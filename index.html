@@ -1,0 +1,224 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>IFP MSI · Pressure Works</title>
+  <meta name="description" content="A hydraulic idle game: pumps, pressure, heat and a lot of cylinders.">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='14' fill='%2314181d' stroke='%23f2a900' stroke-width='3'/%3E%3Cpath d='M16 16 L24 9' stroke='%23e5484d' stroke-width='3' stroke-linecap='round'/%3E%3C/svg%3E">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <svg class="brand-gauge" viewBox="0 0 32 32" aria-hidden="true">
+        <circle cx="16" cy="16" r="13" />
+        <path id="brand-needle" d="M16 16 L24 9" />
+      </svg>
+      <div>
+        <h1>IFP MSI</h1>
+        <p class="tagline">Pressure Works · <span id="tagline-loc">Cedar Rapids, Iowa</span> · est. 1972</p>
+      </div>
+    </div>
+    <dl class="resources">
+      <div class="res"><dt>Cash</dt><dd id="r-cash">$0</dd><small id="r-income">$0/s</small></div>
+      <div class="res"><dt>Know-how</dt><dd id="r-kh">0</dd><small id="r-khrate">0/s</small></div>
+      <div class="res" id="r-patents-wrap"><dt>Patents</dt><dd id="r-patents">0</dd><small id="r-patentbonus">+0%</small></div>
+    </dl>
+  </header>
+
+  <main class="layout">
+    <!-- Left: the live machine -->
+    <section class="panel machine" aria-label="Hydraulic system">
+      <h2 class="panel-title">System <span id="tier-name" class="chip">Rubber Hose · 750 psi</span></h2>
+
+      <svg id="schematic" viewBox="0 0 400 230" role="img" aria-label="Live hydraulic circuit">
+        <!-- tank -->
+        <rect class="sym" x="20" y="170" width="120" height="44" rx="2" />
+        <rect id="tank-oil" class="oil-fill" x="22" y="186" width="116" height="26" />
+        <text class="sym-label" x="80" y="226">TANK</text>
+        <!-- suction -->
+        <path class="line" d="M60 186 V146" />
+        <path class="oil oil-supply" d="M60 186 V146" />
+        <!-- motor + pump -->
+        <circle class="sym" cx="24" cy="130" r="12" /><text class="sym-text" x="24" y="134">M</text>
+        <path class="sym" d="M36 130 H44" />
+        <g id="pump-sym">
+          <circle class="sym" cx="60" cy="130" r="16" />
+          <path class="sym-solid" d="M60 115 L52 128 H68 Z" />
+        </g>
+        <!-- pressure line -->
+        <path class="line" d="M60 114 V50 H300" />
+        <path class="oil oil-supply" d="M60 114 V50 H300" />
+        <!-- accumulator -->
+        <path class="line" d="M110 50 V36" />
+        <rect class="sym" x="98" y="6" width="24" height="30" rx="12" />
+        <rect id="acc-fill" class="oil-fill" x="100" y="20" width="20" height="14" rx="4" />
+        <path class="sym" d="M100 21 H120" />
+        <!-- gauge -->
+        <path class="line" d="M160 50 V38" />
+        <circle class="sym" cx="160" cy="28" r="10" />
+        <path id="mini-needle" class="needle" d="M160 28 L166 22" />
+        <!-- relief valve -->
+        <path class="line" d="M210 50 V80" />
+        <rect class="sym" x="198" y="80" width="24" height="28" />
+        <path class="sym" d="M210 84 V104 M206 99 L210 104 L214 99" />
+        <path class="sym" d="M222 94 l4 -4 l4 8 l4 -8 l4 8 l4 -4" />
+        <path class="line" d="M210 108 V170" />
+        <path id="relief-oil" class="oil oil-relief" d="M210 108 V170" />
+        <!-- directional valve + cylinder -->
+        <rect class="sym" x="290" y="50" width="24" height="20" />
+        <rect class="sym" x="314" y="50" width="24" height="20" />
+        <path class="sym" d="M296 66 L308 54 M302 54 H308 V60 M320 54 L332 66" />
+        <path class="line" d="M302 50 V30 H326" />
+        <path class="oil oil-work" d="M302 50 V30 H326" />
+        <rect class="sym" x="326" y="14" width="44" height="26" />
+        <g id="cyl-piston">
+          <rect class="sym-solid" x="332" y="16" width="6" height="22" />
+          <rect class="rod" x="338" y="24" width="40" height="6" />
+        </g>
+        <!-- return line through cooler and filter -->
+        <path class="line" d="M326 70 V140 H140 V170" />
+        <path class="oil oil-return" d="M326 70 V140 H140 V170" />
+        <g id="cooler-sym">
+          <path class="sym" d="M262 126 L276 140 L262 154 L248 140 Z" />
+          <path class="sym" d="M252 132 H272 M252 148 H272" />
+        </g>
+        <path class="sym" d="M186 126 L200 140 L186 154 L172 140 Z" />
+        <path class="sym dash" d="M179 133 L193 147" />
+        <text class="sym-label" x="262" y="166">COOLER</text>
+        <text class="sym-label" x="186" y="166">FILTER</text>
+        <text class="sym-label" x="230" y="122">RELIEF</text>
+        <text class="sym-label" x="352" y="52">LOAD</text>
+      </svg>
+
+      <div class="gauges">
+        <figure class="gauge" id="g-pressure"><figcaption>Pressure</figcaption></figure>
+        <figure class="gauge" id="g-temp"><figcaption>Oil temp</figcaption></figure>
+      </div>
+
+      <div class="meters">
+        <div class="meter">
+          <div class="meter-head"><span>Flow</span><span id="m-flow-text">0 / 0 GPM</span></div>
+          <div class="bar"><div id="m-flow-demand" class="bar-mark"></div><div id="m-flow" class="bar-fill flow"></div></div>
+        </div>
+        <div class="meter">
+          <div class="meter-head"><span>Accumulator</span><span id="m-acc-text">0 / 5 gal</span></div>
+          <div class="bar"><div id="m-acc" class="bar-fill acc"></div></div>
+        </div>
+      </div>
+
+      <ul id="alerts" class="alerts" aria-live="polite"></ul>
+
+      <div class="actions">
+        <button id="btn-stroke" class="big-btn stroke">
+          <span class="big-btn-title">Stroke hand pump</span>
+          <span class="big-btn-sub" id="stroke-sub">+$1</span>
+        </button>
+        <button id="btn-surge" class="big-btn surge" disabled>
+          <span class="big-btn-title">Surge</span>
+          <span class="big-btn-sub" id="surge-sub">Charge the accumulator</span>
+        </button>
+      </div>
+    </section>
+
+    <!-- Right: the shop -->
+    <section class="panel shop" aria-label="Workshop">
+      <nav class="tabs" role="tablist">
+        <button role="tab" data-tab="actuators" aria-selected="true">Actuators</button>
+        <button role="tab" data-tab="pumps">Pumps</button>
+        <button role="tab" data-tab="system">System</button>
+        <button role="tab" data-tab="tech">R&amp;D <span class="badge" id="tech-badge" hidden></span></button>
+        <button role="tab" data-tab="company">Company</button>
+        <button role="tab" data-tab="overhaul" id="tab-overhaul">Overhaul</button>
+        <button role="tab" data-tab="settings">Logbook</button>
+      </nav>
+
+      <div class="buyqty" id="buyqty" role="radiogroup" aria-label="Buy quantity">
+        <span>Buy</span>
+        <button data-qty="1" aria-checked="true">×1</button>
+        <button data-qty="10">×10</button>
+        <button data-qty="100">×100</button>
+        <button data-qty="max">Max</button>
+      </div>
+
+      <div class="tab-body" data-body="actuators">
+        <p class="hint">Actuators earn money. Each one needs <b>flow</b> from your pumps and a minimum <b>pressure rating</b>. Pressure above the minimum pays extra.</p>
+        <div id="list-actuators" class="list"></div>
+      </div>
+      <div class="tab-body" data-body="pumps" hidden>
+        <p class="hint">Pumps make flow. Too little and actuators stall; too much and the surplus dumps over the relief valve as <b>heat</b>.</p>
+        <div id="list-pumps" class="list"></div>
+      </div>
+      <div class="tab-body" data-body="system" hidden>
+        <h3>Pressure rating</h3>
+        <div id="tier-box" class="card"></div>
+        <h3>Accumulator</h3>
+        <div id="acc-box" class="card"></div>
+        <h3>Cooling</h3>
+        <p class="hint">Every pump wastes part of its power as heat. Coolers carry it away. Above the temperature limit, oil thins out and income falls.</p>
+        <div id="list-coolers" class="list"></div>
+      </div>
+      <div class="tab-body" data-body="tech" hidden>
+        <p class="hint">Know-how accumulates while your shop earns (√ of income). Spend it on engineering breakthroughs.</p>
+        <div id="tech-tree" class="tech-tree"></div>
+      </div>
+      <div class="tab-body" data-body="company" hidden>
+        <div class="card era-card">
+          <div class="era-label">Era <span id="era-num">I</span> · <b id="era-name">The First Shop</b></div>
+          <p class="muted">Every fluid-power company runs on eleven departments. Orders flow through the
+            <b>Order Line</b> like oil through a circuit, and the narrowest department sets the pace.
+            Departments open as the shop grows. Hiring staff arrives in a future update; for now, you run every open department yourself.</p>
+        </div>
+        <h3>Territory <span class="muted">· 4 locations · 13 states + Gulf · <span id="customer-base"></span></span></h3>
+        <div class="territory">
+          <svg id="territory-map" class="territory-map" viewBox="0 0 188 368" role="img" aria-label="Territory map"></svg>
+          <div id="region-list" class="region-list"></div>
+        </div>
+        <h3>Order Line <span class="muted">· leads in → cash out</span></h3>
+        <div id="order-line" class="order-line"></div>
+        <h3>Support</h3>
+        <div id="support-depts" class="dept-grid"></div>
+        <h3>Project Engineering · Pak lines</h3>
+        <div id="pak-chain" class="pak-chain"></div>
+      </div>
+      <div class="tab-body" data-body="overhaul" hidden>
+        <div class="card overhaul-card">
+          <h3>Full overhaul</h3>
+          <p>Strip the shop down to the slab and rebuild it better. You lose cash, equipment, pressure rating, accumulator and research. You keep your <b>Patents</b>: each one adds <b>+10%</b> to all income, forever.</p>
+          <p class="big-number">+<span id="ov-gain">0</span> patents</p>
+          <p class="muted" id="ov-detail"></p>
+          <button id="btn-overhaul" class="btn danger" disabled>Overhaul the shop</button>
+        </div>
+      </div>
+      <div class="tab-body" data-body="settings" hidden>
+        <div class="card">
+          <h3>Logbook</h3>
+          <dl id="stats" class="stats"></dl>
+        </div>
+        <div class="card">
+          <h3>Save data</h3>
+          <p class="muted">Autosaves every 10 seconds to this browser.</p>
+          <div class="row-btns">
+            <button id="btn-save" class="btn">Save now</button>
+            <button id="btn-export" class="btn">Export</button>
+            <button id="btn-import" class="btn">Import</button>
+            <button id="btn-reset" class="btn danger">Hard reset</button>
+          </div>
+          <textarea id="save-text" rows="4" spellcheck="false" placeholder="Exported save appears here; paste a save and press Import."></textarea>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <div id="toast" class="toast" role="status" hidden></div>
+
+  <script src="src/data.js"></script>
+  <script src="src/format.js"></script>
+  <script src="src/engine.js"></script>
+  <script src="src/ui.js"></script>
+  <script src="src/main.js"></script>
+</body>
+</html>

@@ -1,0 +1,93 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 430" font-family="'Courier New', monospace">
+  <defs>
+    <pattern id="grid" width="20" height="20" patternUnits="userSpaceOnUse">
+      <path d="M20 0 H0 V20" fill="none" stroke="#2c5f8f" stroke-width="0.5"/>
+    </pattern>
+    <style>
+      .bp { fill: none; stroke: #e8f1ff; stroke-width: 2; stroke-linejoin: round; }
+      .acc { fill: none; stroke: #ffb000; stroke-width: 2; }
+      .card { fill: #0b2e4f; stroke: #9cc3ea; stroke-width: 1.2; }
+      .card.future { stroke-dasharray: 6 4; }
+      .h { fill: #fff; font-size: 20px; font-weight: bold; letter-spacing: 2px; }
+      .era { fill: #ffd36b; font-size: 12px; font-weight: bold; letter-spacing: 2px; }
+      .name { fill: #fff; font-size: 15px; font-weight: bold; }
+      .t { fill: #c8dcf3; font-size: 11px; }
+      .psi { fill: #ff9b9b; font-size: 11px; }
+    </style>
+  </defs>
+  <rect width="1200" height="430" fill="#0e3a63"/>
+  <rect width="1200" height="430" fill="url(#grid)"/>
+  <text class="h" x="30" y="42">PROGRESSION: SIX ERAS</text>
+  <text class="t" x="30" y="62">Pressure rises left to right. Each era adds one new thing to balance.</text>
+
+  <!-- pressure ramp -->
+  <path d="M40 400 C 300 395, 700 360, 1160 300" fill="none" stroke="#ff7b7b" stroke-width="3"/>
+  <text class="psi" x="40" y="390">750 psi</text>
+  <text class="psi" x="1060" y="330">10,000+ psi</text>
+
+  <!-- I -->
+  <rect class="card" x="30" y="84" width="180" height="200" rx="6"/>
+  <text class="era" x="44" y="106">ERA I</text>
+  <text class="name" x="44" y="126">The First Shop</text>
+  <g transform="translate(90 140)"><rect class="bp" x="0" y="44" width="60" height="14"/><rect class="bp" x="10" y="14" width="40" height="30"/><rect class="bp" x="22" y="0" width="16" height="14"/><path class="acc" d="M14 0 H46"/></g>
+  <text class="t" x="44" y="222">bottle jacks, log</text>
+  <text class="t" x="44" y="236">splitters, gear pumps</text>
+  <text class="t" x="44" y="256" fill="#ffd36b">NEW: flow vs demand</text>
+  <text class="t" x="44" y="272">0 – 10 min</text>
+
+  <!-- II -->
+  <rect class="card" x="224" y="84" width="180" height="200" rx="6"/>
+  <text class="era" x="238" y="106">ERA II</text>
+  <text class="name" x="238" y="126">The Job Shop</text>
+  <g transform="translate(270 140)"><path class="bp" d="M0 60 H70 M14 20 L34 0 L60 14"/><path class="bp" d="M60 14 L68 40 L48 40 Z"/><path class="bp" d="M2 60 H30 V44 H6 Z"/><path class="acc" d="M20 44 L28 22"/></g>
+  <text class="t" x="238" y="222">shop presses, excavator</text>
+  <text class="t" x="238" y="236">arms, vane + axial pumps</text>
+  <text class="t" x="238" y="256" fill="#ffd36b">NEW: pressure + heat</text>
+  <text class="t" x="238" y="272">10 – 45 min</text>
+
+  <!-- III -->
+  <rect class="card" x="418" y="84" width="180" height="200" rx="6"/>
+  <text class="era" x="432" y="106">ERA III</text>
+  <text class="name" x="432" y="126">The Factory</text>
+  <g transform="translate(466 140)"><path class="bp" d="M0 64 V24 L20 34 V24 L40 34 V24 L60 34 V4 H74 V64 Z"/><path class="acc" d="M64 4 C 64 -6, 76 -6, 76 -14"/></g>
+  <text class="t" x="432" y="222">injection molding, forging</text>
+  <text class="t" x="432" y="236">presses, radial pumps</text>
+  <text class="t" x="432" y="256" fill="#ffd36b">NEW: the cooling wall</text>
+  <text class="t" x="432" y="272">45 min – 1.5 h</text>
+
+  <!-- IV -->
+  <rect class="card" x="612" y="84" width="180" height="200" rx="6"/>
+  <text class="era" x="626" y="106">ERA IV</text>
+  <text class="name" x="626" y="126">Heavy Civil</text>
+  <g transform="translate(656 140)"><path class="bp" d="M0 34 H90 L78 50 H12 Z M30 34 V20 H60 V34"/><path class="bp" d="M-4 64 H96"/><path class="acc" d="M6 64 V50 M84 64 V50"/></g>
+  <text class="t" x="626" y="222">ship lifts, load-sensing</text>
+  <text class="t" x="626" y="236">pumps, PLC automation</text>
+  <text class="t" x="626" y="256" fill="#ffd36b">NEW: Overhaul + Patents</text>
+  <text class="t" x="626" y="272">1.5 h+ / run 2</text>
+
+  <!-- V -->
+  <rect class="card" x="806" y="84" width="180" height="200" rx="6"/>
+  <text class="era" x="820" y="106">ERA V</text>
+  <text class="name" x="820" y="126">Megaprojects</text>
+  <g transform="translate(850 140)"><path class="bp" d="M0 64 L30 10 L46 36 L60 18 L90 64 Z"/><path class="acc" d="M-10 40 H6 M0 34 L6 40 L0 46 M100 40 H84 M90 34 L84 40 L90 46"/></g>
+  <text class="t" x="820" y="222">tectonic press, digital</text>
+  <text class="t" x="820" y="236">displacement, UHP</text>
+  <text class="t" x="820" y="256" fill="#ffd36b">NEW: absurd scale</text>
+  <text class="t" x="820" y="272">runs 3+</text>
+
+  <!-- VI -->
+  <rect class="card future" x="1000" y="84" width="180" height="200" rx="6"/>
+  <text class="era" x="1014" y="106">ERA VI · PLANNED</text>
+  <text class="name" x="1014" y="126">Beyond</text>
+  <g transform="translate(1060 140)"><path class="bp" d="M30 0 L50 30 L30 64 L10 30 Z"/><path class="acc" d="M30 -4 V-14 M30 68 V78"/><path class="bp" d="M10 30 H50" stroke-dasharray="3 3"/></g>
+  <text class="t" x="1014" y="222">dam spillway gates,</text>
+  <text class="t" x="1014" y="236">diamond presses, ???</text>
+  <text class="t" x="1014" y="256" fill="#ffd36b">NEW: Standards Committee</text>
+  <text class="t" x="1014" y="272">2nd prestige layer</text>
+
+  <!-- arrows between cards -->
+  <g fill="#ffd36b">
+    <path d="M222 184 l-10 -6 v12 Z"/><path d="M416 184 l-10 -6 v12 Z"/><path d="M610 184 l-10 -6 v12 Z"/>
+    <path d="M804 184 l-10 -6 v12 Z"/><path d="M998 184 l-10 -6 v12 Z"/>
+  </g>
+</svg>
