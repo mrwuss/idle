@@ -181,7 +181,7 @@
       const x = X0 + st.x * (T + G), y = Y0 + st.y * (T + G);
       const r = REGIONS.find((g) => g.id === st.region);
       svg += `<g class="tile region-${st.region}${st.offshore ? ' offshore' : ''}" data-state="${st.id}">
-        <title>${st.name} · ${r.name} region${st.branch ? ' · branch: ' + r.branch : ''}</title>
+        <title>${st.name} · ${r.name} · customer base ${st.customers}${st.branch ? ' · location: ' + r.branch : ''}</title>
         <rect x="${x}" y="${y}" width="${T}" height="${T}" rx="5"/>
         ${st.offshore ? `<path class="waves" d="M${x + 8} ${y + 40} q6 -6 12 0 t12 0 t12 0 t12 0"/>` : ''}
         <text x="${x + T / 2}" y="${y + (st.branch ? 26 : 34)}">${st.offshore ? 'GULF' : st.id}</text>
@@ -200,13 +200,17 @@
       el.innerHTML = `<div class="dept-head"><span class="dept-name"><i class="swatch"></i>${r.name}</span><span class="dept-status"></span></div>
         <div class="dept-role">Branch: <b>${r.branch}</b> · ${states.join(', ')}</div>
         <div class="dept-teams">${r.markets.map((m) => `<span>${m}</span>`).join('')}</div>
-        <div class="dept-twist">${r.twist} Ambient ${r.ambientF}°F.</div>`;
+        <div class="dept-twist">Customer base potential <b>${fmt(E.customerBase(null, r.id))}</b>${r.id === 'hq'
+          ? ' · every location runs the same departments and processes as HQ'
+          : ` · ${(E.customerBase(null, r.id) / E.customerBase(null, 'hq')).toFixed(1)}× HQ`}</div>`;
       list.appendChild(el);
       regionEls[r.id] = { el, status: el.querySelector('.dept-status') };
     }
   }
 
   function renderTerritory(s) {
+    const total = STATES.reduce((sum, st) => sum + st.customers, 0);
+    $('customer-base').textContent = `customer base ${fmt(E.customerBase(s))} / ${fmt(total)}`;
     for (const r of REGIONS) {
       const open = E.regionOpen(s, r);
       regionEls[r.id].el.classList.toggle('closed', !open);

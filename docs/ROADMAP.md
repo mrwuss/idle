@@ -32,10 +32,9 @@ Design: [DEPARTMENTS.md](DEPARTMENTS.md)
 
 Design: [TERRITORY.md](TERRITORY.md)
 
-- [ ] Branches as parallel Order Line front ends feeding HQ's shared departments
-- [ ] State coverage purchases and regional markets
-- [ ] Regional twists (North cold, West hub, South heat + offshore)
-- [ ] Branch shops with their own ambient temperature; service bench for repair & refurbishing
+- [ ] Demand ceiling = customer base of open locations × market penetration
+- [ ] Outside Sales drives penetration; "customers maxed out" alert
+- [ ] Location-tagged Sys-Pak projects and per-state industry markets
 
 ## v0.3 — Make it feel good
 

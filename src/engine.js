@@ -305,6 +305,12 @@
     const i = DATA.REGIONS.indexOf(region);
     return (i === 0 || !!s.locations[DATA.REGIONS[i - 1].id]) && opensMet(s, region.opens);
   }
+  /** Customer-base potential of a region, or of every open location if omitted. */
+  function customerBase(s, regionId) {
+    return DATA.STATES
+      .filter((st) => (regionId ? st.region === regionId : s.locations[st.region]))
+      .reduce((sum, st) => sum + st.customers, 0);
+  }
   /** Records newly reached locations and returns them (for announcements). */
   function checkLocations(s) {
     const opened = [];
@@ -343,7 +349,7 @@
     bulkCost, maxAffordable, isUnlocked, quote, buy,
     nextTier, canUpgradeTier, upgradeTier, accCapacity, accUpgradeCost, upgradeAccumulator,
     techAvailable, research, click, canSurge, surge,
-    patentsTotal, overhaulGain, canOverhaul, overhaul, opensMet, departmentOpen, regionOpen, checkLocations, currentEra,
+    patentsTotal, overhaulGain, canOverhaul, overhaul, opensMet, departmentOpen, regionOpen, checkLocations, customerBase, currentEra,
     serialize, deserialize,
   };
   root.PW = root.PW || {};

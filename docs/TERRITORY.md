@@ -1,9 +1,11 @@
-# Territory — branches, regions and states
+# Territory — locations and customer base
 
-> Design v0.2. In the game today: the company is **IFP MSI**, and locations
-> **unlock in order as you grow, Iowa → North → West → South**, each with a
-> "New location!" announcement. The map is on the **Company** tab. The
-> regional mechanics below come later.
+> Design v0.3. **Every location is an extension of HQ:** the same departments,
+> the same processes, but a bigger customer base. In the game today, the
+> company is **IFP MSI**, and locations **unlock in order as you grow, Iowa →
+> North → West → South**, each with a "New location!" announcement. The Company
+> tab shows the map and each location's customer-base potential. Customer base
+> starts affecting income once Departments ship.
 
 ## Real-world basis
 
@@ -50,54 +52,54 @@ and as the company grows it unlocks new locations in a fixed order:
 *Optional flavor:* the logbook's calendar starts in **1972**, and each era is
 roughly a decade, ending in the present day.
 
-## How branches fit the Departments system
+## Every location is an extension of HQ
 
-Branches are where the Order Line meets geography. **Working assumption (please
-correct it):** each branch runs its own customer-facing departments, and HQ runs
-the shared ones.
+A new location doesn't bring new rules. It runs the **same eleven departments
+and the same processes** as Cedar Rapids, and it sells the same products,
+Valve-Paks, Base-Paks and Sys-Paks included. What it adds is **more customers to
+sell to**.
 
-| Runs at every branch | Shared from HQ |
-|---|---|
-| Outside Sales, Inside Sales, Warehouse, Production (service & repair shop) | Engineering, Accounting, IT, Management, Purchasing, Quality, Safety |
+That keeps the game easy to read. The player learns one company, and every
+location makes that company bigger.
 
-So:
+## Customer base: the demand ceiling
 
-- A branch adds a **parallel Order Line front end**: its own leads, quotes,
-  stock and shop. The branches' output then merges into HQ's shared back half
-  (Quality, Accounting). Branches add capacity. They don't add new bottlenecks
-  to the shared departments, but they **do** push more volume through them.
-  Grow branches and you'll need to grow HQ.
-- **Engineering stays at HQ,** so every Valve-Pak, Base-Pak and Sys-Pak comes
-  from Cedar Rapids. Branches *sell* Paks into their regional markets, and
-  Sys-Pak projects are tagged with a region (for example, "Gulf platform HPU",
-  "Iron Range crusher system", "Wichita test-stand").
+Each state has a **customer-base potential**. A location adds all of its states
+when it opens:
 
-## Regional twists
+| Location | States (potential) | Customer base | vs HQ |
+|---|---|---:|---:|
+| **HQ** · Cedar Rapids | IA 40, IL 60 | 100 | 1× |
+| **North** · Minneapolis | MN 60, WI 50, ND 25, SD 15 | 150 | 1.5× |
+| **West** · Kansas City | MO 60, OK 60, KS 50, NE 40, AR 40 | 250 | 2.5× |
+| **South** · Houston | TX 300, LA 100, Gulf offshore 100 | 500 | 5× |
+| **Total** | 13 states + Gulf | **1,000** | |
 
-Each region has one mechanical twist, the way each department does.
+The numbers are relative and easy to change (`STATES[].customers` in
+`src/data.js`). If you have a better sense of the real relative sizes, swap them in.
 
-| Region | Twist | Mechanic (first pass) |
-|---|---|---|
-| **HQ** | Home of the shared departments | Shared-department capacity +10% per open branch (economies of scale) |
-| **North** | Cold climate | Branch shop ambient **60°F**, so cooling goes further. Winter **cold-start** events: for 60 s after one, pump efficiency drops 5% unless the branch has reservoir heaters. |
-| **West** | Crossroads distribution hub | Warehouse capacity ×1.5 company-wide while West is open; Rush Ship lasts longer |
-| **South** | Hot, salty, high-stakes | Branch shop ambient **95°F**, so it needs more cooling. **Offshore** jobs pay ×3 but need a minimum Safety level, and their incidents cost twice as much. |
+**How it plays (with Departments):** customers set the most the company can
+sell, however much the shop can produce.
 
-The ambient temperatures plug straight into the existing heat formula
-(`T_eq = ambient + heat / k`), so a branch shop in Houston really does run hotter
-than one in Minneapolis.
+```
+demand ceiling ($/s) = customer base of open locations × market penetration × $ per customer point
+realized income      = min(Order Line throughput, demand ceiling)
+```
 
-## States: coverage within a region
+- **Locations widen the market.** Each unlock is a big step: total customer base
+  goes 100 → 250 → 500 → 1,000, so the ceiling rises ×2.5, ×2 and ×2.
+- **Outside Sales digs deeper into it.** *Market penetration* grows with
+  Outside Sales headcount and the industry markets they open (ag equipment,
+  mining, aerospace, oil & gas…). That's the steady growth between unlocks.
+- When the shop out-produces its customers, the alert says so: *"Customers are
+  maxed out: 30% of production unsold. Grow Outside Sales or open the next
+  location."* Opening a new location is the big release.
 
-When a region opens, its branch's home state is covered. Outside Sales then
-**expands coverage** state by state:
+Until Departments ship there is no ceiling, and customer base is only shown.
 
-- Covering a state is a one-time purchase (`300 s × production at the time`, ×2
-  for each state already covered in that region).
-- Each covered state adds **+10% leads** in its region and opens that state's
-  **signature market** for Outside Sales:
+## Industries by state (flavor for markets and projects)
 
-| State | Signature market | State | Signature market |
+| State | Signature industry | State | Signature industry |
 |---|---|---|---|
 | IA | Ag equipment | KS | Aerospace |
 | IL | Heavy equipment manufacturing | NE | Irrigation & agriculture |
@@ -107,28 +109,22 @@ When a region opens, its branch's home state is covered. Outside Sales then
 | SD | Agriculture | TX | Oil & gas, petrochemical |
 | GULF | Offshore platforms | LA | Petrochemical, ports & marine |
 
-On the map, covered states fill with the region's color, and uncovered states
-in an open region are outlined.
+These name the Outside Sales markets, and they tag Sys-Pak projects with a place
+(for example, "Gulf platform HPU", "Iron Range crusher system", "Wichita test
+stand"). Projects from a location only show up once it's open.
 
 ## Implementation phases
 
-1. **Placeholder (done).** Territory map and region cards on the Company tab,
-   driven by `REGIONS`/`STATES`, opening on the conditions above with no effect
-   on income.
-2. **Branches as Order Line front ends.** Opening a branch adds a parallel
-   Outside Sales → Inside Sales → Warehouse feed into the shared back half.
-   State coverage. Regional market multipliers. This depends on Departments v0.2.
-3. **Branch shops.** Each branch gets its own small hydraulic shop floor using
-   the region's ambient temperature, switched with a location picker on the
-   System panel. Repair & refurbishing jobs live here as a **service bench**:
-   customers bring in worn cylinders and pumps, you rebuild them for cash, and
-   that's a light active loop.
-4. **Offshore.** Gulf jobs: high pay, need Safety, punishing incidents.
+1. **Done.** Territory map, unlock order with announcements, locations kept
+   through Overhaul, customer base shown per location and in total.
+2. **With Departments.** Demand ceiling = customer base × market penetration;
+   Outside Sales drives penetration; the "customers maxed out" alert.
+3. **Projects and markets.** Location-tagged Sys-Pak projects and per-state
+   industry markets.
 
 ## Open questions
 
-- Is the "branch-local vs HQ-shared" split above how the business really works?
-  For example, does each location have its own Purchasing or Warehouse? Does
-  Production at a branch mean repair and service, manufacturing, or both?
+- Do the relative customer-base sizes (South biggest, then West, North, HQ) feel
+  right for the business?
 - Should the map stay a tidy tile grid, or switch to a real (stylized)
   geographic map later?

@@ -201,40 +201,39 @@
   ];
 
   // ---- Territory ------------------------------------------------------------
-  // See docs/TERRITORY.md. Four locations unlock in this order as the company
-  // grows (Iowa → North → West → South); each needs the one before it. They
-  // don't affect income yet. They cover 13 states plus the Gulf offshore region. `x, y` place each state on the
-  // tile map in the Company tab (a cartogram, not to scale).
+  // See docs/TERRITORY.md. Every location is an extension of HQ: same
+  // departments, same processes. What a new location adds is customer base.
+  // Locations unlock in this order as the company grows (Iowa → North → West →
+  // South); each needs the one before it. Customer base doesn't affect income
+  // yet. `customers` is relative customer-base potential (13 states + the Gulf
+  // = 1,000). `x, y` place each state on the Company tab's tile map (a
+  // cartogram, not to scale).
   const REGIONS = [
-    { id: 'hq', name: 'Headquarters', branch: 'Cedar Rapids, IA', opens: {}, era: 0, ambientF: 80,
-      markets: ['Ag equipment OEMs', 'Industrial manufacturing'],
-      twist: 'Home shop and home of the shared departments: Engineering, Accounting, IT, Management.' },
-    { id: 'north', name: 'North', branch: 'Minneapolis, MN', opens: { lifetime: 1e7 }, era: 3, ambientF: 60,
-      markets: ['Mining', 'Forestry & paper', 'Food processing'],
-      twist: 'Cold climate: oil runs cooler, but winter cold-starts stress the pumps.' },
-    { id: 'west', name: 'West', branch: 'Kansas City (Olathe, KS)', opens: { lifetime: 1e8 }, era: 3, ambientF: 80,
-      markets: ['Aerospace', 'Agriculture', 'Oil & gas', 'Rail & trucking'],
-      twist: 'Crossroads of the territory: a distribution hub that boosts Warehouse.' },
-    { id: 'south', name: 'South', branch: 'Houston, TX', opens: { lifetime: 1e9 }, era: 4, ambientF: 95,
-      markets: ['Oil & gas', 'Petrochemical', 'Offshore', 'Ports & marine'],
-      twist: 'Hot, salty and high-stakes: offshore jobs pay the most but demand Safety.' },
+    { id: 'hq',    name: 'Headquarters', branch: 'Cedar Rapids, IA',         opens: {},                era: 0,
+      markets: ['Ag equipment OEMs', 'Industrial manufacturing'] },
+    { id: 'north', name: 'North',        branch: 'Minneapolis, MN',          opens: { lifetime: 1e7 }, era: 3,
+      markets: ['Mining', 'Forestry & paper', 'Food processing'] },
+    { id: 'west',  name: 'West',         branch: 'Kansas City (Olathe, KS)', opens: { lifetime: 1e8 }, era: 3,
+      markets: ['Aerospace', 'Agriculture', 'Oil & gas', 'Rail & trucking'] },
+    { id: 'south', name: 'South',        branch: 'Houston, TX',              opens: { lifetime: 1e9 }, era: 4,
+      markets: ['Oil & gas', 'Petrochemical', 'Offshore', 'Ports & marine'] },
   ];
 
   const STATES = [
-    { id: 'ND', name: 'North Dakota', region: 'north', x: 1, y: 0 },
-    { id: 'MN', name: 'Minnesota',    region: 'north', x: 2, y: 0, branch: true },
-    { id: 'WI', name: 'Wisconsin',    region: 'north', x: 3, y: 0 },
-    { id: 'SD', name: 'South Dakota', region: 'north', x: 1, y: 1 },
-    { id: 'IA', name: 'Iowa',         region: 'hq',    x: 2, y: 1, branch: true },
-    { id: 'IL', name: 'Illinois',     region: 'hq',    x: 3, y: 1 },
-    { id: 'NE', name: 'Nebraska',     region: 'west',  x: 1, y: 2 },
-    { id: 'MO', name: 'Missouri',     region: 'west',  x: 2, y: 2 },
-    { id: 'KS', name: 'Kansas',       region: 'west',  x: 1, y: 3, branch: true },
-    { id: 'AR', name: 'Arkansas',     region: 'west',  x: 2, y: 3 },
-    { id: 'OK', name: 'Oklahoma',     region: 'west',  x: 1, y: 4 },
-    { id: 'LA', name: 'Louisiana',    region: 'south', x: 2, y: 4 },
-    { id: 'TX', name: 'Texas',        region: 'south', x: 1, y: 5, branch: true },
-    { id: 'GULF', name: 'Gulf offshore', region: 'south', x: 2, y: 5, offshore: true },
+    { id: 'ND',   name: 'North Dakota',  region: 'north', customers: 25,  x: 1, y: 0 },
+    { id: 'MN',   name: 'Minnesota',     region: 'north', customers: 60,  x: 2, y: 0, branch: true },
+    { id: 'WI',   name: 'Wisconsin',     region: 'north', customers: 50,  x: 3, y: 0 },
+    { id: 'SD',   name: 'South Dakota',  region: 'north', customers: 15,  x: 1, y: 1 },
+    { id: 'IA',   name: 'Iowa',          region: 'hq',    customers: 40,  x: 2, y: 1, branch: true },
+    { id: 'IL',   name: 'Illinois',      region: 'hq',    customers: 60,  x: 3, y: 1 },
+    { id: 'NE',   name: 'Nebraska',      region: 'west',  customers: 40,  x: 1, y: 2 },
+    { id: 'MO',   name: 'Missouri',      region: 'west',  customers: 60,  x: 2, y: 2 },
+    { id: 'KS',   name: 'Kansas',        region: 'west',  customers: 50,  x: 1, y: 3, branch: true },
+    { id: 'AR',   name: 'Arkansas',      region: 'west',  customers: 40,  x: 2, y: 3 },
+    { id: 'OK',   name: 'Oklahoma',      region: 'west',  customers: 60,  x: 1, y: 4 },
+    { id: 'LA',   name: 'Louisiana',     region: 'south', customers: 100, x: 2, y: 4 },
+    { id: 'TX',   name: 'Texas',         region: 'south', customers: 300, x: 1, y: 5, branch: true },
+    { id: 'GULF', name: 'Gulf offshore', region: 'south', customers: 100, x: 2, y: 5, offshore: true },
   ];
 
   const CONSTANTS = {
