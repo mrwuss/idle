@@ -28,7 +28,7 @@
   <!-- I -->
   <rect class="card" x="30" y="84" width="180" height="200" rx="6"/>
   <text class="era" x="44" y="106">ERA I</text>
-  <text class="name" x="44" y="126">The Tire Shop</text>
+  <text class="name" x="44" y="126">The First Shop</text>
   <g transform="translate(90 140)"><rect class="bp" x="0" y="44" width="60" height="14"/><rect class="bp" x="10" y="14" width="40" height="30"/><rect class="bp" x="22" y="0" width="16" height="14"/><path class="acc" d="M14 0 H46"/></g>
   <text class="t" x="44" y="222">bottle jacks, log</text>
   <text class="t" x="44" y="236">splitters, gear pumps</text>

@@ -210,7 +210,9 @@
     for (const r of REGIONS) {
       const open = E.regionOpen(s, r);
       regionEls[r.id].el.classList.toggle('closed', !open);
-      regionEls[r.id].status.textContent = r.id === 'hq' ? 'Home' : open ? 'Open' : opensText(s, r);
+      const i = REGIONS.indexOf(r), prev = REGIONS[i - 1];
+      regionEls[r.id].status.textContent = r.id === 'hq' ? 'Home' : open ? 'Open'
+        : prev && !E.regionOpen(s, prev) ? `Opens after ${prev.name} · ${opensText(s, r).replace('Opens: ', '')}` : opensText(s, r);
       for (const st of STATES) if (st.region === r.id) stateEls[st.id].classList.toggle('closed', !open);
     }
   }
@@ -334,6 +336,8 @@
     // top bar
     $('r-cash').textContent = '$' + fmt(s.cash);
     $('r-income').textContent = `+$${fmt(d.income)}/s`;
+    const nLoc = REGIONS.filter((r) => E.regionOpen(s, r)).length;
+    $('tagline-loc').textContent = nLoc > 1 ? `${nLoc} locations` : 'Cedar Rapids, Iowa';
     $('r-kh').textContent = fmt(s.kh);
     $('r-khrate').textContent = `+${fmt(d.khRate)}/s`;
     $('r-patents-wrap').hidden = s.patents === 0 && !E.canOverhaul(s);

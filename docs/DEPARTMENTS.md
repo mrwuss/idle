@@ -167,7 +167,7 @@ After:   pumps ⇄ actuators ⇄ heat  =  Production $/s
 
 | Era | Departments that open | Opens when (any of) | Story beat |
 |---|---|---|---|
-| I · Tire Shop | Production | start | It's you, a bottle jack, and Grandpa's ledger. |
+| I · First Shop | Production | start | It's you, a bottle jack, and one ledger in Cedar Rapids. |
 | II · Job Shop | Inside Sales, Accounting | $1K earned | The phone won't stop ringing, and somebody has to send invoices. |
 | III · Factory | Purchasing, Warehouse, Quality, Safety | 2-Wire Braid (3,000 psi) or $100K earned | Parts by the pallet. The first customer audit. The first close call. |
 | IV · Heavy Civil | Outside Sales, Engineering, IT | $10M earned | You stop waiting for work and go get it. |

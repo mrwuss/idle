@@ -95,7 +95,7 @@
       UI.toast('Save imported.');
       render();
     } catch (err) {
-      UI.toast('That does not look like a Pressure Works save.');
+      UI.toast('That does not look like an IFP MSI save.');
     }
   });
   $('btn-reset').addEventListener('click', () => {
@@ -121,6 +121,15 @@
     // Long gaps (sleeping laptop) are handled in chunks to keep temperature stable.
     while (dt > 0) { const step = Math.min(dt, 1); E.tick(state, step); dt -= step; }
   }, 100);
+  // New locations are announced once, the moment the company grows into them.
+  function announceLocations() {
+    for (const r of E.checkLocations(state)) {
+      const states = E.DATA.STATES.filter((st) => st.region === r.id).map((st) => st.offshore ? 'the Gulf' : st.id);
+      UI.toast(`<b>New location!</b> IFP MSI ${r.name} opens in <b>${r.branch}</b>, covering ${states.join(', ')}.`, 8000);
+    }
+  }
+  E.checkLocations(state); // catch up silently after load or offline progress
+  setInterval(announceLocations, 1000);
   setInterval(render, 200);
   setInterval(save, 10000);
 

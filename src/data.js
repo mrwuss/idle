@@ -31,7 +31,7 @@
   // pressure; running above it pays proportionally more (force = P × A).
   const ACTUATORS = [
     { id: 'jack',      name: 'Bottle Jack Bay',        gpm: 1,     psi: 500,  rate: 0.6,    cost: 10,     growth: 1.15,
-      flavor: "Grandpa's tire shop. Pump, pump, pump — up goes the truck." },
+      flavor: 'The first service bay in Cedar Rapids. Pump, pump, pump — up goes the truck.' },
     { id: 'splitter',  name: 'Log Splitter',           gpm: 4,     psi: 1200, rate: 5,      cost: 150,    growth: 1.15,
       flavor: 'Firewood by the cord. The neighbours are impressed.' },
     { id: 'press',     name: 'Shop Press',             gpm: 12,    psi: 1500, rate: 28,     cost: 2400,   growth: 1.15,
@@ -131,7 +131,7 @@
   // tab shows them so players can see what's coming and when.
   // `opens` is met when ANY listed condition is true:
   //   lifetime ($ earned ever), tier (pressure tier index), overhauls (count).
-  const ERAS = ['The Tire Shop', 'The Job Shop', 'The Factory', 'Heavy Civil', 'Megaprojects', 'Beyond'];
+  const ERAS = ['The First Shop', 'The Job Shop', 'The Factory', 'Heavy Civil', 'Megaprojects', 'Beyond'];
 
   const DEPARTMENTS = [
     // Order Line, in the order an order travels through it.
@@ -200,9 +200,10 @@
       recipe: '2–6 Base-Paks + control panel (needs Controls engineers)' },
   ];
 
-  // ---- Territory (design scaffold — not simulated yet) ----------------------
-  // See docs/TERRITORY.md. Four regions, each run from a branch, covering
-  // 13 states plus the Gulf offshore region. `x, y` place each state on the
+  // ---- Territory ------------------------------------------------------------
+  // See docs/TERRITORY.md. Four locations unlock in this order as the company
+  // grows (Iowa → North → West → South); each needs the one before it. They
+  // don't affect income yet. They cover 13 states plus the Gulf offshore region. `x, y` place each state on the
   // tile map in the Company tab (a cartogram, not to scale).
   const REGIONS = [
     { id: 'hq', name: 'Headquarters', branch: 'Cedar Rapids, IA', opens: {}, era: 0, ambientF: 80,
@@ -214,7 +215,7 @@
     { id: 'west', name: 'West', branch: 'Kansas City (Olathe, KS)', opens: { lifetime: 1e8 }, era: 3, ambientF: 80,
       markets: ['Aerospace', 'Agriculture', 'Oil & gas', 'Rail & trucking'],
       twist: 'Crossroads of the territory: a distribution hub that boosts Warehouse.' },
-    { id: 'south', name: 'South', branch: 'Houston, TX', opens: { lifetime: 1e9, overhauls: 1 }, era: 4, ambientF: 95,
+    { id: 'south', name: 'South', branch: 'Houston, TX', opens: { lifetime: 1e9 }, era: 4, ambientF: 95,
       markets: ['Oil & gas', 'Petrochemical', 'Offshore', 'Ports & marine'],
       twist: 'Hot, salty and high-stakes: offshore jobs pay the most but demand Safety.' },
   ];

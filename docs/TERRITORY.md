@@ -1,8 +1,9 @@
 # Territory — branches, regions and states
 
-> Design v0.1. The game already shows the territory map and the four regions on
-> the **Company** tab (`REGIONS` and `STATES` in `src/data.js`). The mechanics
-> below come later.
+> Design v0.2. In the game today: the company is **IFP MSI**, and locations
+> **unlock in order as you grow, Iowa → North → West → South**, each with a
+> "New location!" announcement. The map is on the **Company** tab. The
+> regional mechanics below come later.
 
 ## Real-world basis
 
@@ -25,15 +26,26 @@ brand names, and no real employees.
 
 ## Story fit
 
-Grandpa's tire shop becomes the Cedar Rapids headquarters. The player grows
-the company outward: north first, then west, then south to the Gulf.
+The player is **IFP MSI**. The first shop *is* the Cedar Rapids headquarters,
+and as the company grows it unlocks new locations in a fixed order:
+**Iowa → North → West → South**.
 
 | Era | Territory beat | Opens (first pass) |
 |---|---|---|
 | I–III | One shop in Iowa covering Iowa and Illinois | start |
 | IV · Heavy Civil | **North branch**, Minneapolis | $10M earned |
 | IV · Heavy Civil | **West branch**, Kansas City | $100M earned |
-| V · Megaprojects | **South branch**, Houston, and the Gulf offshore jobs | $1B earned or first Overhaul |
+| V · Megaprojects | **South branch**, Houston, and the Gulf offshore jobs | $1B earned |
+
+### Unlock rules (implemented)
+
+- **Fixed order:** each location needs the one before it, so the company
+  always grows Iowa → North → West → South.
+- **Growth means lifetime earnings:** the $ earned ever, which never resets.
+- **Locations are permanent.** An Overhaul rebuilds the shop, but the company
+  keeps its locations. (This settles the earlier open question.)
+- **Announced once:** a toast names the new branch city and its states, and the
+  header switches from "Cedar Rapids, Iowa" to "N locations".
 
 *Optional flavor:* the logbook's calendar starts in **1972**, and each era is
 roughly a decade, ending in the present day.
@@ -118,7 +130,5 @@ in an open region are outlined.
 - Is the "branch-local vs HQ-shared" split above how the business really works?
   For example, does each location have its own Purchasing or Warehouse? Does
   Production at a branch mean repair and service, manufacturing, or both?
-- Should branches survive an Overhaul (for example, kept at level 1 as a Patent
-  perk), or reset like everything else?
 - Should the map stay a tidy tile grid, or switch to a real (stylized)
   geographic map later?

@@ -1,9 +1,9 @@
 # Pressure Works
 
-*A hydraulic idle game. Every empire starts with a bottle jack.*
+*A hydraulic idle game. Grow IFP MSI from one bottle jack in Cedar Rapids to a four-branch fluid-power company.*
 
-You inherit your grandfather's tire shop and its one rusty bottle jack. Pump by
-pump and cylinder by cylinder, you grow it into a hydraulic empire. Along the way
+It's 1972 in Cedar Rapids, Iowa. **IFP MSI** opens its doors with one bottle jack and a gear pump. Pump by
+pump and cylinder by cylinder, you grow it into a hydraulic empire, then expand from Iowa to North, West and South. Along the way
 you'll balance **flow**, **pressure** and **heat**, the same trade-offs a real
 fluid-power engineer deals with.
 

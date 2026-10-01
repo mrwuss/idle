@@ -13,7 +13,8 @@
 - [x] Headless balance simulator (`tools/simulate.js`)
 - [x] Design docs and sketches
 - [x] Company tab placeholder: all eleven departments, their unlock conditions and the Pak chain (no mechanics yet)
-- [x] Territory map placeholder: 4 regions, 13 states + Gulf offshore, branch unlock conditions
+- [x] Territory map: 4 regions, 13 states + Gulf offshore
+- [x] Company named IFP MSI; locations unlock in order as you grow (Iowa → North → West → South), announced, kept through Overhaul
 
 ## v0.2 — Departments (the business layer)
 

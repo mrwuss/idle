@@ -10,4 +10,5 @@
   counts over fresh defaults.
 - Design intent lives in `docs/`; keep it in sync when mechanics change.
 - Departments and territory (`DEPARTMENTS`, `PAKS`, `REGIONS`, `STATES` in data.js) are a design scaffold: the Company
-  tab displays them, but they don't affect income yet. The plans are in `docs/DEPARTMENTS.md` and `docs/TERRITORY.md`.
+  tab displays them, but they don't affect income yet. Location unlocks
+  (`state.locations`, `checkLocations()`) are real and persist through Overhaul. The plans are in `docs/DEPARTMENTS.md` and `docs/TERRITORY.md`.

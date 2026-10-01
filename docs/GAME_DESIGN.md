@@ -11,9 +11,11 @@
 
 ## 1. Elevator pitch
 
-You inherit your grandfather's tire shop and its one rusty bottle jack. Pump by
-pump and cylinder by cylinder, you grow it into a hydraulic empire that lifts
-ships, forges steel and eventually starts moving mountains.
+It's 1972 in Cedar Rapids, Iowa. You are **IFP MSI**, and you open with one
+bottle jack and a gear pump. Pump by pump and cylinder by cylinder, you grow it
+into a hydraulic empire that lifts ships, forges steel and eventually starts
+moving mountains. Along the way you open new locations, Iowa → North → West →
+South, across 13 states and the Gulf.
 
 Most idle games give you one number that goes up. Pressure Works gives you a
 **machine you have to keep in balance**: pumps make **flow**, the hose rating
@@ -185,7 +187,7 @@ for up to 24 h. A toast summarises what the shop earned while they were away.
 
 | Era | Name | Rough time (first run) | Signature content | New idea introduced |
 |---|---|---|---|---|
-| I | **The Tire Shop** | 0–10 min | Bottle jacks, log splitters, gear pumps | Flow vs demand, the hand pump |
+| I | **The First Shop** | 0–10 min | Bottle jacks, log splitters, gear pumps | Flow vs demand, the hand pump |
 | II | **The Job Shop** | 10–45 min | Shop presses, excavator arms, vane & axial pumps | Pressure tiers, heat, first research |
 | III | **The Factory** | 45 min–1.5 h | Injection molding, forging presses, radial pumps | Cooling wall, proportional & servo control |
 | IV | **Heavy Civil** | 1.5 h+ / run 2 | Ship lifts, load-sensing pumps | Overhaul and Patents, automation |

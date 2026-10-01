@@ -33,6 +33,7 @@
       accCharge: 0,
       temp: C.ambientF,
       surgeLeft: 0,
+      locations: { hq: true }, // unlocked branches; kept through Overhaul
       time: 0,
       strokes: 0,
       lastSeen: Date.now(),
@@ -282,7 +283,7 @@
     if (!canOverhaul(s)) return false;
     const keep = {
       patents: s.patents + overhaulGain(s), lifetime: s.lifetime,
-      overhauls: s.overhauls + 1, strokes: s.strokes, time: s.time,
+      overhauls: s.overhauls + 1, strokes: s.strokes, time: s.time, locations: s.locations,
     };
     Object.assign(s, newState(), keep);
     return true;
@@ -298,7 +299,22 @@
       || (o.overhauls != null && s.overhauls >= o.overhauls);
   }
   const departmentOpen = (s, dept) => opensMet(s, dept.opens);
-  const regionOpen = (s, region) => opensMet(s, region.opens);
+  /** Locations unlock in REGIONS order: each needs the previous one first. */
+  function regionOpen(s, region) {
+    if (s.locations[region.id]) return true;
+    const i = DATA.REGIONS.indexOf(region);
+    return (i === 0 || !!s.locations[DATA.REGIONS[i - 1].id]) && opensMet(s, region.opens);
+  }
+  /** Records newly reached locations and returns them (for announcements). */
+  function checkLocations(s) {
+    const opened = [];
+    for (const r of DATA.REGIONS) {
+      if (s.locations[r.id] || !regionOpen(s, r)) continue;
+      s.locations[r.id] = true;
+      opened.push(r);
+    }
+    return opened;
+  }
   /** Current era index: the latest era any open department belongs to. */
   function currentEra(s) {
     return Math.max(0, ...DATA.DEPARTMENTS.filter((d) => departmentOpen(s, d)).map((d) => d.era));
@@ -327,7 +343,7 @@
     bulkCost, maxAffordable, isUnlocked, quote, buy,
     nextTier, canUpgradeTier, upgradeTier, accCapacity, accUpgradeCost, upgradeAccumulator,
     techAvailable, research, click, canSurge, surge,
-    patentsTotal, overhaulGain, canOverhaul, overhaul, opensMet, departmentOpen, regionOpen, currentEra,
+    patentsTotal, overhaulGain, canOverhaul, overhaul, opensMet, departmentOpen, regionOpen, checkLocations, currentEra,
     serialize, deserialize,
   };
   root.PW = root.PW || {};
