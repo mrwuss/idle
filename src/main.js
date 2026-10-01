@@ -84,9 +84,20 @@
   $('btn-mute').addEventListener('click', () => { SFX.setMuted(!SFX.muted); showMute(); SFX.play('tab', 0.6); });
   showMute();
 
-  $('btn-overhaul').addEventListener('click', () => {
+  // Destructive buttons ask for a second click instead of confirm(), which
+  // some embedded viewers block (it silently returns false there).
+  function armed(btn, prompt) {
+    if (btn.dataset.armed === '1') { clearTimeout(btn._disarm); btn.dataset.armed = ''; btn.textContent = btn._label; return true; }
+    btn._label = btn.textContent;
+    btn.dataset.armed = '1';
+    btn.textContent = prompt;
+    btn._disarm = setTimeout(() => { btn.dataset.armed = ''; btn.textContent = btn._label; }, 4000);
+    return false;
+  }
+
+  $('btn-overhaul').addEventListener('click', (ev) => {
     const gain = E.overhaulGain(state);
-    if (!confirm(`Overhaul the shop for ${gain} patent(s)? Cash, equipment and research are reset.`)) return;
+    if (!armed(ev.currentTarget, `Click again: overhaul for ${gain} patent${gain === 1 ? '' : 's'}`)) return;
     if (E.overhaul(state)) {
       SFX.play('overhaul');
       save();
@@ -111,8 +122,8 @@
       UI.toast('That does not look like an IFP MSI save.');
     }
   });
-  $('btn-reset').addEventListener('click', () => {
-    if (!confirm('Erase everything, including patents? This cannot be undone.')) return;
+  $('btn-reset').addEventListener('click', (ev) => {
+    if (!armed(ev.currentTarget, 'Click again to erase everything')) return;
     state = E.newState();
     save();
     render();
