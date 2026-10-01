@@ -17,7 +17,7 @@ There's no build step. Open `index.html` in a browser, or serve the folder:
 python3 -m http.server 8000   # then visit http://localhost:8000
 ```
 
-**Controls:** `Space` strokes the hand pump · `S` fires Surge · progress autosaves every 10 s.
+**Controls:** `Space` strokes the hand pump · `S` fires Surge · `M` mutes sound · progress autosaves every 10 s.
 
 ## How it works (in 30 seconds)
 
@@ -38,6 +38,7 @@ style.css           all styling
 src/data.js         every tunable number (pumps, actuators, tiers, coolers, tech, constants)
 src/engine.js       pure game logic, no DOM; shared by the browser and the simulator
 src/format.js       number/time formatting
+src/audio.js        sound effects + mute (clips in assets/audio, see CREDITS.md)
 src/ui.js           rendering, gauges, animation
 src/main.js         load/save, game loop, input
 tools/simulate.js   headless balance simulator (a greedy bot plays the real engine)
@@ -54,6 +55,7 @@ docs/               design documents and sketches
 | [ECONOMY.md](docs/ECONOMY.md) | Formulas, content tables, pacing targets vs simulated results |
 | [TECH_TREE.md](docs/TECH_TREE.md) | The R&D tree (diagram, effects, real-world background) |
 | [ROADMAP.md](docs/ROADMAP.md) | Milestones and open questions |
+| [ASSETS.md](docs/ASSETS.md) | Art direction, sound effects in use, and the Kenney packs we reviewed |
 | [sketches/](docs/sketches/) | Wireframes, a circuit-to-gameplay map, the era map, a departments mockup |
 
 ## Balance simulator

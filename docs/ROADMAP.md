@@ -39,7 +39,8 @@ Design: [TERRITORY.md](TERRITORY.md)
 ## v0.3 — Make it feel good
 
 - [ ] First-time-user guidance: highlight the gear pump and jack, explain the flow bar on first starvation, explain heat on first overheat
-- [ ] Sound: pump whine tied to flow, relief squeal, Surge thunk (with a mute toggle)
+- [x] Sound effects (Kenney CC0) with a mute toggle: stroke, buy, upgrade, research, Surge, overheat, new location, Overhaul
+- [ ] Ambient sound: pump whine tied to flow, relief squeal while dumping
 - [ ] Number popups on actuators, a screen shake on Surge
 - [ ] "Buy until next milestone" quantity option
 - [ ] Achievements (first 1,000 psi, deadheading for 60 s, 100 jacks…)
