@@ -1,0 +1,418 @@
+/*
+ * Pressure Works — DOM rendering. Reads state + engine, never mutates state
+ * except through the handlers main.js passes in.
+ */
+(function (root) {
+  'use strict';
+
+  const E = root.PW.engine;
+  const { fmt, fmtTime } = root.PW.format;
+  const { PUMPS, ACTUATORS, COOLERS, TECH, TIERS } = E.DATA;
+  const $ = (id) => document.getElementById(id);
+  const SVGNS = 'http://www.w3.org/2000/svg';
+
+  // ---- Icons (40×40, line-art in the spirit of ISO 1219 symbols) -----------
+
+  const ICONS = {
+    gear: '<circle cx="14" cy="20" r="9"/><circle cx="27" cy="20" r="7"/><circle class="solid" cx="14" cy="20" r="2"/><circle class="solid" cx="27" cy="20" r="2"/>',
+    vane: '<circle cx="20" cy="20" r="14"/><circle cx="22" cy="20" r="8"/><path d="M22 12 V7 M30 20 h4 M22 28 v5 M14 20 h-7"/>',
+    axial: '<rect x="6" y="12" width="22" height="16"/><path class="accent" d="M30 8 L36 32"/><path d="M8 16 h18 M8 20 h18 M8 24 h18"/>',
+    radial: '<circle cx="20" cy="20" r="6"/><path d="M20 14 V4 M20 26 V36 M14 20 H4 M26 20 H36 M15.5 15.5 L9 9 M24.5 24.5 L31 31 M24.5 15.5 L31 9 M15.5 24.5 L9 31"/>',
+    ls: '<circle cx="20" cy="20" r="13"/><path class="solid" d="M20 8 L14 18 H26 Z"/><path class="accent" d="M8 32 L32 8 M27 8 H32 V13"/>',
+    dd: '<circle cx="20" cy="20" r="14"/><circle class="solid" cx="20" cy="10" r="2"/><circle class="solid" cx="29" cy="17" r="2"/><circle class="solid" cx="26" cy="28" r="2"/><circle class="solid" cx="14" cy="28" r="2"/><circle class="solid" cx="11" cy="17" r="2"/><path class="accent" d="M21 15 L17 21 H23 L19 27"/>',
+    jack: '<rect x="10" y="30" width="20" height="6"/><rect x="13" y="16" width="14" height="14"/><rect x="17" y="6" width="6" height="10"/><path class="accent" d="M14 6 H26"/>',
+    splitter: '<circle cx="12" cy="20" r="8"/><circle cx="12" cy="20" r="3"/><path class="accent" d="M20 20 L34 12 V28 Z"/><path d="M34 20 H38"/>',
+    press: '<path d="M6 36 V6 H34 V36 M4 36 H36"/><rect x="16" y="6" width="8" height="10"/><rect class="solid" x="13" y="16" width="14" height="4"/><rect x="12" y="28" width="16" height="8"/>',
+    excavator: '<path d="M4 34 H18 V26 H8 Z"/><path class="accent" d="M14 26 L22 10 L33 18"/><path d="M33 18 L36 28 L28 28 Z"/>',
+    molding: '<rect x="4" y="12" width="16" height="16"/><rect x="20" y="16" width="10" height="8"/><path class="accent" d="M30 20 H36"/><path d="M8 28 V34 M16 28 V34"/>',
+    forge: '<path d="M8 30 H32 L28 24 H12 Z M16 30 V36 M24 30 V36"/><rect x="14" y="4" width="12" height="10"/><path class="accent" d="M20 14 V20 M14 20 H26"/>',
+    shiplift: '<path d="M6 22 H34 L30 28 H10 Z"/><path d="M14 22 V16 H24 V22"/><path d="M4 34 H36"/><path class="accent" d="M8 34 V28 M32 34 V28"/>',
+    tectonic: '<path d="M4 34 L16 12 L22 22 L28 14 L36 34 Z"/><path class="accent" d="M2 22 L8 22 M5 19 L8 22 L5 25 M38 22 L32 22 M35 19 L32 22 L35 25"/>',
+    fan: '<circle cx="20" cy="20" r="15"/><path class="accent" d="M20 20 C20 10 28 8 28 12 Z M20 20 C30 20 32 28 28 28 Z M20 20 C20 30 12 32 12 28 Z M20 20 C10 20 8 12 12 12 Z"/>',
+    shell: '<rect x="6" y="12" width="28" height="16" rx="8"/><path class="accent" d="M8 17 H32 M8 20 H32 M8 23 H32"/><path d="M14 12 V6 M26 28 V34"/>',
+    plate: '<path d="M10 6 V34 M15 6 V34 M20 6 V34 M25 6 V34 M30 6 V34"/><path class="accent" d="M6 12 H34 M6 28 H34"/>',
+    chiller: '<path class="accent" d="M20 4 V36 M6 12 L34 28 M6 28 L34 12"/><path d="M16 7 L20 11 L24 7 M16 33 L20 29 L24 33"/>',
+  };
+  const icon = (id) => `<svg class="item-icon" viewBox="0 0 40 40" aria-hidden="true">${ICONS[id] || ''}</svg>`;
+
+  // ---- Gauges ---------------------------------------------------------------
+
+  function makeGauge(fig, unit) {
+    const svg = document.createElementNS(SVGNS, 'svg');
+    svg.setAttribute('viewBox', '0 0 120 102');
+    fig.prepend(svg);
+    const cx = 60, cy = 56, r = 44;
+    const ang = (f) => (-225 + 270 * f) * Math.PI / 180;   // 0..1 → radians, 7:30 → 4:30
+    const pt = (f, rr) => [cx + rr * Math.cos(ang(f)), cy + rr * Math.sin(ang(f))];
+    const arc = (f0, f1, rr) => {
+      const [x0, y0] = pt(f0, rr), [x1, y1] = pt(f1, rr);
+      return `M${x0} ${y0} A${rr} ${rr} 0 ${(f1 - f0) * 270 > 180 ? 1 : 0} 1 ${x1} ${y1}`;
+    };
+    svg.innerHTML = `<circle class="face" cx="${cx}" cy="${cy}" r="${r + 4}"/>
+      <path class="zone" stroke="var(--pressure)" />
+      <g class="ticks"></g>
+      <text class="readout" x="${cx}" y="${cy + 33}"></text>
+      <text class="unit" x="${cx}" y="${cy + 42}">${unit}</text>
+      <line class="g-needle" x1="${cx}" y1="${cy}" x2="${cx}" y2="${cy - r + 6}" style="transform-origin:${cx}px ${cy}px"/>
+      <circle class="hub" cx="${cx}" cy="${cy}" r="4"/>`;
+    const zone = svg.querySelector('.zone'), ticks = svg.querySelector('.ticks');
+    const needle = svg.querySelector('.g-needle'), readout = svg.querySelector('.readout');
+    let lastScale = null;
+    return {
+      set(value, min, max, zoneFrom, label) {
+        const key = `${min}|${max}|${zoneFrom}`;
+        if (key !== lastScale) {
+          lastScale = key;
+          let html = '';
+          for (let i = 0; i <= 10; i++) {
+            const f = i / 10, major = i % 5 === 0;
+            const [x0, y0] = pt(f, r - (major ? 8 : 4)), [x1, y1] = pt(f, r);
+            html += `<line class="tick${major ? ' major' : ''}" x1="${x0}" y1="${y0}" x2="${x1}" y2="${y1}"/>`;
+            if (major) {
+              const [tx, ty] = pt(f, r - 15);
+              html += `<text class="scale" x="${tx}" y="${ty + 2}">${fmt(min + (max - min) * f, 0)}</text>`;
+            }
+          }
+          ticks.innerHTML = html;
+          const zf = Math.min(1, Math.max(0, (zoneFrom - min) / (max - min)));
+          zone.setAttribute('d', zf < 1 ? arc(zf, 1, r - 3) : '');
+        }
+        const f = Math.min(1.02, Math.max(0, (value - min) / (max - min)));
+        needle.style.transform = `rotate(${-135 + 270 * f}deg)`;
+        readout.textContent = label;
+      },
+    };
+  }
+
+  // ---- Builders ---------------------------------------------------------------
+
+  const rows = { pump: {}, actuator: {}, cooler: {} };
+
+  function buildList(container, kind, items, onBuy) {
+    container.innerHTML = '';
+    for (const it of items) {
+      const el = document.createElement('div');
+      el.className = 'item';
+      el.innerHTML = `${icon(it.id)}
+        <div class="item-name">${it.name} <span class="item-count"></span></div>
+        <div class="item-stats"></div>
+        <button class="btn"></button>
+        <div class="item-milestone"><div></div></div>
+        <div class="item-flavor">${it.flavor || ''}</div>`;
+      el.querySelector('.btn').addEventListener('click', () => onBuy(kind, it.id));
+      container.appendChild(el);
+      rows[kind][it.id] = {
+        el, count: el.querySelector('.item-count'), stats: el.querySelector('.item-stats'),
+        btn: el.querySelector('.btn'), ms: el.querySelector('.item-milestone'), msBar: el.querySelector('.item-milestone div'),
+      };
+    }
+  }
+
+  const techEls = {};
+  function techDepth(id, memo = {}) {
+    if (memo[id] != null) return memo[id];
+    const t = TECH.find((x) => x.id === id);
+    return (memo[id] = t.requires.length ? 1 + Math.max(...t.requires.map((r) => techDepth(r, memo))) : 0);
+  }
+  function buildTech(container, onResearch) {
+    const cols = [];
+    for (const t of TECH) (cols[techDepth(t.id)] ||= []).push(t);
+    container.innerHTML = '';
+    cols.forEach((list, i) => {
+      const col = document.createElement('div');
+      col.className = 'tech-col';
+      col.innerHTML = `<h4>Stage ${i + 1}</h4>`;
+      for (const t of list) {
+        const b = document.createElement('button');
+        b.className = 'tech';
+        b.innerHTML = `<span class="t-name">${t.name}</span><span class="t-desc">${t.desc}</span><span class="t-cost"></span>`;
+        b.addEventListener('click', () => onResearch(t.id));
+        col.appendChild(b);
+        techEls[t.id] = { el: b, cost: b.querySelector('.t-cost') };
+      }
+      container.appendChild(col);
+    });
+  }
+
+  // ---- Init ---------------------------------------------------------------
+
+  let gP, gT, ui = { tab: 'actuators', qty: 1 }, handlers;
+
+  function init(h) {
+    handlers = h;
+    gP = makeGauge($('g-pressure'), 'PSI');
+    gT = makeGauge($('g-temp'), '°F');
+    buildList($('list-actuators'), 'actuator', ACTUATORS, h.buy);
+    buildList($('list-pumps'), 'pump', PUMPS, h.buy);
+    buildList($('list-coolers'), 'cooler', COOLERS, h.buy);
+    buildTech($('tech-tree'), h.research);
+
+    document.querySelectorAll('.tabs [data-tab]').forEach((b) =>
+      b.addEventListener('click', () => setTab(b.dataset.tab)));
+    document.querySelectorAll('#buyqty [data-qty]').forEach((b) =>
+      b.addEventListener('click', () => {
+        ui.qty = b.dataset.qty === 'max' ? 'max' : Number(b.dataset.qty);
+        document.querySelectorAll('#buyqty [data-qty]').forEach((x) => x.setAttribute('aria-checked', x === b));
+        h.qtyChanged && h.qtyChanged(ui.qty);
+      }));
+  }
+
+  function setTab(tab) {
+    ui.tab = tab;
+    document.querySelectorAll('.tabs [data-tab]').forEach((b) => b.setAttribute('aria-selected', b.dataset.tab === tab));
+    document.querySelectorAll('.tab-body').forEach((b) => (b.hidden = b.dataset.body !== tab));
+    $('buyqty').hidden = !['actuators', 'pumps', 'system'].includes(tab);
+  }
+
+  // ---- Render (≈5×/s) ---------------------------------------------------------
+
+  function quoteFor(s, kind, id) {
+    const q = E.quote(s, kind, id, ui.qty);
+    return { ...q, ok: q.cost <= s.cash };
+  }
+
+  function renderList(s, d, kind, items, describe) {
+    const bucket = { pump: 'pumps', actuator: 'actuators', cooler: 'coolers' }[kind];
+    let shownLocked = false;
+    for (const it of items) {
+      const r = rows[kind][it.id], n = s[bucket][it.id];
+      const unlocked = E.isUnlocked(s, kind, it.id);
+      // Show everything unlocked plus a single locked teaser.
+      r.el.hidden = !unlocked && shownLocked && n === 0;
+      if (!unlocked && n === 0) shownLocked = true;
+      r.el.classList.toggle('locked', !unlocked);
+      r.count.textContent = n ? `×${n}` : '';
+      if (!unlocked) {
+        r.stats.textContent = lockReason(s, kind, it);
+        r.btn.disabled = true;
+        r.btn.innerHTML = 'Locked';
+        r.ms.hidden = true;
+        continue;
+      }
+      r.stats.textContent = describe(it, n);
+      const q = quoteFor(s, kind, it.id);
+      r.btn.disabled = !q.ok;
+      r.btn.innerHTML = `$${fmt(q.cost)}<small>buy ${q.qty}</small>`;
+      if (kind !== 'cooler') {
+        const next = E.nextMilestone(n), prev = [0, ...E.DATA.CONSTANTS.milestones].filter((m) => m <= n).pop();
+        r.ms.hidden = !next;
+        if (next) {
+          r.msBar.style.width = `${((n - prev) / (next - prev)) * 100}%`;
+          r.ms.title = `×2 output at ${next} owned`;
+        }
+      } else r.ms.hidden = true;
+    }
+  }
+
+  function lockReason(s, kind, it) {
+    if (it.requires && !s.tech[it.requires]) return `Requires research: ${TECH.find((t) => t.id === it.requires).name}`;
+    if (kind === 'actuator') {
+      const tier = TIERS.find((t) => t.psi >= it.psi);
+      return `Needs ${fmt(it.psi)} psi — upgrade to ${tier ? tier.name : 'a higher rating'}`;
+    }
+    return 'Locked';
+  }
+
+  function render(s) {
+    const d = E.derive(s);
+    const m = d.m;
+
+    // top bar
+    $('r-cash').textContent = '$' + fmt(s.cash);
+    $('r-income').textContent = `+$${fmt(d.income)}/s`;
+    $('r-kh').textContent = fmt(s.kh);
+    $('r-khrate').textContent = `+${fmt(d.khRate)}/s`;
+    $('r-patents-wrap').hidden = s.patents === 0 && !E.canOverhaul(s);
+    $('r-patents').textContent = fmt(s.patents);
+    $('r-patentbonus').textContent = `+${fmt((m.patentMult - 1) * 100)}% income`;
+
+    // machine panel
+    $('tier-name').textContent = `${TIERS[s.tier].name} · ${fmt(d.psi)} psi`;
+    $('m-flow-text').textContent = `${fmt(d.supply)} / ${fmt(d.demand)} GPM`;
+    const flowMax = Math.max(d.supply, d.demand, 1) * 1.1;
+    $('m-flow').style.width = `${(d.supply / flowMax) * 100}%`;
+    $('m-flow').classList.toggle('starved', d.utilization < 1);
+    $('m-flow-demand').style.left = `${(d.demand / flowMax) * 100}%`;
+    const accFrac = s.accCharge / d.accCap;
+    $('m-acc-text').textContent = `${fmt(s.accCharge)} / ${fmt(d.accCap)} gal`;
+    $('m-acc').style.width = `${accFrac * 100}%`;
+    $('m-acc').classList.toggle('full', accFrac >= 0.999);
+
+    const tMax = Math.max(260, d.tempLimit + 80);
+    gT.set(s.temp, 60, tMax, d.tempLimit, `${Math.round(s.temp)}°`);
+
+    $('stroke-sub').textContent = `+$${fmt(E.DATA.CONSTANTS.clickBase + m.clickPct * d.income)} · +${E.DATA.CONSTANTS.clickGal} gal`;
+    const surgeBtn = $('btn-surge');
+    surgeBtn.disabled = !E.canSurge(s);
+    surgeBtn.classList.toggle('active', d.surging);
+    $('surge-sub').textContent = d.surging ? `×${m.surgeMult} income · ${Math.ceil(s.surgeLeft)}s`
+      : E.canSurge(s) ? `Dump for ×${m.surgeMult} income, ${E.DATA.CONSTANTS.surgeSeconds}s`
+      : m.autoSurge ? 'PLC fires when full' : `Charging… ${Math.floor(accFrac * 100)}%`;
+
+    renderAlerts(s, d);
+
+    // lists (only the visible tab, plus badges)
+    if (ui.tab === 'actuators') {
+      renderList(s, d, 'actuator', ACTUATORS, (a, n) => {
+        const each = a.rate * Math.sqrt(d.psi / a.psi) * E.milestoneMult(n) * m.actMult * m.patentMult;
+        return `${fmt(a.gpm)} GPM · ≥${fmt(a.psi)} psi · $${fmt(each)}/s each` +
+          (n ? ` · total $${fmt(d.perActuator[a.id] * d.utilization * d.thermalMult * d.surgeMult * m.patentMult)}/s` : '');
+      });
+    }
+    if (ui.tab === 'pumps') {
+      renderList(s, d, 'pump', PUMPS, (p, n) => {
+        const each = p.gpm * m.pumpMult * E.milestoneMult(n);
+        return `${fmt(each)} GPM each · η ${Math.round(p.eff * 100)}%` + (n ? ` · total ${fmt(each * n)} GPM` : '');
+      });
+    }
+    if (ui.tab === 'system') renderSystem(s, d);
+    if (ui.tab === 'tech') renderTech(s);
+    if (ui.tab === 'overhaul') renderOverhaul(s);
+    if (ui.tab === 'settings') renderStats(s, d);
+
+    const ready = TECH.filter((t) => E.techAvailable(s, t.id) && s.kh >= t.cost).length;
+    $('tech-badge').hidden = !ready;
+    $('tech-badge').textContent = ready;
+    $('tab-overhaul').classList.toggle('locked', !E.canOverhaul(s) && s.patents === 0);
+    return d;
+  }
+
+  function renderAlerts(s, d) {
+    const out = [];
+    if (d.demand === 0) out.push(['warn', 'Nothing is connected. Buy a Bottle Jack Bay to start earning.']);
+    if (d.utilization < 1) out.push(['bad', `Flow-starved: actuators running at ${Math.round(d.utilization * 100)}%. Add pumps.`]);
+    if (d.toAcc < 0) out.push(['warn', `Accumulator is covering a ${fmt(-d.toAcc)} GPM shortfall.`]);
+    if (d.overRelief > 0) out.push(['warn', `Relief valve dumping ${fmt(d.overRelief)} GPM over the relief valve: ${fmt(d.reliefHP)} HP of heat.`]);
+    if (s.temp > d.tempLimit) out.push(['bad', `Oil at ${Math.round(s.temp)}°F and thinning: income ×${d.thermalMult.toFixed(2)}. Add cooling.`]);
+    else if (d.tempEq > d.tempLimit) out.push(['warn', `Oil heading for ${Math.round(Math.min(d.tempEq, 999))}°F, above the ${d.tempLimit}°F limit.`]);
+    if (d.surging) out.push(['good', `SURGE: accumulator dumping, income ×${d.m.surgeMult}.`]);
+    const html = out.map(([c, t]) => `<li class="${c}">${t}</li>`).join('');
+    const box = $('alerts');
+    if (box.innerHTML !== html) box.innerHTML = html;
+  }
+
+  function renderSystem(s, d) {
+    const next = E.nextTier(s), cm = d.m.costMult;
+    const ladder = TIERS.map((t, i) => `<span class="${i < s.tier ? 'done' : i === s.tier ? 'now' : ''}">${fmt(t.psi)}</span>`).join('');
+    let nextHtml = '<p class="muted">Maximum rating reached — for now.</p>';
+    if (next) {
+      const needs = next.requires && !s.tech[next.requires] ? TECH.find((t) => t.id === next.requires).name : null;
+      nextHtml = `<div class="card-row"><div>Next: <b>${next.name}</b> — ${fmt(next.psi)} psi
+        <div class="muted">${needs ? `Requires research: ${needs}` : 'Higher pressure unlocks new actuators and pays more for existing ones.'}</div></div>
+        <button class="btn" data-act="tier" ${E.canUpgradeTier(s) ? '' : 'disabled'}>$${fmt(next.cost * cm)}<small>upgrade</small></button></div>`;
+    }
+    setHtml('tier-box', `<div>Current: <b>${TIERS[s.tier].name}</b>, relief valve set to ${fmt(d.psi)} psi.</div>${nextHtml}<div class="ladder">${ladder}</div>`);
+
+    const accCost = E.accUpgradeCost(s);
+    setHtml('acc-box', `<div class="card-row"><div>Bladder size <b>${s.accLevel + 1}</b>: ${fmt(d.accCap)} gal
+      <div class="muted">Stores surplus flow. Covers shortfalls. When full, Surge dumps it for ×${d.m.surgeMult} income.</div></div>
+      <button class="btn" data-act="acc" ${s.cash >= accCost ? '' : 'disabled'}>$${fmt(accCost)}<small>×${E.DATA.CONSTANTS.accGrowth} capacity</small></button></div>`);
+
+    renderList(s, d, 'cooler', COOLERS, (c, n) =>
+      `+${fmt(c.k)} HP/°F each` + (n ? ` · total ${fmt(n * c.k)} HP/°F` : ''));
+    rows.cooler.fan.stats.textContent += ` · now rejecting ${fmt(d.heatHP)} HP (k=${fmt(d.k)})`;
+  }
+
+  function setHtml(id, html) {
+    const el = $(id);
+    if (el._html !== html) { el.innerHTML = html; el._html = html; }
+  }
+
+  function renderTech(s) {
+    for (const t of TECH) {
+      const { el, cost } = techEls[t.id];
+      const done = !!s.tech[t.id], avail = E.techAvailable(s, t.id), ready = avail && s.kh >= t.cost;
+      el.className = 'tech ' + (done ? 'done' : avail ? 'available' + (ready ? ' ready' : '') : 'locked');
+      el.disabled = !ready;
+      cost.textContent = done ? '✓ Researched' : avail ? `${fmt(t.cost)} KH` :
+        `${fmt(t.cost)} KH · needs ${t.requires.filter((r) => !s.tech[r]).map((r) => TECH.find((x) => x.id === r).name).join(', ')}`;
+    }
+  }
+
+  function renderOverhaul(s) {
+    const C = E.DATA.CONSTANTS;
+    $('ov-gain').textContent = fmt(E.overhaulGain(s));
+    const nextAt = (E.patentsTotal(s.lifetime) + 1) ** 2 * C.patentDivisor;
+    $('ov-detail').textContent = s.lifetime < C.overhaulMin
+      ? `Available once you have earned $${fmt(C.overhaulMin)} in total (so far $${fmt(s.lifetime)}).`
+      : `Lifetime earnings $${fmt(s.lifetime)}. Next patent at $${fmt(nextAt)}.`;
+    $('btn-overhaul').disabled = !E.canOverhaul(s);
+  }
+
+  function renderStats(s, d) {
+    const rows = [
+      ['Time on the clock', fmtTime(s.time)],
+      ['Hand-pump strokes', fmt(s.strokes)],
+      ['Earned this rebuild', '$' + fmt(s.runEarnings)],
+      ['Earned all time', '$' + fmt(s.lifetime)],
+      ['Overhauls', fmt(s.overhauls)],
+      ['Hydraulic power delivered', fmt(d.hydraulicHP) + ' HP'],
+      ['Heat generated', fmt(d.heatHP) + ' HP'],
+      ['Equilibrium temperature', Math.round(Math.min(d.tempEq, 9999)) + '°F'],
+    ];
+    setHtml('stats', rows.map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join(''));
+  }
+
+  // ---- Per-frame animation ---------------------------------------------------
+
+  const anim = { supply: 0, ret: 0, relief: 0, piston: 0, phase: 0 };
+  function animate(s, d, dt) {
+    if (!d) return;
+    const speed = (q) => (q > 0 ? 8 + 10 * Math.log10(1 + q) : 0);
+    anim.supply = (anim.supply + speed(d.supply) * dt) % 1200;
+    anim.ret = (anim.ret + speed(Math.min(d.supply, d.demand)) * dt) % 1200;
+    anim.relief = (anim.relief + speed(d.overRelief) * dt) % 1200;
+    document.querySelectorAll('.oil-supply, .oil-work').forEach((el) => (el.style.strokeDashoffset = -anim.supply));
+    document.querySelectorAll('.oil-return').forEach((el) => (el.style.strokeDashoffset = -anim.ret));
+    const relief = $('relief-oil');
+    relief.style.strokeDashoffset = -anim.relief;
+    relief.style.opacity = d.overRelief > 0 ? 1 : 0;
+
+    // Cylinder cycles faster with more delivered flow; stalls when starved.
+    const rate = d.demand > 0 ? (0.25 + 0.15 * Math.log10(1 + d.demand)) * d.utilization * (d.surging ? 2 : 1) : 0;
+    anim.phase += rate * dt * Math.PI * 2;
+    const x = (1 - Math.cos(anim.phase)) * 10;
+    $('cyl-piston').setAttribute('transform', `translate(${x} 0)`);
+
+    // Accumulator and tank
+    const accFrac = Math.min(1, s.accCharge / d.accCap);
+    const accH = 2 + accFrac * 26;
+    const acc = $('acc-fill');
+    acc.setAttribute('y', 34 - accH); acc.setAttribute('height', accH);
+    const heat = Math.min(1, Math.max(0, (s.temp - 80) / (d.tempLimit + 40 - 80)));
+    $('tank-oil').style.fill = `hsl(${42 - 40 * heat} ${90}% ${48 - 12 * heat}%)`;
+    $('cooler-sym').style.opacity = 0.5 + 0.5 * Math.min(1, (s.coolers.fan + s.coolers.shell + s.coolers.plate + s.coolers.chiller) / 3);
+
+    // Pressure needle wobbles with each actuator stroke.
+    const wobble = d.demand > 0 ? 0.88 + 0.1 * Math.abs(Math.sin(anim.phase)) : 0.6;
+    const shown = d.psi * (d.supply > 0 ? wobble * Math.min(1, 0.3 + d.utilization) : 0);
+    gP.set(shown, 0, niceMax(d.psi * 1.25), d.psi, fmt(shown, 0));
+    const frac = shown / niceMax(d.psi * 1.25);
+    $('mini-needle').setAttribute('transform', `rotate(${-180 + 270 * frac} 160 28)`);
+    $('brand-needle').style.transform = `rotate(${-80 + 120 * frac}deg)`;
+  }
+  function niceMax(v) {
+    const p = 10 ** Math.floor(Math.log10(v)), n = v / p;
+    return (n <= 1 ? 1 : n <= 2 ? 2 : n <= 2.5 ? 2.5 : n <= 5 ? 5 : 10) * p;
+  }
+
+  // ---- Small helpers used by main.js -----------------------------------------
+
+  function toast(msg, ms = 4000) {
+    const t = $('toast');
+    t.innerHTML = msg;
+    t.hidden = false;
+    clearTimeout(toast._t);
+    toast._t = setTimeout(() => (t.hidden = true), ms);
+  }
+  function floater(x, y, text) {
+    const f = document.createElement('div');
+    f.className = 'floater';
+    f.textContent = text;
+    f.style.left = `${x}px`; f.style.top = `${y}px`;
+    document.body.appendChild(f);
+    setTimeout(() => f.remove(), 900);
+  }
+
+  root.PW.ui = { init, render, animate, toast, floater, setTab, get qty() { return ui.qty; } };
+})(window);

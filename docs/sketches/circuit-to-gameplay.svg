@@ -1,0 +1,121 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1100 640" font-family="'Courier New', monospace">
+  <defs>
+    <pattern id="grid" width="20" height="20" patternUnits="userSpaceOnUse">
+      <path d="M20 0 H0 V20" fill="none" stroke="#2c5f8f" stroke-width="0.5"/>
+    </pattern>
+    <marker id="flow" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="8" markerHeight="8" orient="auto">
+      <path d="M0 0 L10 5 L0 10 Z" fill="#ffb000"/>
+    </marker>
+    <style>
+      .bp { fill: none; stroke: #e8f1ff; stroke-width: 2; }
+      .solid { fill: #e8f1ff; }
+      .p { fill: none; stroke: #ffb000; stroke-width: 3; }
+      .r { fill: none; stroke: #8fd0ff; stroke-width: 2.4; stroke-dasharray: 8 5; }
+      .hot { fill: none; stroke: #ff7b7b; stroke-width: 2.4; stroke-dasharray: 8 5; }
+      .t { fill: #e8f1ff; font-size: 13px; }
+      .lbl { fill: #9cc3ea; font-size: 11px; letter-spacing: 1px; }
+      .h { fill: #fff; font-size: 20px; font-weight: bold; letter-spacing: 2px; }
+      .boxt { fill: #ffd36b; font-size: 13px; font-weight: bold; }
+      .box { fill: #0b2e4f; stroke: #ffd36b; stroke-width: 1.2; }
+      .lead { fill: none; stroke: #ffd36b; stroke-width: 1; stroke-dasharray: 3 3; }
+    </style>
+  </defs>
+  <rect width="1100" height="640" fill="#0e3a63"/>
+  <rect width="1100" height="640" fill="url(#grid)"/>
+  <text class="h" x="30" y="44">CIRCUIT → GAMEPLAY</text>
+  <text class="lbl" x="30" y="64">Every symbol on the main-screen schematic is a game system. ISO 1219-style symbols.</text>
+
+  <!-- tank -->
+  <path class="bp" d="M120 520 V570 H300 V520"/>
+  <text class="lbl" x="186" y="590">RESERVOIR</text>
+  <!-- motor & pump -->
+  <circle class="bp" cx="90" cy="430" r="22"/><text class="t" x="84" y="435">M</text>
+  <path class="bp" d="M112 430 H138"/>
+  <circle class="bp" cx="170" cy="430" r="30"/>
+  <path class="solid" d="M170 402 L158 424 H182 Z"/>
+  <path class="p" d="M170 520 V462"/>
+  <path class="p" d="M170 400 V200 H780"/>
+  <!-- accumulator -->
+  <path class="p" d="M300 200 V170"/>
+  <rect class="bp" x="276" y="96" width="48" height="74" rx="24"/>
+  <path class="bp" d="M278 132 H322"/>
+  <path class="solid" d="M296 160 L300 152 L304 160 Z"/>
+  <!-- gauge -->
+  <path class="p" d="M400 200 V174"/>
+  <circle class="bp" cx="400" cy="156" r="18"/><path class="bp" d="M400 156 L410 144"/>
+  <!-- relief -->
+  <path class="p" d="M520 200 V270"/>
+  <rect class="bp" x="496" y="270" width="48" height="60"/>
+  <path class="bp" d="M520 278 V322 M512 312 L520 322 L528 312"/>
+  <path class="bp" d="M544 300 l8 -8 l8 16 l8 -16 l8 16 l8 -8"/>
+  <path class="hot" d="M520 330 V520 H300"/>
+  <!-- DCV -->
+  <rect class="bp" x="760" y="200" width="60" height="50"/>
+  <rect class="bp" x="820" y="200" width="60" height="50"/>
+  <path class="bp" d="M772 240 L808 210 M796 210 H808 V222 M832 210 L868 240 M856 240 H868 V228"/>
+  <path class="bp" d="M760 225 l-14 -8 v16 Z"/>
+  <!-- cylinder -->
+  <path class="p" d="M790 200 V130 H860"/>
+  <rect class="bp" x="860" y="100" width="150" height="60"/>
+  <rect class="solid" x="900" y="104" width="12" height="52"/>
+  <rect class="solid" x="912" y="124" width="140" height="12"/>
+  <path class="bp" d="M1052 108 V152"/>
+  <text class="lbl" x="1000" y="182">LOAD / WORK</text>
+  <!-- return through cooler & filter -->
+  <path class="r" d="M850 250 V470 H300"/>
+  <path class="bp" d="M680 440 L710 470 L680 500 L650 470 Z"/><path class="bp" d="M658 456 H702 M658 484 H702"/>
+  <path class="bp" d="M420 440 L450 470 L420 500 L390 470 Z"/><path class="bp" d="M405 455 L435 485" stroke-dasharray="4 3"/>
+  <text class="lbl" x="652" y="520">COOLER</text>
+  <text class="lbl" x="394" y="520">FILTER</text>
+
+  <!-- annotations -->
+  <path class="lead" d="M200 430 H240 V360 H246"/>
+  <rect class="box" x="246" y="332" width="210" height="56" rx="4"/>
+  <text class="boxt" x="256" y="352">PUMP = SUPPLY</text>
+  <text class="t" x="256" y="370">GPM · efficiency η</text>
+  <text class="t" x="256" y="384">(1−η) of its power → heat</text>
+
+  <path class="lead" d="M276 130 H210 V84"/>
+  <rect class="box" x="30" y="76" width="200" height="72" rx="4"/>
+  <text class="boxt" x="40" y="96">ACCUMULATOR</text>
+  <text class="t" x="40" y="114">stores surplus, covers</text>
+  <text class="t" x="40" y="128">shortfalls; full → SURGE</text>
+  <text class="t" x="40" y="142">×3–×4 income for 15 s</text>
+
+  <path class="lead" d="M418 156 H470 V132"/>
+  <rect class="box" x="430" y="76" width="220" height="56" rx="4"/>
+  <text class="boxt" x="440" y="96">PRESSURE RATING</text>
+  <text class="t" x="440" y="114">gates actuators; income</text>
+  <text class="t" x="440" y="128">× √(system psi / required)</text>
+
+  <path class="lead" d="M590 300 H620"/>
+  <rect class="box" x="620" y="276" width="220" height="70" rx="4"/>
+  <text class="boxt" x="630" y="296">RELIEF VALVE</text>
+  <text class="t" x="630" y="314">surplus with a full accum.</text>
+  <text class="t" x="630" y="328">dumps here = PURE HEAT</text>
+  <text class="t" x="630" y="342">(R&amp;D: unloading, LS)</text>
+
+  <path class="lead" d="M1010 130 H1040 V230"/>
+  <rect class="box" x="900" y="230" width="190" height="72" rx="4"/>
+  <text class="boxt" x="910" y="250">ACTUATOR = DEMAND</text>
+  <text class="t" x="910" y="268">needs GPM + min psi</text>
+  <text class="t" x="910" y="282">turns P×Q into $/s</text>
+  <text class="t" x="910" y="296">starved → runs slower</text>
+
+  <path class="lead" d="M710 470 H760 V540"/>
+  <rect class="box" x="700" y="540" width="250" height="70" rx="4"/>
+  <text class="boxt" x="710" y="560">COOLER = HEAT REJECTION</text>
+  <text class="t" x="710" y="578">k (HP/°F). T_eq = 80 + heat/k</text>
+  <text class="t" x="710" y="592">over the limit → income falls</text>
+  <text class="t" x="710" y="606">1%/°F (floor ×0.2)</text>
+
+  <path class="lead" d="M420 500 V540"/>
+  <rect class="box" x="330" y="540" width="130" height="56" rx="4" stroke-dasharray="5 3"/>
+  <text class="boxt" x="340" y="560">FILTER</text>
+  <text class="t" x="340" y="578">planned v0.3:</text>
+  <text class="t" x="340" y="592">contamination</text>
+
+  <!-- legend -->
+  <path class="p" d="M40 612 H80"/><text class="lbl" x="88" y="616">PRESSURE LINE</text>
+  <path class="r" d="M200 612 H240"/><text class="lbl" x="248" y="616">RETURN</text>
+</svg>

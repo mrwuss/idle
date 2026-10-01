@@ -1,0 +1,107 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 560" font-family="'Courier New', monospace">
+  <defs>
+    <pattern id="grid" width="20" height="20" patternUnits="userSpaceOnUse">
+      <path d="M20 0 H0 V20" fill="none" stroke="#2c5f8f" stroke-width="0.5"/>
+    </pattern>
+    <style>
+      .bp { fill: none; stroke: #e8f1ff; stroke-width: 1.6; }
+      .thin { fill: none; stroke: #9cc3ea; stroke-width: 1; }
+      .p { fill: none; stroke: #ffb000; stroke-width: 2.4; }
+      .h { fill: #fff; font-size: 18px; font-weight: bold; letter-spacing: 2px; }
+      .t { fill: #e8f1ff; font-size: 12px; }
+      .s { fill: #9cc3ea; font-size: 11px; }
+      .y { fill: #ffd36b; font-size: 12px; }
+      .r { fill: #ff9b9b; font-size: 11px; }
+      .tile { fill: #0b2e4f; stroke: #9cc3ea; stroke-width: 1; }
+    </style>
+  </defs>
+  <rect width="1200" height="560" fill="#0e3a63"/>
+  <rect width="1200" height="560" fill="url(#grid)"/>
+
+  <!-- Contracts board -->
+  <text class="h" x="30" y="40">A · CONTRACTS BOARD (v0.3)</text>
+  <rect class="bp" x="30" y="56" width="540" height="480"/>
+  <text class="s" x="44" y="80">Timed orders. Accept one at a time. Requirements check against the live system.</text>
+
+  <g>
+    <rect class="thin" x="44" y="94" width="512" height="120"/>
+    <text class="t" x="58" y="116" font-weight="bold">RIVERSIDE BEARINGS CO.</text><text class="s" x="440" y="116">⏱ 3:00</text>
+    <text class="t" x="58" y="136">"Press 400 bearings into housings."</text>
+    <text class="s" x="58" y="158">NEEDS  ≥ 2,000 psi   ≥ 40 GPM spare   Shop Press ×10</text>
+    <text class="y" x="58" y="180">PAYS   $45K  +  120 KH</text>
+    <rect class="bp" x="440" y="168" width="104" height="32"/><text class="t" x="466" y="189">ACCEPT</text>
+  </g>
+  <g>
+    <rect class="thin" x="44" y="224" width="512" height="120"/>
+    <text class="t" x="58" y="246" font-weight="bold">COUNTY ROADS DEPT.</text><text class="s" x="440" y="246">⏱ 8:00</text>
+    <text class="t" x="58" y="266">"Dig 2 km of drainage ditch."</text>
+    <text class="s" x="58" y="288">NEEDS  Excavator ×5 running   oil below 150°F</text>
+    <text class="y" x="58" y="310">PAYS   $600K  +  Contract Token</text>
+    <rect class="bp" x="440" y="298" width="104" height="32"/><text class="t" x="466" y="319">ACCEPT</text>
+  </g>
+  <g opacity="0.85">
+    <rect class="thin" x="44" y="354" width="512" height="100" stroke="#ffd36b"/>
+    <text class="t" x="58" y="376" font-weight="bold">IN PROGRESS: SAWMILL SUPPLY</text>
+    <rect class="thin" x="58" y="390" width="400" height="12" rx="6"/><rect x="58" y="390" width="250" height="12" rx="6" fill="#ffb000"/>
+    <text class="s" x="466" y="400">62%</text>
+    <text class="r" x="58" y="426">⚠ Progress pauses while flow-starved.</text>
+    <text class="s" x="58" y="444">Tip: Surge doubles contract progress too.</text>
+  </g>
+  <text class="s" x="44" y="480">Design notes: contracts give active players a goal beyond clicking;</text>
+  <text class="s" x="44" y="496">requirements teach the systems (e.g. "keep oil below X").</text>
+  <text class="s" x="44" y="512">Contract Tokens buy cosmetic paint jobs and rare blueprints.</text>
+
+  <!-- Circuit builder -->
+  <text class="h" x="610" y="40">B · CIRCUIT BUILDER (v0.4)</text>
+  <rect class="bp" x="610" y="56" width="560" height="480"/>
+  <text class="s" x="624" y="80">Per actuator line: drag valves into slots between the pump bus and the cylinder.</text>
+
+  <!-- grid of slots -->
+  <rect class="tile" x="640" y="110" width="90" height="70"/><text class="s" x="652" y="140">PUMP BUS</text><text class="y" x="652" y="160">120 GPM</text>
+  <path class="p" d="M730 145 H770"/>
+  <rect class="tile" x="770" y="110" width="90" height="70"/>
+  <path class="bp" d="M790 160 L840 130 M828 130 H840 V142"/><text class="s" x="780" y="174">FLOW CTRL</text>
+  <path class="p" d="M860 145 H900"/>
+  <rect class="tile" x="900" y="110" width="90" height="70" stroke="#ffd36b" stroke-dasharray="5 3"/>
+  <text class="s" x="920" y="150">+ slot</text>
+  <path class="p" d="M990 145 H1030"/>
+  <rect class="tile" x="1030" y="110" width="120" height="70"/>
+  <rect class="bp" x="1040" y="130" width="70" height="28"/><rect x="1058" y="132" width="6" height="24" fill="#e8f1ff"/><rect x="1064" y="141" width="60" height="6" fill="#e8f1ff"/>
+  <text class="s" x="1040" y="174">SHOP PRESS ×15</text>
+
+  <!-- palette -->
+  <text class="t" x="640" y="220" font-weight="bold">VALVE PALETTE</text>
+  <g>
+    <rect class="tile" x="640" y="232" width="250" height="62"/>
+    <text class="t" x="652" y="252">Regenerative circuit</text>
+    <text class="s" x="652" y="270">speed ×2, force ×0.5</text>
+    <text class="s" x="652" y="285">best on low-psi lines</text>
+  </g>
+  <g>
+    <rect class="tile" x="900" y="232" width="250" height="62"/>
+    <text class="t" x="912" y="252">Counterbalance valve</text>
+    <text class="s" x="912" y="270">no loss when slightly starved</text>
+    <text class="s" x="912" y="285">(util ≥ 90% counts as 100%)</text>
+  </g>
+  <g>
+    <rect class="tile" x="640" y="304" width="250" height="62"/>
+    <text class="t" x="652" y="324">Sequence valve</text>
+    <text class="s" x="652" y="342">two actuators share flow in turn:</text>
+    <text class="s" x="652" y="357">−50% demand, −30% income</text>
+  </g>
+  <g>
+    <rect class="tile" x="900" y="304" width="250" height="62"/>
+    <text class="t" x="912" y="324">Pressure-reducing valve</text>
+    <text class="s" x="912" y="342">run an old line below system psi:</text>
+    <text class="s" x="912" y="357">less heat, less income</text>
+  </g>
+
+  <!-- readout -->
+  <rect class="thin" x="640" y="386" width="510" height="90"/>
+  <text class="t" x="652" y="408" font-weight="bold">LINE READOUT</text>
+  <text class="s" x="652" y="428">before:  180 GPM   $1.4K/s   heat 22 HP</text>
+  <text class="y" x="652" y="446">after:   120 GPM   $1.6K/s   heat 15 HP   ▲ 14%</text>
+  <text class="s" x="652" y="464">Slots unlock via R&amp;D (Proportional Valves → 1, Servo → 2, …)</text>
+  <text class="s" x="624" y="504">Design notes: a light puzzle layer for players who like optimising,</text>
+  <text class="s" x="624" y="520">and it teaches real circuit types. Always optional: the defaults are fine.</text>
+</svg>

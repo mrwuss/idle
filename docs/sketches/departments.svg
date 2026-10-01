@@ -1,0 +1,159 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 700" font-family="'Courier New', monospace">
+  <defs>
+    <pattern id="grid" width="20" height="20" patternUnits="userSpaceOnUse">
+      <path d="M20 0 H0 V20" fill="none" stroke="#2c5f8f" stroke-width="0.5"/>
+    </pattern>
+    <style>
+      .bp { fill: none; stroke: #e8f1ff; stroke-width: 1.6; }
+      .thin { fill: none; stroke: #9cc3ea; stroke-width: 1; }
+      .pipe { fill: none; stroke: #36506b; stroke-width: 26; stroke-linecap: round; }
+      .oil { fill: none; stroke: #ffb000; stroke-width: 3; stroke-dasharray: 10 8; }
+      .h { fill: #fff; font-size: 20px; font-weight: bold; letter-spacing: 2px; }
+      .sub { fill: #fff; font-size: 14px; font-weight: bold; letter-spacing: 1px; }
+      .t { fill: #e8f1ff; font-size: 12px; }
+      .s { fill: #9cc3ea; font-size: 10.5px; }
+      .y { fill: #ffd36b; font-size: 11px; }
+      .r { fill: #ff9b9b; font-size: 11px; font-weight: bold; }
+      .valve { fill: #0b2e4f; stroke: #e8f1ff; stroke-width: 1.6; }
+      .valve.neck { stroke: #ff7b7b; stroke-width: 2.4; }
+      .box { fill: #0b2e4f; stroke: #9cc3ea; stroke-width: 1.2; }
+      .lead { fill: none; stroke: #9cc3ea; stroke-width: 1; stroke-dasharray: 3 3; }
+    </style>
+  </defs>
+  <rect width="1200" height="700" fill="#0e3a63"/>
+  <rect width="1200" height="700" fill="url(#grid)"/>
+  <text class="h" x="30" y="42">COMPANY TAB: THE ORDER LINE</text>
+  <text class="s" x="30" y="62">Orders flow left to right like oil. Each department is a valve. Opening width = capacity ÷ production. The narrowest valve is the bottleneck.</text>
+
+  <!-- support departments, above the pipe -->
+  <g>
+    <rect class="box" x="120" y="86" width="210" height="64" rx="4"/>
+    <text class="sub" x="132" y="106">MANAGEMENT</text>
+    <text class="s" x="132" y="124">span of control 180 / 210 staff</text>
+    <text class="y" x="132" y="140">Focus: Inside Sales ×2 (4:12)</text>
+    <path class="lead" d="M225 150 V230"/>
+  </g>
+  <g>
+    <rect class="box" x="350" y="86" width="210" height="64" rx="4"/>
+    <text class="sub" x="362" y="106">IT</text>
+    <text class="s" x="362" y="124">ERP v2: +15% all capacity</text>
+    <text class="s" x="362" y="140">offline 100% · auto-surge ON</text>
+    <path class="lead" d="M455 150 V230"/>
+  </g>
+  <g>
+    <rect class="box" x="580" y="86" width="210" height="64" rx="4"/>
+    <text class="sub" x="592" y="106">SAFETY</text>
+    <text class="y" x="592" y="124">142 DAYS WITHOUT INCIDENT</text>
+    <text class="s" x="592" y="140">streak bonus +14% · risk: low</text>
+    <path class="lead" d="M685 150 V230"/>
+  </g>
+  <g>
+    <rect class="box" x="810" y="86" width="270" height="64" rx="4"/>
+    <text class="sub" x="822" y="106">ENGINEERING</text>
+    <text class="s" x="822" y="124">Design 12 · Controls 5 · Project 8</text>
+    <text class="s" x="822" y="140">KH +38/s · Pak lines below ↓</text>
+    <path class="lead" d="M945 150 V230"/>
+  </g>
+
+  <!-- pipe -->
+  <path class="pipe" d="M40 260 H1160"/>
+  <path class="oil" d="M40 260 H1160"/>
+  <text class="s" x="40" y="236">LEADS IN</text>
+  <text class="s" x="1110" y="236">$ OUT</text>
+
+  <!-- valves: x center, half-opening -->
+  <!-- Outside Sales -->
+  <g transform="translate(110 260)">
+    <rect class="valve" x="-36" y="-34" width="72" height="68" rx="4"/>
+    <rect x="-30" y="-13" width="60" height="26" fill="#ffb000" opacity=".55"/>
+    <text class="t" x="-34" y="56">OUTSIDE</text><text class="t" x="-34" y="70">SALES</text>
+    <text class="s" x="-34" y="88">22 reps</text><text class="s" x="-34" y="102">5 markets</text>
+  </g>
+  <g transform="translate(260 260)">
+    <rect class="valve neck" x="-36" y="-34" width="72" height="68" rx="4"/>
+    <rect x="-30" y="-4" width="60" height="8" fill="#ff7b7b"/>
+    <text class="t" x="-34" y="56">INSIDE</text><text class="t" x="-34" y="70">SALES</text>
+    <text class="r" x="-34" y="88">BOTTLENECK</text><text class="s" x="-34" y="102">conv. 31%</text>
+  </g>
+  <g transform="translate(410 260)">
+    <rect class="valve" x="-36" y="-34" width="72" height="68" rx="4"/>
+    <rect x="-30" y="-11" width="60" height="22" fill="#ffb000" opacity=".55"/>
+    <text class="t" x="-34" y="56">PURCHASING</text>
+    <text class="s" x="-34" y="74">−18% costs</text>
+  </g>
+  <g transform="translate(560 260)">
+    <rect class="valve" x="-36" y="-34" width="72" height="68" rx="4"/>
+    <rect x="-30" y="-12" width="60" height="24" fill="#ffb000" opacity=".55"/>
+    <rect class="thin" x="-26" y="-30" width="52" height="12"/><rect x="-26" y="-30" width="34" height="12" fill="#8fd0ff"/>
+    <text class="t" x="-34" y="56">WAREHOUSE</text>
+    <text class="s" x="-34" y="74">stock 65%</text><text class="y" x="-34" y="88">RUSH SHIP ready</text>
+  </g>
+  <g transform="translate(720 260)">
+    <rect class="valve" x="-46" y="-40" width="92" height="80" rx="4" stroke="#ffb000"/>
+    <path class="bp" d="M-30 18 V-6 M-30 -6 L-20 -18 L-10 -6 Z"/><rect class="bp" x="0" y="-14" width="30" height="16"/><rect x="6" y="-12" width="4" height="12" fill="#e8f1ff"/><rect x="10" y="-8" width="24" height="4" fill="#e8f1ff"/>
+    <text class="t" x="-44" y="60">PRODUCTION</text>
+    <text class="s" x="-44" y="76">= the shop floor</text><text class="s" x="-44" y="90">(hydraulic layer)</text>
+  </g>
+  <g transform="translate(880 260)">
+    <rect class="valve" x="-36" y="-34" width="72" height="68" rx="4"/>
+    <rect x="-30" y="-10" width="60" height="20" fill="#ffb000" opacity=".55"/>
+    <text class="t" x="-34" y="56">QUALITY</text>
+    <text class="s" x="-34" y="74">yield 96%</text><text class="y" x="-34" y="88">ISO 9001 ✓</text>
+  </g>
+  <g transform="translate(1030 260)">
+    <rect class="valve" x="-36" y="-34" width="72" height="68" rx="4"/>
+    <rect x="-30" y="-12" width="60" height="24" fill="#ffb000" opacity=".55"/>
+    <text class="t" x="-34" y="56">ACCOUNTING</text>
+    <text class="s" x="-34" y="74">DSO 34 days</text><text class="s" x="-34" y="88">interest +0.2%/m</text>
+  </g>
+
+  <!-- alert -->
+  <rect class="thin" x="40" y="380" width="580" height="26"/><path d="M40 380 V406" stroke="#ff7b7b" stroke-width="3"/>
+  <text class="t" x="52" y="398">Inside Sales is the bottleneck: 1.2M/s of 3.1M/s production idle. Hire reps.</text>
+
+  <!-- Pak chain -->
+  <text class="h" x="30" y="450">PROJECT ENGINEERING: PAK LINES</text>
+  <text class="s" x="30" y="470">Each tier is built from the one below. Sell now, or hold to climb the chain.</text>
+
+  <g transform="translate(40 490)">
+    <rect class="box" x="0" y="0" width="300" height="180" rx="4"/>
+    <text class="sub" x="12" y="22">VALVE-PAK</text>
+    <text class="s" x="12" y="40">manifold + valves only</text>
+    <rect class="bp" x="40" y="60" width="140" height="56"/>
+    <rect class="bp" x="52" y="44" width="26" height="16"/><rect class="bp" x="96" y="44" width="26" height="16"/><rect class="bp" x="140" y="44" width="26" height="16"/>
+    <circle class="bp" cx="65" cy="96" r="5"/><circle class="bp" cx="109" cy="96" r="5"/><circle class="bp" cx="153" cy="96" r="5"/>
+    <text class="t" x="12" y="140">stock 14 · +2.1/min</text>
+    <text class="y" x="12" y="158">sells $40K each</text>
+    <rect class="bp" x="200" y="132" width="88" height="34"/><text class="t" x="222" y="153">SELL 14</text>
+  </g>
+  <path d="M345 580 h28" stroke="#ffd36b" stroke-width="2"/><path d="M382 580 l-10 -6 v12 Z" fill="#ffd36b"/>
+  <g transform="translate(390 490)">
+    <rect class="box" x="0" y="0" width="340" height="180" rx="4"/>
+    <text class="sub" x="12" y="22">BASE-PAK</text>
+    <text class="s" x="12" y="40">power unit: tank + pump + motor + Valve-Pak (+ cooler)</text>
+    <rect class="bp" x="30" y="90" width="150" height="40"/>
+    <circle class="bp" cx="70" cy="74" r="14"/><path d="M70 62 L64 72 H76 Z" fill="#e8f1ff"/>
+    <circle class="bp" cx="40" cy="74" r="12"/><text class="s" x="36" y="78">M</text>
+    <rect class="bp" x="100" y="66" width="56" height="20"/>
+    <path class="bp" d="M168 70 l8 8 l-8 8 l-8 -8 Z"/>
+    <text class="s" x="190" y="74">grade: AXIAL PISTON</text>
+    <text class="s" x="190" y="90">variant: cooled</text>
+    <text class="t" x="12" y="150">stock 3 · uses 1 Valve-Pak</text>
+    <text class="y" x="12" y="168">sells $480K each</text>
+    <rect class="bp" x="240" y="140" width="88" height="30"/><text class="t" x="256" y="160">BUILD 1</text>
+  </g>
+  <path d="M735 580 h28" stroke="#ffd36b" stroke-width="2"/><path d="M772 580 l-10 -6 v12 Z" fill="#ffd36b"/>
+  <g transform="translate(780 490)">
+    <rect class="box" x="0" y="0" width="380" height="180" rx="4" stroke="#ffd36b"/>
+    <text class="sub" x="12" y="22">SYS-PAK</text>
+    <text class="s" x="12" y="40">multi-function system: Base-Paks + controls</text>
+    <rect class="bp" x="20" y="56" width="60" height="34"/><rect class="bp" x="90" y="56" width="60" height="34"/><rect class="bp" x="160" y="56" width="60" height="34"/>
+    <rect class="bp" x="240" y="50" width="44" height="50"/><circle cx="252" cy="62" r="3" fill="#46c37b"/><circle cx="262" cy="62" r="3" fill="#ffd36b"/><path class="thin" d="M248 74 H276 M248 82 H276 M248 90 H270"/>
+    <path class="thin" d="M50 90 V104 H262 V100 M120 90 V104 M190 90 V104"/>
+    <text class="s" x="232" y="114">PLC panel</text>
+    <text class="t" x="12" y="134">PROJECT: Steel-mill descaler</text>
+    <text class="s" x="12" y="150">needs 3 Base-Paks · 6K psi · Ctrl ≥4</text>
+    <text class="y" x="12" y="168">pays $28M + 5K KH · due 22:00</text>
+    <rect class="bp" x="290" y="140" width="80" height="30"/><text class="t" x="304" y="160">ACCEPT</text>
+  </g>
+</svg>

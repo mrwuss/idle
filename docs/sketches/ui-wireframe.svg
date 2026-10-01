@@ -1,0 +1,152 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1290 780" font-family="'Courier New', monospace">
+  <defs>
+    <pattern id="grid" width="20" height="20" patternUnits="userSpaceOnUse">
+      <path d="M20 0 H0 V20" fill="none" stroke="#2c5f8f" stroke-width="0.5"/>
+    </pattern>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0 0 L10 5 L0 10 Z" fill="#ffd36b"/>
+    </marker>
+    <style>
+      .bp { fill: none; stroke: #e8f1ff; stroke-width: 1.6; }
+      .thin { fill: none; stroke: #9cc3ea; stroke-width: 1; }
+      .dash { stroke-dasharray: 6 4; }
+      .t { fill: #e8f1ff; font-size: 13px; }
+      .s { fill: #9cc3ea; font-size: 11px; }
+      .h { fill: #ffffff; font-size: 18px; font-weight: bold; letter-spacing: 2px; }
+      .note { fill: #ffd36b; font-size: 12px; }
+      .call { fill: none; stroke: #ffd36b; stroke-width: 1.2; marker-end: url(#arrow); }
+      .num { fill: #ffd36b; font-size: 12px; font-weight: bold; text-anchor: middle; }
+    </style>
+  </defs>
+  <rect width="1290" height="780" fill="#0e3a63"/>
+  <rect width="1290" height="780" fill="url(#grid)"/>
+
+  <!-- title block -->
+  <rect class="bp" x="880" y="700" width="300" height="64"/>
+  <path class="bp" d="M880 724 H1180 M1030 724 V764"/>
+  <text class="t" x="892" y="717" font-weight="bold">PRESSURE WORKS · MAIN SCREEN</text>
+  <text class="s" x="892" y="742">DWG: UI-001  REV: A</text>
+  <text class="s" x="892" y="757">SCALE: NTS</text>
+  <text class="s" x="1042" y="742">DRAWN: design v0.1</text>
+  <text class="s" x="1042" y="757">SHEET 1 OF 1</text>
+
+  <!-- browser frame -->
+  <rect class="bp" x="20" y="20" width="840" height="740" rx="6"/>
+  <!-- top bar -->
+  <rect class="bp" x="20" y="20" width="840" height="64"/>
+  <circle class="bp" cx="52" cy="52" r="16"/><path class="bp" d="M52 52 L62 42"/>
+  <text class="h" x="80" y="50">PRESSURE WORKS</text>
+  <text class="s" x="80" y="68">every empire starts with a bottle jack</text>
+  <rect class="bp" x="470" y="32" width="120" height="42"/><text class="s" x="480" y="47">CASH</text><text class="t" x="480" y="66">$3.83M  +3.6K/s</text>
+  <rect class="bp" x="600" y="32" width="120" height="42"/><text class="s" x="610" y="47">KNOW-HOW</text><text class="t" x="610" y="66">1.90K  +2.4/s</text>
+  <rect class="bp" x="730" y="32" width="120" height="42"/><text class="s" x="740" y="47">PATENTS</text><text class="t" x="740" y="66">12  +120%</text>
+
+  <!-- left machine panel -->
+  <rect class="bp" x="36" y="100" width="330" height="644"/>
+  <text class="t" x="48" y="122" font-weight="bold">SYSTEM</text>
+  <rect class="thin" x="250" y="108" width="106" height="20" rx="10"/><text class="s" x="258" y="122">2-wire · 3000psi</text>
+  <!-- schematic -->
+  <rect class="thin" x="48" y="134" width="306" height="180"/>
+  <rect class="bp" x="62" y="270" width="90" height="34"/><text class="s" x="88" y="298">TANK</text>
+  <circle class="bp" cx="92" cy="232" r="14"/><path class="bp" d="M92 219 L85 230 H99 Z"/>
+  <path class="thin" d="M92 270 V246 M92 218 V170 H300"/>
+  <rect class="bp" x="120" y="146" width="18" height="24" rx="9"/>
+  <rect class="bp" x="200" y="190" width="18" height="24"/><path class="thin" d="M209 170 V190 M209 214 V270"/>
+  <rect class="bp" x="270" y="154" width="54" height="22"/><rect class="bp" x="324" y="160" width="24" height="10" fill="#e8f1ff"/>
+  <path class="thin dash" d="M300 176 V250 H152"/>
+  <path class="bp" d="M250 240 l10 10 l-10 10 l-10 -10 Z"/>
+  <!-- gauges -->
+  <circle class="bp" cx="120" cy="380" r="52"/><path class="bp" d="M120 380 L150 350"/><text class="s" x="96" y="452">PRESSURE</text>
+  <circle class="bp" cx="282" cy="380" r="52"/><path class="bp" d="M282 380 L250 392"/><text class="s" x="258" y="452">OIL TEMP</text>
+  <path d="M310 345 A52 52 0 0 1 320 415" fill="none" stroke="#ff7b7b" stroke-width="5"/>
+  <!-- meters -->
+  <text class="s" x="48" y="484">FLOW</text><text class="s" x="270" y="484">452 / 731 GPM</text>
+  <rect class="thin" x="48" y="490" width="306" height="10" rx="5"/><rect x="48" y="490" width="190" height="10" rx="5" fill="#ff7b7b"/>
+  <path d="M290 486 V504" stroke="#fff" stroke-width="2"/>
+  <text class="s" x="48" y="522">ACCUMULATOR</text>
+  <rect class="thin" x="48" y="528" width="306" height="10" rx="5"/><rect x="48" y="528" width="120" height="10" rx="5" fill="#8fd0ff"/>
+  <!-- alerts -->
+  <rect class="thin" x="48" y="552" width="306" height="22"/><path d="M48 552 V574" stroke="#ff7b7b" stroke-width="3"/>
+  <text class="s" x="58" y="567">Flow-starved: actuators at 62%</text>
+  <rect class="thin" x="48" y="580" width="306" height="22"/><path d="M48 580 V602" stroke="#ffd36b" stroke-width="3"/>
+  <text class="s" x="58" y="595">Oil heading for 175°F (limit 160°F)</text>
+  <!-- buttons -->
+  <rect class="bp" x="48" y="620" width="176" height="56" rx="4"/><text class="t" x="66" y="646" font-weight="bold">STROKE HAND PUMP</text><text class="s" x="96" y="664">+$1 · +0.25 gal</text>
+  <rect class="bp" x="234" y="620" width="120" height="56" rx="4"/><text class="t" x="272" y="646" font-weight="bold">SURGE</text><text class="s" x="252" y="664">×4 for 15s</text>
+  <text class="s" x="48" y="700">[space] stroke   [S] surge</text>
+
+  <!-- right shop panel -->
+  <rect class="bp" x="380" y="100" width="466" height="644"/>
+  <path class="bp" d="M380 136 H846"/>
+  <text class="t" x="394" y="124" text-decoration="underline">ACTUATORS</text>
+  <text class="s" x="490" y="124">PUMPS</text><text class="s" x="550" y="124">SYSTEM</text><text class="s" x="616" y="124">R&amp;D(1)</text><text class="s" x="680" y="124">OVERHAUL</text><text class="s" x="760" y="124">LOGBOOK</text>
+  <text class="s" x="680" y="158">BUY [×1] ×10 ×100 MAX</text>
+  <!-- rows -->
+  <g>
+    <rect class="thin" x="394" y="170" width="438" height="76"/>
+    <rect class="bp" x="404" y="182" width="36" height="36"/><path class="thin" d="M410 212 H434 M414 212 V196 H430 V212 M419 196 V188 H425 V196"/>
+    <text class="t" x="452" y="192" font-weight="bold">BOTTLE JACK BAY  ×31</text>
+    <text class="s" x="452" y="210">1 GPM · ≥500 psi · $7.12/s each</text>
+    <rect class="thin" x="452" y="218" width="270" height="3"/><rect x="452" y="218" width="80" height="3" fill="#ffd36b"/>
+    <text class="s" x="452" y="238" font-style="italic">"Grandpa's tire shop…"</text>
+    <rect class="bp" x="738" y="184" width="84" height="34" rx="3"/><text class="t" x="756" y="200">$761</text><text class="s" x="756" y="212">buy 1</text>
+  </g>
+  <g>
+    <rect class="thin" x="394" y="254" width="438" height="76"/>
+    <rect class="bp" x="404" y="266" width="36" height="36"/>
+    <text class="t" x="452" y="276" font-weight="bold">LOG SPLITTER  ×20</text>
+    <text class="s" x="452" y="294">4 GPM · ≥1200 psi · $19.1/s each</text>
+    <rect class="bp" x="738" y="268" width="84" height="34" rx="3"/><text class="t" x="750" y="290">$2.45K</text>
+  </g>
+  <g>
+    <rect class="thin" x="394" y="338" width="438" height="76"/>
+    <rect class="bp" x="404" y="350" width="36" height="36"/>
+    <text class="t" x="452" y="360" font-weight="bold">SHOP PRESS  ×15</text>
+    <rect class="bp" x="738" y="352" width="84" height="34" rx="3"/><text class="t" x="750" y="374">$19.5K</text>
+  </g>
+  <g opacity="0.45">
+    <rect class="thin dash" x="394" y="422" width="438" height="76"/>
+    <rect class="bp" x="404" y="434" width="36" height="36"/>
+    <text class="t" x="452" y="444" font-weight="bold">SHIP LIFT</text>
+    <text class="s" x="452" y="462">needs 5,500 psi — upgrade to 6-Spiral</text>
+    <rect class="bp dash" x="738" y="436" width="84" height="34" rx="3"/><text class="t" x="752" y="458">LOCKED</text>
+  </g>
+  <text class="s" x="560" y="530">(only one locked teaser is shown)</text>
+
+  <!-- callouts -->
+  <circle cx="900" cy="140" r="11" fill="none" stroke="#ffd36b"/><text class="num" x="900" y="144">1</text>
+  <path class="call" d="M889 140 C 600 140, 420 190, 356 200"/>
+  <text class="note" x="918" y="136">LIVE SCHEMATIC: oil dashes move with GPM,</text>
+  <text class="note" x="918" y="152">cylinder strokes with work rate, relief line</text>
+  <text class="note" x="918" y="168">turns red when dumping, tank darkens when hot.</text>
+
+  <circle cx="900" cy="230" r="11" fill="none" stroke="#ffd36b"/><text class="num" x="900" y="234">2</text>
+  <path class="call" d="M889 230 C 700 300, 420 360, 335 380"/>
+  <text class="note" x="918" y="226">ANALOGUE GAUGES with red zones. Temp red zone</text>
+  <text class="note" x="918" y="242">starts at the current heat limit (moves with R&amp;D).</text>
+
+  <circle cx="900" cy="310" r="11" fill="none" stroke="#ffd36b"/><text class="num" x="900" y="314">3</text>
+  <path class="call" d="M889 310 C 700 420, 420 480, 292 492"/>
+  <text class="note" x="918" y="306">FLOW BAR: fill = supply, white tick = demand.</text>
+  <text class="note" x="918" y="322">Goal: keep the fill just past the tick.</text>
+  <text class="note" x="918" y="338">Red fill = starved.</text>
+
+  <circle cx="900" cy="390" r="11" fill="none" stroke="#ffd36b"/><text class="num" x="900" y="394">4</text>
+  <path class="call" d="M889 390 C 700 500, 420 560, 356 570"/>
+  <text class="note" x="918" y="386">ALERTS explain WHY income dropped and</text>
+  <text class="note" x="918" y="402">WHAT to buy. Never more than ~3 lines.</text>
+
+  <circle cx="900" cy="470" r="11" fill="none" stroke="#ffd36b"/><text class="num" x="900" y="474">5</text>
+  <path class="call" d="M889 470 C 720 520, 560 620, 356 646"/>
+  <text class="note" x="918" y="466">ACTIVE PLAY: stroke = small $ + accumulator</text>
+  <text class="note" x="918" y="482">charge. Surge = big timed multiplier.</text>
+
+  <circle cx="900" cy="550" r="11" fill="none" stroke="#ffd36b"/><text class="num" x="900" y="554">6</text>
+  <path class="call" d="M889 550 C 860 500, 830 260, 790 226"/>
+  <text class="note" x="918" y="546">ROW = icon (ISO-style symbol), count,</text>
+  <text class="note" x="918" y="562">stats, milestone bar (×2 at 25/50/100…),</text>
+  <text class="note" x="918" y="578">flavor text, buy button showing qty.</text>
+
+  <text class="note" x="900" y="640">MOBILE: panels stack vertically,</text>
+  <text class="note" x="900" y="656">tabs scroll horizontally, 16px gutters.</text>
+</svg>
