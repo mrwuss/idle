@@ -126,6 +126,80 @@
       effects: { pumpMult: 1.5 } },
   ];
 
+  // ---- Departments (design scaffold — not simulated yet) --------------------
+  // See docs/DEPARTMENTS.md. The engine does not read these yet; the Company
+  // tab shows them so players can see what's coming and when.
+  // `opens` is met when ANY listed condition is true:
+  //   lifetime ($ earned ever), tier (pressure tier index), overhauls (count).
+  const ERAS = ['The Tire Shop', 'The Job Shop', 'The Factory', 'Heavy Civil', 'Megaprojects', 'Beyond'];
+
+  const DEPARTMENTS = [
+    // Order Line, in the order an order travels through it.
+    { id: 'outside_sales', name: 'Outside Sales', group: 'order', era: 3, opens: { lifetime: 1e7 },
+      role: 'Finds leads at job sites, OEMs, farms and ports.',
+      twist: 'Markets: open customer segments that raise average order value.',
+      metric: 'Leads / min' },
+    { id: 'inside_sales', name: 'Inside Sales', group: 'order', era: 1, opens: { lifetime: 1e3 },
+      role: 'Quotes, cross-references and turns leads into orders.',
+      twist: 'Conversion rate: faster quotes win more orders.',
+      metric: 'Conversion %' },
+    { id: 'purchasing', name: 'Purchasing', group: 'order', era: 2, opens: { tier: 2, lifetime: 1e5 },
+      role: 'Sources components and raw stock for every order.',
+      twist: 'Supplier deals: lowers the price of everything you buy.',
+      metric: 'Cost reduction %' },
+    { id: 'warehouse', name: 'Warehouse', group: 'order', era: 2, opens: { tier: 2, lifetime: 1e5 },
+      role: 'Receives, stocks, picks, packs and ships.',
+      twist: 'Inventory buffer, the accumulator of the Order Line. Full stock enables Rush Ship.',
+      metric: 'Stock %' },
+    { id: 'production', name: 'Production', group: 'order', era: 0, opens: {},
+      role: 'The shop floor: everything on the other tabs.',
+      twist: 'Pumps, actuators, pressure and heat set how much work the company can do.',
+      metric: '$ / s of work' },
+    { id: 'quality', name: 'Quality', group: 'order', era: 2, opens: { tier: 2, lifetime: 1e5 },
+      role: 'Inspects, tests and certifies every order.',
+      twist: 'Yield and certifications (ISO 9001 → AS9100) unlock top-tier markets.',
+      metric: 'Yield %' },
+    { id: 'accounting', name: 'Accounting', group: 'order', era: 1, opens: { lifetime: 1e3 },
+      role: 'Invoices, collects and pays the bills.',
+      twist: 'Cash timing: shortens collection delay (DSO), later earns interest.',
+      metric: 'DSO days' },
+    // Support
+    { id: 'engineering', name: 'Engineering', group: 'support', era: 3, opens: { lifetime: 1e7 },
+      role: 'Designs systems, programs controls and delivers packaged projects.',
+      twist: 'Three teams: Design, Controls and Project.',
+      metric: 'Engineers',
+      teams: [
+        { id: 'design',   name: 'Design',   role: 'Generates Know-how and runs the R&D tree.' },
+        { id: 'controls', name: 'Controls', role: 'Owns automation and electronics research; needed for Sys-Paks.' },
+        { id: 'project',  name: 'Project',  role: 'Builds Valve-Paks, Base-Paks and Sys-Paks.' },
+      ] },
+    { id: 'it', name: 'IT', group: 'support', era: 3, opens: { lifetime: 1e7 },
+      role: 'Keeps systems running and automates the business.',
+      twist: 'ERP adds capacity to every Order Line department; hosts PLC and Telematics.',
+      metric: 'ERP level' },
+    { id: 'safety', name: 'Safety', group: 'support', era: 2, opens: { tier: 2, lifetime: 1e5 },
+      role: 'Protects people and equipment.',
+      twist: '"Days without a lost-time incident" builds a bonus that resets on an incident.',
+      metric: 'Days without incident' },
+    { id: 'management', name: 'Management', group: 'support', era: 4, opens: { lifetime: 1e9, overhauls: 1 },
+      role: 'Coordinates people and sets direction.',
+      twist: 'Span of control: too many staff per manager slows every department.',
+      metric: 'Span of control' },
+  ];
+
+  // Project Engineering product lines: each tier is built from the one below.
+  const PAKS = [
+    { id: 'valve', name: 'Valve-Pak', value: 1,
+      desc: 'Manifold and valves only: a drop-in hydraulic control block.',
+      recipe: 'Manifold block + 2–6 valves' },
+    { id: 'base', name: 'Base-Pak', value: 8,
+      desc: 'Simple power unit: reservoir, pump, motor, a valve or two, sometimes a cooler.',
+      recipe: '1 Valve-Pak + best pump + reservoir/motor kit (+ cooler)' },
+    { id: 'sys', name: 'Sys-Pak', value: 100,
+      desc: 'Complex multi-function system built from several Base-Paks plus controls.',
+      recipe: '2–6 Base-Paks + control panel (needs Controls engineers)' },
+  ];
+
   const CONSTANTS = {
     ambientF: 80,           // reservoir sits at shop temperature
     baseK: 0.25,            // natural heat rejection of a bare reservoir (HP/°F)
@@ -152,7 +226,7 @@
     startCash: 10,
   };
 
-  const DATA = { PUMPS, ACTUATORS, TIERS, COOLERS, TECH, CONSTANTS };
+  const DATA = { PUMPS, ACTUATORS, TIERS, COOLERS, TECH, ERAS, DEPARTMENTS, PAKS, CONSTANTS };
   root.PW = root.PW || {};
   root.PW.DATA = DATA;
   if (typeof module !== 'undefined') module.exports = DATA;

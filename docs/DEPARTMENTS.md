@@ -1,7 +1,8 @@
 # Departments — the business is a circuit too
 
-> Design v0.1 for the Departments system. Not in the prototype yet; it's the next
-> major milestone (see [ROADMAP.md](ROADMAP.md)).
+> Design v0.2 for the Departments system. The game already has a **Company** tab
+> placeholder that shows every department and when it opens. The mechanics are
+> the next major milestone (see [ROADMAP.md](ROADMAP.md)).
 
 ## The idea
 
@@ -164,29 +165,105 @@ After:   pumps ⇄ actuators ⇄ heat  =  Production $/s
 - Departments **open one at a time** so players never face eleven new things at
   once. Each has a short story beat when it opens:
 
-| Era | Departments that open | Story beat |
-|---|---|---|
-| I · Tire Shop | Production | It's you, a bottle jack, and Grandpa's ledger. |
-| II · Job Shop | Inside Sales, Accounting | The phone won't stop ringing, and somebody has to send invoices. |
-| III · Factory | Purchasing, Warehouse, Quality, Safety | Parts by the pallet. The first customer audit. The first close call. |
-| IV · Heavy Civil | Outside Sales, Engineering, IT | You stop waiting for work and go get it. |
-| V · Megaprojects | Management | Two hundred people. Somebody has to run this. |
+| Era | Departments that open | Opens when (any of) | Story beat |
+|---|---|---|---|
+| I · Tire Shop | Production | start | It's you, a bottle jack, and Grandpa's ledger. |
+| II · Job Shop | Inside Sales, Accounting | $1K earned | The phone won't stop ringing, and somebody has to send invoices. |
+| III · Factory | Purchasing, Warehouse, Quality, Safety | 2-Wire Braid (3,000 psi) or $100K earned | Parts by the pallet. The first customer audit. The first close call. |
+| IV · Heavy Civil | Outside Sales, Engineering, IT | $10M earned | You stop waiting for work and go get it. |
+| V · Megaprojects | Management | $1B earned or first Overhaul | Two hundred people. Somebody has to run this. |
+
+These conditions live in `src/data.js` (`DEPARTMENTS[].opens`) and drive the
+Company tab that's already in the game.
 
 - Until a department opens, its stage counts as *unlimited capacity* (the owner
   is doing it), so the formula works from minute one.
 
-## UI sketch
+## UI
 
-A new **Company** tab, drawn as a pipe diagram (see
-[sketches/departments.svg](sketches/departments.svg)):
+**In the game now (placeholder):** a **Company** tab lists all eleven
+departments: the Order Line as numbered steps 1–7, the Support departments, and
+the Pak chain. Each card shows the department's job, its twist, its era, and
+either *Open · owner-run* or what it takes to open it, with a progress bar.
+Production is highlighted and links back to the shop. Nothing on the tab affects
+income yet.
 
-- The Order Line is a horizontal pipe. Each department is a valve whose opening
+**Target (see [sketches/departments.svg](sketches/departments.svg)):**
+
+- The Order Line is drawn as a pipe. Each department is a valve whose opening
   width shows its capacity relative to production. The narrowest valve is the
   bottleneck and glows red.
 - Click a department to see headcount, capacity, its upgrades and its signature meter
   (conversion %, inventory, yield %, DSO, incident streak…).
 - Support departments sit above the pipe like the accumulator and gauges on
   the hydraulic schematic.
+
+## First-pass numbers
+
+These are starting points to put into the simulator, not final balance.
+
+### Capacity that scales with the run
+
+Fixed dollar numbers break the moment Patents speed a run up, so department
+numbers scale off **production at the moment the department opens** (call it
+`P₀`, snapshotted into state):
+
+| Quantity | Rule |
+|---|---|
+| Owner-run capacity | `2 × P₀`. The owner can cover it for a while, but production keeps growing past it. |
+| Capacity per staff member | `0.25 × P₀ × milestone(staff)` (×2 at 10, 25, 50, 100) |
+| Hire cost | `60 s × P₀ × 1.15^staff` |
+| Before opening | unlimited capacity (the stage isn't modelled yet) |
+
+**Target:** keeping every department off the bottleneck should take about
+20–30% of total spending. If it's more, departments feel like a tax. If it's
+less, they don't matter.
+
+### Department twists
+
+| Department | Formula sketch |
+|---|---|
+| Outside Sales | Capacity = lead value/s. **Markets** are one-time purchases, each ×1.25 order value; some require an actuator (Marine needs a Ship Lift, Energy needs a Forging Press). |
+| Inside Sales | Orders in = `min(leads × conversion, Inside Sales capacity)`. Conversion starts at 25%, +1% per 10 staff, capped at 60%; CRM and Same-day quotes add flat %. |
+| Purchasing | Equipment cost × `1 / (1 + 0.02 × √staff)`, floored at ×0.6. Replaces the Lean Manufacturing tech. |
+| Warehouse | Buffer = `60 s × throughput × level`. Fills when upstream outruns downstream, drains to cover dips. **Rush Ship** when full: shipping ×2 for 30 s. |
+| Production | Unchanged: the existing hydraulic income. |
+| Quality | Defect rate `15% / (1 + staff / 10)`; yield = 1 − defects. **ISO 9001** and **AS9100** are one-time certifications that open the Industrial and Aerospace markets. |
+| Accounting | Income goes into **receivables** and turns into cash after DSO (base 120 s, down to 10 s with staff). Interest of 0.1%/min on cash, capped at 10 min of income so it can't run away. |
+| Engineering · Design | Know-how × `(1 + 0.10 × design staff)` |
+| Engineering · Controls | Controls-branch tech costs × `(1 − 0.05 × staff)`, floor ×0.5 |
+| Engineering · Project | Engineering-hours/s = project staff. Valve-Pak 60 h; Base-Pak 300 h + 1 Valve-Pak; Sys-Pak 2,000 h + 3 Base-Paks, and needs ≥ 4 controls engineers. A Pak sells for `30 s × current production × Pak value` (×1, ×8, ×100). |
+| IT | ERP levels, +15% capacity to every Order Line department each; each level costs ×10 the last. Hosts PLC and Telematics. |
+| Safety | Incident chance/min `0.02 × (psi / 3000) × (temp / limit) / (1 + staff / 5)`. An incident stops one actuator line for 30 s. The streak bonus is +1% per shop-day (10 real minutes) without one, capped at +50%. |
+| Management | Each manager covers 8 staff (more with upgrades). Efficiency `= min(1, managers × 8 / total staff)^0.5` applies to every department. **Focus:** one department ×2 for 5 min, then a 15 min cooldown. |
+
+### Realized income
+
+```
+leads      = Outside Sales capacity × market value multiplier
+orders     = min(leads × conversion, Inside Sales capacity)
+throughput = min(orders, Purchasing, Warehouse (+ buffer), Production, Quality, Accounting) × management efficiency
+income     = throughput × yield × safety streak × surge × patents   → receivables → cash after DSO
+```
+
+Any department that hasn't opened is left out of the `min()`.
+
+## Build plan (when we implement)
+
+1. **State:** `departments: { [id]: { staff, p0, upgrades: {} } }`,
+   `engineering: { design, controls, project }`, `paks: { valve, base, sys }`,
+   `receivables`, `incidentStreak`. `deserialize()` already merges new keys, so
+   existing saves keep working.
+2. **Engine:** `derive()` keeps today's figure as `productionIncome` and adds
+   the Order Line on top as a separate step, so the hydraulic layer stays
+   testable on its own.
+3. **Tech migration:** Lean Manufacturing → Purchasing. Proportional, Servo,
+   PLC, Load Sensing, Digital Displacement and Telematics are tagged
+   `branch: 'controls'`, and the rest `branch: 'design'`. The tree itself doesn't change.
+4. **Simulator:** add "hire for the bottleneck" candidates to the bot, then
+   re-check that the pacing table in ECONOMY.md moves by no more than about 25%.
+5. **UI:** turn the placeholder cards into the valve diagram, with a hire
+   button and signature meter on each card.
 
 ## Balancing intent
 

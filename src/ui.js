@@ -7,7 +7,7 @@
 
   const E = root.PW.engine;
   const { fmt, fmtTime } = root.PW.format;
-  const { PUMPS, ACTUATORS, COOLERS, TECH, TIERS } = E.DATA;
+  const { PUMPS, ACTUATORS, COOLERS, TECH, TIERS, DEPARTMENTS, PAKS, ERAS } = E.DATA;
   const $ = (id) => document.getElementById(id);
   const SVGNS = 'http://www.w3.org/2000/svg';
 
@@ -134,6 +134,74 @@
     });
   }
 
+  // Company tab: departments are a design scaffold. Cards show what each
+  // department will do and when it opens; nothing here affects income yet.
+  const deptEls = {}, pakEls = {};
+  const ROMAN = ['I', 'II', 'III', 'IV', 'V', 'VI'];
+  function buildCompany() {
+    const card = (d) => {
+      const el = document.createElement('div');
+      el.className = 'dept' + (d.id === 'production' ? ' production' : '');
+      el.innerHTML = `<div class="dept-head"><span class="dept-name">${d.name}</span><span class="dept-status"></span></div>
+        <div class="dept-role">${d.role}</div>
+        <div class="dept-twist">${d.twist}</div>
+        ${d.teams ? `<div class="dept-teams">${d.teams.map((t) => `<span title="${t.role}">${t.name}</span>`).join('')}</div>` : ''}
+        <div class="dept-progress"><div></div></div>
+        <div class="dept-era">Era ${ROMAN[d.era]} · ${ERAS[d.era]}</div>`;
+      if (d.id === 'production') el.addEventListener('click', () => setTab('actuators'));
+      deptEls[d.id] = { el, status: el.querySelector('.dept-status'), prog: el.querySelector('.dept-progress'),
+        bar: el.querySelector('.dept-progress div') };
+      return el;
+    };
+    const line = $('order-line'), support = $('support-depts');
+    DEPARTMENTS.filter((d) => d.group === 'order').forEach((d, i) => {
+      const el = card(d);
+      el.querySelector('.dept-head').insertAdjacentHTML('afterbegin', `<span class="dept-step">${i + 1}</span>`);
+      line.appendChild(el);
+    });
+    DEPARTMENTS.filter((d) => d.group === 'support').forEach((d) => support.appendChild(card(d)));
+    const chain = $('pak-chain');
+    PAKS.forEach((p, i) => {
+      if (i) chain.insertAdjacentHTML('beforeend', '<span class="pak-arrow" aria-hidden="true">→</span>');
+      const el = document.createElement('div');
+      el.className = 'pak';
+      el.innerHTML = `<div class="dept-head"><span class="dept-name">${p.name}</span><span class="pak-value">×${p.value} value</span></div>
+        <div class="dept-role">${p.desc}</div><div class="dept-twist">Built from: ${p.recipe}</div><div class="dept-status"></div>`;
+      chain.appendChild(el);
+      pakEls[p.id] = { el, status: el.querySelector('.dept-status') };
+    });
+  }
+
+  function opensText(s, d) {
+    const o = d.opens, parts = [];
+    if (o.lifetime != null) parts.push(`$${fmt(o.lifetime)} earned`);
+    if (o.tier != null) parts.push(TIERS[o.tier].name);
+    if (o.overhauls != null) parts.push('first Overhaul');
+    return 'Opens: ' + parts.join(' or ');
+  }
+
+  function renderCompany(s) {
+    const era = E.currentEra(s);
+    $('era-num').textContent = ROMAN[era];
+    $('era-name').textContent = ERAS[era];
+    for (const d of DEPARTMENTS) {
+      const r = deptEls[d.id], open = E.departmentOpen(s, d);
+      r.el.classList.toggle('closed', !open);
+      r.status.textContent = d.id === 'production' ? 'Active' : open ? 'Open · owner-run' : opensText(s, d);
+      r.prog.hidden = open || d.opens.lifetime == null;
+      if (!open && d.opens.lifetime != null) {
+        // log scale so early progress is visible
+        const f = Math.log10(1 + s.lifetime) / Math.log10(1 + d.opens.lifetime);
+        r.bar.style.width = `${Math.min(100, f * 100)}%`;
+      }
+    }
+    const eng = E.departmentOpen(s, DEPARTMENTS.find((d) => d.id === 'engineering'));
+    for (const p of PAKS) {
+      pakEls[p.id].el.classList.toggle('closed', !eng);
+      pakEls[p.id].status.textContent = eng ? 'Line coming in the Departments update' : 'Opens with Engineering';
+    }
+  }
+
   // ---- Init ---------------------------------------------------------------
 
   let gP, gT, ui = { tab: 'actuators', qty: 1 }, handlers;
@@ -146,6 +214,7 @@
     buildList($('list-pumps'), 'pump', PUMPS, h.buy);
     buildList($('list-coolers'), 'cooler', COOLERS, h.buy);
     buildTech($('tech-tree'), h.research);
+    buildCompany();
 
     document.querySelectorAll('.tabs [data-tab]').forEach((b) =>
       b.addEventListener('click', () => setTab(b.dataset.tab)));
@@ -267,6 +336,7 @@
     }
     if (ui.tab === 'system') renderSystem(s, d);
     if (ui.tab === 'tech') renderTech(s);
+    if (ui.tab === 'company') renderCompany(s);
     if (ui.tab === 'overhaul') renderOverhaul(s);
     if (ui.tab === 'settings') renderStats(s, d);
 

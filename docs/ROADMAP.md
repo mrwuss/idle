@@ -12,6 +12,7 @@
 - [x] Save/load, export/import, offline progress
 - [x] Headless balance simulator (`tools/simulate.js`)
 - [x] Design docs and sketches
+- [x] Company tab placeholder: all eleven departments, their unlock conditions and the Pak chain (no mechanics yet)
 
 ## v0.2 — Departments (the business layer)
 
@@ -22,7 +23,7 @@ Design: [DEPARTMENTS.md](DEPARTMENTS.md)
 - [ ] Move R&D under Engineering → Design; move PLC/Servo/Proportional/LS/DD/Telematics to Controls
 - [ ] Department signature mechanics: markets, conversion, supplier discount, inventory + Rush Ship, yield + certifications, DSO + interest, incident streak, span of control
 - [ ] Project Engineering Pak lines: Valve-Pak → Base-Pak → Sys-Pak
-- [ ] Company tab with the Order Line pipe diagram
+- [ ] Turn the Company tab placeholder into the Order Line valve diagram with hiring
 - [ ] Extend the simulator bot to hire for the bottleneck; re-run the pacing table
 
 ## v0.3 — Make it feel good

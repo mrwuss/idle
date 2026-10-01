@@ -131,6 +131,7 @@
         <button role="tab" data-tab="pumps">Pumps</button>
         <button role="tab" data-tab="system">System</button>
         <button role="tab" data-tab="tech">R&amp;D <span class="badge" id="tech-badge" hidden></span></button>
+        <button role="tab" data-tab="company">Company</button>
         <button role="tab" data-tab="overhaul" id="tab-overhaul">Overhaul</button>
         <button role="tab" data-tab="settings">Logbook</button>
       </nav>
@@ -163,6 +164,20 @@
       <div class="tab-body" data-body="tech" hidden>
         <p class="hint">Know-how accumulates while your shop earns (√ of income). Spend it on engineering breakthroughs.</p>
         <div id="tech-tree" class="tech-tree"></div>
+      </div>
+      <div class="tab-body" data-body="company" hidden>
+        <div class="card era-card">
+          <div class="era-label">Era <span id="era-num">I</span> · <b id="era-name">The Tire Shop</b></div>
+          <p class="muted">Every fluid-power company runs on eleven departments. Orders flow through the
+            <b>Order Line</b> like oil through a circuit, and the narrowest department sets the pace.
+            Departments open as the shop grows. Hiring staff arrives in a future update; for now, you run every open department yourself.</p>
+        </div>
+        <h3>Order Line <span class="muted">· leads in → cash out</span></h3>
+        <div id="order-line" class="order-line"></div>
+        <h3>Support</h3>
+        <div id="support-depts" class="dept-grid"></div>
+        <h3>Project Engineering · Pak lines</h3>
+        <div id="pak-chain" class="pak-chain"></div>
       </div>
       <div class="tab-body" data-body="overhaul" hidden>
         <div class="card overhaul-card">

@@ -28,6 +28,7 @@ python3 -m http.server 8000   # then visit http://localhost:8000
 - Spare flow charges the **accumulator**. Dump it with **Surge** for ×3–×4 income.
 - **Know-how** funds a 17-node **R&D tree** of real hydraulic breakthroughs.
 - **Overhaul** (prestige) trades everything for **Patents**, each one +10% income forever.
+- The **Company** tab previews the eleven departments that run the business and when each one opens. They're coming in the next update.
 
 ## Project layout
 
