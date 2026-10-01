@@ -4,7 +4,7 @@
 (function (root) {
   'use strict';
 
-  const E = root.PW.engine, UI = root.PW.ui;
+  const E = root.PW.engine, UI = root.PW.ui, SFX = root.PW.audio;
   const { fmt, fmtTime } = root.PW.format;
   const SAVE_KEY = 'pressure-works-save';
   const $ = (id) => document.getElementById(id);
@@ -37,10 +37,11 @@
 
   UI.init({
     buy(kind, id) {
-      if (E.buy(state, kind, id, UI.qty)) render();
+      if (E.buy(state, kind, id, UI.qty)) { SFX.play('buy'); render(); } else SFX.play('cant');
     },
     research(id) {
       if (E.research(state, id)) {
+        SFX.play('research');
         UI.toast(`Researched <b>${E.DATA.TECH.find((t) => t.id === id).name}</b>.`);
         render();
       }
@@ -52,14 +53,16 @@
     const b = ev.target.closest('[data-act]');
     if (!b || b.disabled) return;
     if (b.dataset.act === 'tier' && E.upgradeTier(state)) {
+      SFX.play('upgrade');
       UI.toast(`System re-rated to <b>${E.DATA.TIERS[state.tier].name}</b>: ${fmt(E.DATA.TIERS[state.tier].psi)} psi.`);
     }
-    if (b.dataset.act === 'acc') E.upgradeAccumulator(state);
+    if (b.dataset.act === 'acc' && E.upgradeAccumulator(state)) SFX.play('upgrade');
     render();
   });
 
   $('btn-stroke').addEventListener('click', (ev) => {
     const gain = E.click(state);
+    SFX.play('stroke', 0.8);
     const rect = ev.currentTarget.getBoundingClientRect();
     const x = ev.clientX || rect.left + rect.width / 2, y = ev.clientY || rect.top;
     UI.floater(x - 10 + Math.random() * 20, y - 20, `+$${fmt(gain)}`);
@@ -70,12 +73,22 @@
     if (ev.target.tagName === 'TEXTAREA') return;
     if (ev.code === 'Space') { ev.preventDefault(); $('btn-stroke').click(); }
     if (ev.key === 's' || ev.key === 'S') $('btn-surge').click();
+    if (ev.key === 'm' || ev.key === 'M') $('btn-mute').click();
   });
+  document.addEventListener('click', (ev) => { if (ev.target.closest('.tabs [data-tab]')) SFX.play('tab', 0.6); });
+
+  function showMute() {
+    $('btn-mute').setAttribute('aria-pressed', SFX.muted);
+    $('btn-mute').title = SFX.muted ? 'Sound off (M to toggle)' : 'Sound on (M to toggle)';
+  }
+  $('btn-mute').addEventListener('click', () => { SFX.setMuted(!SFX.muted); showMute(); SFX.play('tab', 0.6); });
+  showMute();
 
   $('btn-overhaul').addEventListener('click', () => {
     const gain = E.overhaulGain(state);
     if (!confirm(`Overhaul the shop for ${gain} patent(s)? Cash, equipment and research are reset.`)) return;
     if (E.overhaul(state)) {
+      SFX.play('overhaul');
       save();
       UI.toast(`Shop overhauled. You now hold <b>${state.patents}</b> patents (+${state.patents * 10}% income).`);
       UI.setTab('actuators');
@@ -120,11 +133,25 @@
     lastTick = now;
     // Long gaps (sleeping laptop) are handled in chunks to keep temperature stable.
     while (dt > 0) { const step = Math.min(dt, 1); E.tick(state, step); dt -= step; }
+    soundCues();
   }, 100);
+
+  // Sounds for things that happen on their own: any Surge starting (manual or
+  // PLC), and the oil crossing its temperature limit (re-armed 5°F below).
+  let wasSurging = state.surgeLeft > 0, hotArmed = true;
+  function soundCues() {
+    const surging = state.surgeLeft > 0;
+    if (surging && !wasSurging) SFX.play('surge');
+    wasSurging = surging;
+    const limit = E.mods(state).tempLimit;
+    if (hotArmed && state.temp > limit) { SFX.play('overheat'); hotArmed = false; }
+    if (state.temp < limit - 5) hotArmed = true;
+  }
   // New locations are announced once, the moment the company grows into them.
   function announceLocations() {
     for (const r of E.checkLocations(state)) {
       const states = E.DATA.STATES.filter((st) => st.region === r.id).map((st) => st.offshore ? 'the Gulf' : st.id);
+      SFX.play('location');
       UI.toast(`<b>New location!</b> IFP MSI ${r.name} opens in <b>${r.branch}</b>, covering ${states.join(', ')}.`, 8000);
     }
   }
