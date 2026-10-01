@@ -13,6 +13,7 @@
 - [x] Headless balance simulator (`tools/simulate.js`)
 - [x] Design docs and sketches
 - [x] Company tab placeholder: all eleven departments, their unlock conditions and the Pak chain (no mechanics yet)
+- [x] Territory map placeholder: 4 regions, 13 states + Gulf offshore, branch unlock conditions
 
 ## v0.2 — Departments (the business layer)
 
@@ -25,6 +26,15 @@ Design: [DEPARTMENTS.md](DEPARTMENTS.md)
 - [ ] Project Engineering Pak lines: Valve-Pak → Base-Pak → Sys-Pak
 - [ ] Turn the Company tab placeholder into the Order Line valve diagram with hiring
 - [ ] Extend the simulator bot to hire for the bottleneck; re-run the pacing table
+
+## v0.2.5 — Territory
+
+Design: [TERRITORY.md](TERRITORY.md)
+
+- [ ] Branches as parallel Order Line front ends feeding HQ's shared departments
+- [ ] State coverage purchases and regional markets
+- [ ] Regional twists (North cold, West hub, South heat + offshore)
+- [ ] Branch shops with their own ambient temperature; service bench for repair & refurbishing
 
 ## v0.3 — Make it feel good
 

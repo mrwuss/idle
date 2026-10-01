@@ -286,5 +286,6 @@ Any department that hasn't opened is left out of the `min()`.
 - Should the existing R&D tab move under Engineering in the UI, or stay
   top-level for discoverability?
 - Should Warehouse inventory decay (obsolete stock) to stop players overbuilding it?
-- One company, or several **branches** (a second location as a mid-game
-  prestige-lite, each with its own department mix)?
+- Branches are now designed in [TERRITORY.md](TERRITORY.md): four regions and
+  13 states, with customer-facing departments at each branch and shared
+  departments at HQ.

@@ -262,3 +262,25 @@ textarea { width: 100%; background: #0f1317; color: var(--text); border: 1px sol
   .pak-chain { grid-template-columns: 1fr; }
   .pak-arrow { transform: rotate(90deg); justify-self: center; }
 }
+
+/* ---- territory ---- */
+.territory { display: grid; grid-template-columns: minmax(150px, 220px) 1fr; gap: 12px; align-items: start; }
+@media (max-width: 640px) { .territory { grid-template-columns: 1fr; } .territory-map { max-width: 220px; justify-self: center; } }
+.territory-map { width: 100%; height: auto; display: block; }
+.region-hq    { --rc: var(--oil); }
+.region-north { --rc: var(--cool); }
+.region-west  { --rc: var(--ok); }
+.region-south { --rc: var(--pressure); }
+.tile rect { fill: color-mix(in srgb, var(--rc) 28%, var(--panel-2)); stroke: var(--rc); stroke-width: 1.5; }
+.tile text { fill: var(--text); font: 600 13px var(--font-mono); text-anchor: middle; }
+.tile circle { fill: var(--rc); stroke: var(--bg); stroke-width: 2; }
+.tile .waves { fill: none; stroke: var(--rc); stroke-width: 1.5; opacity: .7; }
+.tile.offshore rect { stroke-dasharray: 4 3; }
+.tile.closed rect { fill: var(--panel-2); stroke-dasharray: 3 3; opacity: .7; }
+.tile.closed text { fill: var(--muted); }
+.region-list { display: grid; gap: 8px; }
+.region { background: var(--panel-2); border: 1px solid var(--edge); border-left: 4px solid var(--rc); border-radius: var(--radius); padding: 8px 10px; display: grid; gap: 4px; }
+.region.closed { opacity: .6; border-style: dashed; border-left-style: solid; }
+.region .dept-role b { color: var(--text); font-weight: 600; }
+.region .dept-teams span { color: var(--rc); }
+.swatch { display: inline-block; width: 9px; height: 9px; border-radius: 2px; background: var(--rc); margin-right: 6px; vertical-align: 1px; }

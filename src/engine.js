@@ -290,14 +290,15 @@
 
   // ---- Departments (scaffold: read-only queries, no effect on income) -------
 
-  /** A department is open when any of its `opens` conditions is met. */
-  function departmentOpen(s, dept) {
-    const o = dept.opens || {};
+  /** An `opens` spec is met when any of its conditions is true ({} = always). */
+  function opensMet(s, o = {}) {
     if (!Object.keys(o).length) return true;
     return (o.lifetime != null && s.lifetime >= o.lifetime)
       || (o.tier != null && s.tier >= o.tier)
       || (o.overhauls != null && s.overhauls >= o.overhauls);
   }
+  const departmentOpen = (s, dept) => opensMet(s, dept.opens);
+  const regionOpen = (s, region) => opensMet(s, region.opens);
   /** Current era index: the latest era any open department belongs to. */
   function currentEra(s) {
     return Math.max(0, ...DATA.DEPARTMENTS.filter((d) => departmentOpen(s, d)).map((d) => d.era));
@@ -326,7 +327,7 @@
     bulkCost, maxAffordable, isUnlocked, quote, buy,
     nextTier, canUpgradeTier, upgradeTier, accCapacity, accUpgradeCost, upgradeAccumulator,
     techAvailable, research, click, canSurge, surge,
-    patentsTotal, overhaulGain, canOverhaul, overhaul, departmentOpen, currentEra,
+    patentsTotal, overhaulGain, canOverhaul, overhaul, opensMet, departmentOpen, regionOpen, currentEra,
     serialize, deserialize,
   };
   root.PW = root.PW || {};

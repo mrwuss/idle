@@ -9,5 +9,5 @@
 - Adding content to `data.js` is save-compatible: `deserialize()` merges saved
   counts over fresh defaults.
 - Design intent lives in `docs/`; keep it in sync when mechanics change.
-- Departments (`DEPARTMENTS`, `PAKS` in data.js) are a design scaffold: the Company
-  tab displays them, but they don't affect income yet. The plan is in `docs/DEPARTMENTS.md`.
+- Departments and territory (`DEPARTMENTS`, `PAKS`, `REGIONS`, `STATES` in data.js) are a design scaffold: the Company
+  tab displays them, but they don't affect income yet. The plans are in `docs/DEPARTMENTS.md` and `docs/TERRITORY.md`.

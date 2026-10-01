@@ -207,6 +207,8 @@ Ordered roughly by how much they add per unit of work. See [ROADMAP.md](ROADMAP.
    Controls (automation) and Project, which builds **Valve-Paks → Base-Paks →
    Sys-Paks** from the shop's own hardware. Full design in
    [DEPARTMENTS.md](DEPARTMENTS.md).
+   Departments run across a **territory** of four branches (HQ Cedar Rapids; North, West and South)
+   covering 13 states and the Gulf; see [TERRITORY.md](TERRITORY.md).
 2. **Sys-Pak projects (contracts).** Timed, named jobs ("Steel-mill descaler:
    3 Base-Paks, 6,000 psi, servo control") that pay lump sums and Know-how.
    They give active players goals beyond clicking and replace the earlier

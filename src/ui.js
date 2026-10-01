@@ -7,7 +7,7 @@
 
   const E = root.PW.engine;
   const { fmt, fmtTime } = root.PW.format;
-  const { PUMPS, ACTUATORS, COOLERS, TECH, TIERS, DEPARTMENTS, PAKS, ERAS } = E.DATA;
+  const { PUMPS, ACTUATORS, COOLERS, TECH, TIERS, DEPARTMENTS, PAKS, ERAS, REGIONS, STATES } = E.DATA;
   const $ = (id) => document.getElementById(id);
   const SVGNS = 'http://www.w3.org/2000/svg';
 
@@ -172,6 +172,49 @@
     });
   }
 
+  // Territory: a tile cartogram of the 13 states, coloured by region.
+  const regionEls = {}, stateEls = {};
+  function buildTerritory() {
+    const T = 56, G = 4, X0 = 4 - T - G, Y0 = 4;   // x starts at 1 in the data
+    let svg = '';
+    for (const st of STATES) {
+      const x = X0 + st.x * (T + G), y = Y0 + st.y * (T + G);
+      const r = REGIONS.find((g) => g.id === st.region);
+      svg += `<g class="tile region-${st.region}${st.offshore ? ' offshore' : ''}" data-state="${st.id}">
+        <title>${st.name} · ${r.name} region${st.branch ? ' · branch: ' + r.branch : ''}</title>
+        <rect x="${x}" y="${y}" width="${T}" height="${T}" rx="5"/>
+        ${st.offshore ? `<path class="waves" d="M${x + 8} ${y + 40} q6 -6 12 0 t12 0 t12 0 t12 0"/>` : ''}
+        <text x="${x + T / 2}" y="${y + (st.branch ? 26 : 34)}">${st.offshore ? 'GULF' : st.id}</text>
+        ${st.branch ? `<circle cx="${x + T / 2}" cy="${y + 40}" r="5"/>` : ''}
+      </g>`;
+    }
+    const map = $('territory-map');
+    map.innerHTML = svg;
+    map.querySelectorAll('[data-state]').forEach((g) => (stateEls[g.dataset.state] = g));
+
+    const list = $('region-list');
+    for (const r of REGIONS) {
+      const states = STATES.filter((st) => st.region === r.id).map((st) => st.offshore ? 'Gulf offshore' : st.id);
+      const el = document.createElement('div');
+      el.className = `region region-${r.id}`;
+      el.innerHTML = `<div class="dept-head"><span class="dept-name"><i class="swatch"></i>${r.name}</span><span class="dept-status"></span></div>
+        <div class="dept-role">Branch: <b>${r.branch}</b> · ${states.join(', ')}</div>
+        <div class="dept-teams">${r.markets.map((m) => `<span>${m}</span>`).join('')}</div>
+        <div class="dept-twist">${r.twist} Ambient ${r.ambientF}°F.</div>`;
+      list.appendChild(el);
+      regionEls[r.id] = { el, status: el.querySelector('.dept-status') };
+    }
+  }
+
+  function renderTerritory(s) {
+    for (const r of REGIONS) {
+      const open = E.regionOpen(s, r);
+      regionEls[r.id].el.classList.toggle('closed', !open);
+      regionEls[r.id].status.textContent = r.id === 'hq' ? 'Home' : open ? 'Open' : opensText(s, r);
+      for (const st of STATES) if (st.region === r.id) stateEls[st.id].classList.toggle('closed', !open);
+    }
+  }
+
   function opensText(s, d) {
     const o = d.opens, parts = [];
     if (o.lifetime != null) parts.push(`$${fmt(o.lifetime)} earned`);
@@ -181,6 +224,7 @@
   }
 
   function renderCompany(s) {
+    renderTerritory(s);
     const era = E.currentEra(s);
     $('era-num').textContent = ROMAN[era];
     $('era-name').textContent = ERAS[era];
@@ -215,6 +259,7 @@
     buildList($('list-coolers'), 'cooler', COOLERS, h.buy);
     buildTech($('tech-tree'), h.research);
     buildCompany();
+    buildTerritory();
 
     document.querySelectorAll('.tabs [data-tab]').forEach((b) =>
       b.addEventListener('click', () => setTab(b.dataset.tab)));
