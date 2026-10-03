@@ -710,6 +710,7 @@ ul.plain b { color: var(--text); }
 .brand h1 span { color: var(--muted); font-weight: 600; font-size: 14px; text-transform: none; letter-spacing: 0; }
 .idc-brand { display: flex; align-items: center; gap: 6px; }
 .idc-brand .ifp-logo { height: 18px; width: auto; }
+.ifp-logo.white { filter: brightness(0) invert(1); }
 .theme-seg { max-width: 360px; }
 .res dd { color: var(--text); }
 @media (max-width: 760px) {

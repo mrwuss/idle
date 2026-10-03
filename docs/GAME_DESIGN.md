@@ -238,8 +238,8 @@ Ordered roughly by how much they add per unit of work. See [ROADMAP.md](ROADMAP.
 
 - **Visual language:** IFP's own brand, from ifpusa.com. The default **Light**
   theme matches the website: white panels, charcoal `#333` text, IFP orange-red
-  `#f04b25` for accents, Nunito Sans type, and the italic **iFP** mark with its
-  swoosh in the header, on ID badges, on the power unit and on the trailers.
+  `#f04b25` for accents, Nunito Sans type, and the official **iFP** logo in the
+  header, on ID badges, on the power unit and on the trailers.
   A **Dark** "shop floor" theme (Logbook → Display) keeps the original steel
   look with the same orange accent. The machine itself is always drawn dark, like
   a control-room screen, with hydraulic-oil amber for flow, pressure red and

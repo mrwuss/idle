@@ -494,7 +494,7 @@
       }).join('');
       const tmp = { mgr: p, team: [] };
       body.innerHTML = `<div class="idc ${g}">
-        <div class="idc-top"><span class="idc-brand">${root.PW.brand.logoSVG({ h: 22, color: '#fff' })}<span>MSI · Cedar Rapids</span></span><span>${sp.kind === 'pool' ? 'APPLICANT' : 'EMPLOYEE ID'}</span></div>
+        <div class="idc-top"><span class="idc-brand">${root.PW.brand.logoHTML({ h: 20, white: true })}<span>MSI · Cedar Rapids</span></span><span>${sp.kind === 'pool' ? 'APPLICANT' : 'EMPLOYEE ID'}</span></div>
         <div class="idc-main"><div class="idc-photo">${avatar(p.a)}</div>
           <div><h3>${p.n}</h3><div class="idc-title">${title}</div><div class="idc-no">No. ${empNo}</div></div>
           <button class="sh-x" data-close="idcard" aria-label="Close">✕</button></div>
@@ -702,8 +702,8 @@
     $('m-status').addEventListener('click', () => setTab('works'));
     // Brand: the iFP mark in the header and the tab icon; Light (IFP) / Dark theme switch.
     const B = root.PW.brand;
-    $('brand-logo').innerHTML = B.logoSVG({ h: 40 });
-    $('favicon').href = B.faviconURL();
+    $('brand-logo').innerHTML = B.logoHTML({ h: 40 });
+    $('favicon').href = B.FAVICON;
     const themeBtns = document.querySelectorAll('[data-theme-set]');
     const showTheme = () => themeBtns.forEach((b) => b.classList.toggle('on', (document.documentElement.dataset.theme || 'light') === b.dataset.themeSet));
     themeBtns.forEach((b) => b.addEventListener('click', () => {

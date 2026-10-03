@@ -75,6 +75,8 @@
       new IntersectionObserver((entries) => { visible = entries[0].isIntersecting; }).observe(canvas);
     }
     canvas.addEventListener('click', onClick);
+    // The logo is part of the cached backdrop: redraw it once the image has loaded.
+    if (root.PW.brand) root.PW.brand.onReady(() => { bg = null; });
     canvas.addEventListener('mousemove', onMove);
   }
 
@@ -322,7 +324,7 @@
     rrect(x, y, w, h, 4, '#26303a', colors.steel, 2);
     for (let i = 1; i < 4; i++) line([[x + 6, y + (h / 4) * i], [x + w - 6, y + (h / 4) * i]], 'rgba(0,0,0,0.25)', 1);
     // stenciled company name
-    if (root.PW.brand) root.PW.brand.drawLogo(ctx, x + w / 2 - 42, y + 58, 44, 'rgba(240,75,37,0.55)');
+    if (root.PW.brand) root.PW.brand.drawLogo(ctx, x + w / 2 - 42, y + 50, 44, { alpha: 0.75 });
     text('HYDRAULIC POWER UNIT', x + w / 2, y + 78, { size: 9, align: 'center', color: 'rgba(221,227,234,0.22)' });
     // sight glass with oil level (drops a little while the accumulator charges)
     const level = 0.72 - 0.18 * clamp(s.accCharge / d.accCap, 0, 1);
@@ -1181,7 +1183,7 @@
     const boxes = Math.floor(tr.fill * 21);
     for (let k = 0; k < boxes; k++) drawBox(x + 16 + (k % 7) * 20, y + h - 6 - Math.floor(k / 7) * 14);
     rect(x, y - 18, w, 18, '#f04b25');
-    if (root.PW.brand) root.PW.brand.drawLogo(ctx, x + w / 2 - 15, y - 7, 16, '#fff');
+    if (root.PW.brand) root.PW.brand.drawLogo(ctx, x + w / 2 - 15, y - 9, 16, { color: '#ffffff' });
     circle(x + 30, y + h + 14, 13, '#14181c', '#555', 3); circle(x + 60, y + h + 14, 13, '#14181c', '#555', 3);
     circle(x + w - 30, y + h + 14, 13, '#14181c', '#555', 3);
     ctx.restore();

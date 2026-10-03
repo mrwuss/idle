@@ -1,43 +1,51 @@
-/* IFP brand: the italic "iFP" mark with its swoosh, colors from ifpusa.com.
- * logoSVG() for the page (header, ID badges, favicon); drawLogo() for the canvas. */
+/* IFP brand: the official iFP logo (assets/brand, from ifpusa.com, used with IFP's
+ * permission) and the brand colors. logoHTML() for the page; drawLogo() for the canvas. */
 (function (root) {
   const BRAND = { orange: '#f04b25', charcoal: '#333333', gray: '#636363' };
+  const LOGO = 'assets/brand/ifp-logo.png';          // 150 × 79, transparent
+  const FAVICON = 'assets/brand/ifp-favicon.png';    // 270 × 270
+  const RATIO = 150 / 79;
 
-  // The swoosh: a crescent that sweeps under the letters and up past the P.
-  const SWOOSH = 'M6 64 C 36 79, 108 80, 148 38 C 116 70, 46 75, 6 64 Z';
-
-  /** The mark as an inline SVG string. `h` is the rendered height in px. */
-  function logoSVG({ color = BRAND.orange, h = 32, title = 'IFP' } = {}) {
-    const w = Math.round(h * 150 / 80);
-    return `<svg class="ifp-logo" width="${w}" height="${h}" viewBox="0 0 150 80" role="img" aria-label="${title}">
-      <g fill="${color}"><text x="14" y="56" font-family="'Nunito Sans', 'Arial Black', Arial, sans-serif" font-weight="900"
-        font-style="italic" font-size="62" letter-spacing="-3">iFP</text><path d="${SWOOSH}"/></g></svg>`;
+  /** The logo as an <img>. `white` turns it white (for orange or dark strips). */
+  function logoHTML({ h = 32, white = false, alt = 'IFP' } = {}) {
+    return `<img class="ifp-logo${white ? ' white' : ''}" src="${LOGO}" alt="${alt}" height="${h}" width="${Math.round(h * RATIO)}">`;
   }
 
-  /** Draw the mark on a canvas, left edge at x, baseline area centred on y, `h` tall. */
-  function drawLogo(ctx, x, y, h, color = BRAND.orange, font = "'Nunito Sans', 'Arial Black', Arial, sans-serif") {
-    const k = h / 80;
+  // Canvas copies: the original, and tinted versions made once the image loads.
+  let img = null, ready = false;
+  const tints = {}, waiting = [];
+  if (typeof Image !== 'undefined') {
+    img = new Image();
+    img.onload = () => { ready = true; waiting.splice(0).forEach((f) => f()); };
+    img.src = LOGO;
+  }
+  /** Run `fn` once the logo can be drawn (immediately if it already can). */
+  function onReady(fn) { if (ready) fn(); else waiting.push(fn); }
+  function tinted(color) {
+    if (!color) return img;
+    if (!tints[color]) {
+      const c = document.createElement('canvas');
+      c.width = img.naturalWidth; c.height = img.naturalHeight;
+      const g = c.getContext('2d');
+      g.drawImage(img, 0, 0);
+      g.globalCompositeOperation = 'source-in';
+      g.fillStyle = color;
+      g.fillRect(0, 0, c.width, c.height);
+      tints[color] = c;
+    }
+    return tints[color];
+  }
+  /** Draw the logo `h` tall with its left edge at x, centred on y. `color` tints it; `alpha` fades it. */
+  function drawLogo(ctx, x, y, h, { color = null, alpha = 1 } = {}) {
+    if (!ready) return false;
     ctx.save();
-    ctx.translate(x, y - h / 2);
-    ctx.scale(k, k);
-    ctx.fillStyle = color;
-    ctx.font = `italic 900 62px ${font}`;
-    ctx.textBaseline = 'alphabetic';
-    ctx.textAlign = 'left';
-    ctx.fillText('iFP', 14, 56);
-    if (root.Path2D) ctx.fill(new Path2D(SWOOSH));
+    ctx.globalAlpha *= alpha;
+    ctx.drawImage(tinted(color), x, y - h / 2, h * RATIO, h);
     ctx.restore();
-  }
-
-  /** Favicon: the mark on a white tile, as a data URL. */
-  function faviconURL() {
-    const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" rx="12" fill="#fff"/>
-      <g transform="translate(2 12) scale(0.4)" fill="${BRAND.orange}"><text x="14" y="56" font-family="Arial Black, Arial, sans-serif"
-      font-weight="900" font-style="italic" font-size="62" letter-spacing="-3">iFP</text><path d="${SWOOSH}"/></g></svg>`;
-    return 'data:image/svg+xml,' + encodeURIComponent(svg);
+    return true;
   }
 
   root.PW = root.PW || {};
-  root.PW.brand = { BRAND, logoSVG, drawLogo, faviconURL };
+  root.PW.brand = { BRAND, LOGO, FAVICON, RATIO, logoHTML, drawLogo, onReady };
   if (typeof module !== 'undefined') module.exports = root.PW.brand;
 })(typeof window !== 'undefined' ? window : globalThis);

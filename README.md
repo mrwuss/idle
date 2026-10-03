@@ -51,7 +51,7 @@ style.css           all styling
 src/data.js         every tunable number (pumps, actuators, tiers, coolers, tech, constants)
 src/engine.js       pure game logic, no DOM; shared by the browser and the simulator
 src/format.js       number/time formatting
-src/brand.js        the iFP mark (SVG + canvas) and brand colors
+src/brand.js        the iFP logo (page + canvas) and brand colors
 src/audio.js        sound effects + mute (clips in assets/audio, see CREDITS.md)
 src/machine.js      "The Works": the animated facility (office, production line, warehouse, shipping)
 src/ui.js           rendering, gauges, shop lists

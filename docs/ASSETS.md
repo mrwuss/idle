@@ -7,7 +7,7 @@ the style.
 
 ## In use
 
-**Brand:** IFP's colors, font and a redrawn iFP mark (`src/brand.js`); see
+**Brand:** IFP's colors, font and the official iFP logo (`assets/brand/`, drawn by `src/brand.js`); see
 [CREDITS.md](../CREDITS.md). Themes are CSS variables at the top of `style.css`
 (light by default, `data-theme="dark"` on `<html>` for the shop floor); the machine
 canvas always reads the dark set from its wrapper.
