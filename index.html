@@ -27,6 +27,7 @@
       <div class="res"><dt>Know-how</dt><dd id="r-kh">0</dd><small id="r-khrate">0/s</small></div>
       <div class="res" id="r-patents-wrap"><dt>Patents</dt><dd id="r-patents">0</dd><small id="r-patentbonus">+0%</small></div>
     </dl>
+    <button id="m-status" class="m-status m-only" aria-label="Open the Works view"></button>
     <button id="btn-mute" class="icon-btn" aria-pressed="false" title="Sound on (M to toggle)" aria-label="Mute sound">
       <svg viewBox="0 0 24 24" aria-hidden="true"><path class="spk" d="M4 9 H8 L13 5 V19 L8 15 H4 Z"/><path class="wave" d="M16 9 Q18.5 12 16 15 M18.5 6.5 Q22.5 12 18.5 17.5"/><path class="cross" d="M16 9 L22 15 M22 9 L16 15"/></svg>
     </button>
@@ -36,6 +37,8 @@
   <section class="works" aria-label="The Works: live view of the shop">
     <div class="works-scroll">
       <canvas id="machine" role="img" aria-label="Animated hydraulic machine showing your pumps, header, and one station per actuator type"></canvas>
+      <button id="btn-works-full" class="works-full-btn m-only" aria-label="Full-screen view">⤢ Full screen</button>
+      <button id="btn-works-close" class="works-close-btn" aria-label="Close full-screen view">✕ Close</button>
     </div>
     <p class="works-hint">Click the hand pump to stroke it. Click a station, the pump bank or the header to jump to it in the shop, or an office room or the warehouse to see that team.</p>
   </section>
@@ -79,13 +82,14 @@
     <!-- Right: the shop -->
     <section class="panel shop" aria-label="Workshop">
       <nav class="tabs" role="tablist">
-        <button role="tab" data-tab="actuators" aria-selected="true">Actuators</button>
-        <button role="tab" data-tab="pumps">Pumps</button>
-        <button role="tab" data-tab="system">System</button>
-        <button role="tab" data-tab="tech">R&amp;D <span class="badge" id="tech-badge" hidden></span></button>
-        <button role="tab" data-tab="company">Company <span class="badge" id="company-badge" hidden>!</span></button>
-        <button role="tab" data-tab="overhaul" id="tab-overhaul">Overhaul</button>
-        <button role="tab" data-tab="settings">Logbook</button>
+        <button role="tab" data-tab="works" class="m-only"><svg class="tab-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 21V11l5 3v-3l5 3v-3l5 3V5h3v16Z"/></svg><span class="tl" data-short="Works">Works</span> <span class="badge" id="works-badge" hidden></span></button>
+        <button role="tab" data-tab="actuators" aria-selected="true"><svg class="tab-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M2 9h12v6H2z M14 12h7 M21 8v8"/></svg><span class="tl" data-short="Lines">Actuators</span></button>
+        <button role="tab" data-tab="pumps"><svg class="tab-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5a7 7 0 1 0 .01 0 M12 2v3 M12 19v3 M2 12h3 M19 12h3 M12 9v6 M9 12h6"/></svg><span class="tl" data-short="Pumps">Pumps</span></button>
+        <button role="tab" data-tab="system"><svg class="tab-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 17a9 9 0 1 1 18 0 M12 17l5-6 M3 17h18"/></svg><span class="tl" data-short="System">System</span></button>
+        <button role="tab" data-tab="tech"><svg class="tab-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 3h6 M10 3v6l-5 11h14l-5-11V3 M7.5 15h9"/></svg><span class="tl" data-short="R&amp;D">R&amp;D</span> <span class="badge" id="tech-badge" hidden></span></button>
+        <button role="tab" data-tab="company"><svg class="tab-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 11a3 3 0 1 0 0-6 3 3 0 0 0 0 6 M2 20c0-4 3-6 6-6s6 2 6 6 M16 5a3 3 0 0 1 0 6 M18 14c2.5 1 4 3 4 6"/></svg><span class="tl" data-short="Team">Company</span> <span class="badge" id="company-badge" hidden>!</span></button>
+        <button role="tab" data-tab="overhaul" id="tab-overhaul"><svg class="tab-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 12a8 8 0 1 1-2.6-5.9 M20 3v5h-5"/></svg><span class="tl" data-short="Overhaul">Overhaul</span></button>
+        <button role="tab" data-tab="settings"><svg class="tab-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h11a3 3 0 0 1 3 3v13H8a3 3 0 0 1-3-3Z M5 17a3 3 0 0 1 3-3h11"/></svg><span class="tl" data-short="Log">Logbook</span></button>
       </nav>
 
       <div class="buyqty" id="buyqty" role="radiogroup" aria-label="Buy quantity">

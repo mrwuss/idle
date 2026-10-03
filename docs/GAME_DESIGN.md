@@ -273,6 +273,16 @@ Ordered roughly by how much they add per unit of work. See [ROADMAP.md](ROADMAP.
   - **Clicks:** the hand pump strokes it; a station, the pump bank or the
     header jumps to that part of the shop.
 - **Gauges, not just numbers:** analogue pressure and temperature dials with red zones.
+- **Phones are played one-handed** (held in the right hand, thumb doing the work):
+  - Everything you tap lives in the bottom third: a tab bar, then Stroke (right, where
+    the thumb rests) and Surge (left), then the buy quantity on shop tabs.
+  - Read-only information sits at the top: resources, plus a one-line status
+    (psi, oil °F, flow %, accumulator %) that turns red when something is wrong.
+  - The machine and gauges move to a **Works** tab, so shop tabs start at the list.
+    The machine fits the width; tapping it opens full screen, rotated so that turning
+    the phone sideways shows it large. Taps still work on the rotated machine.
+  - Only vertical scrolling. The R&D tree becomes a two-column list; the Company tab
+    puts the Order Line before the territory map.
 - **Audio (planned):** pump whine pitch tracks flow; relief-valve squeal when
   dumping; a deep *thunk* on each Surge; muted shop ambience.
 

@@ -20,6 +20,10 @@ python3 -m http.server 8000   # then visit http://localhost:8000
 **Controls:** `Space` strokes the hand pump · `S` fires Surge · `M` mutes sound · progress autosaves every 10 s.
 The buy-quantity bar has ×1, ×10, ×100, **Next** (up to the next ×2 milestone) and Max.
 
+**On a phone** the layout is built for one hand: tabs, Stroke/Surge and the buy quantity sit at the bottom under your thumb, with Stroke on the right.
+A slim status line at the top shows pressure, oil temperature, flow and the accumulator. The machine and gauges live on the **Works** tab;
+tap the machine for full screen, and turn the phone sideways to see it large.
+
 ## How it works (in 30 seconds)
 
 - **Pumps** make flow (GPM). **Actuators** (jacks, presses, excavators, ship lifts…) consume it and earn money.

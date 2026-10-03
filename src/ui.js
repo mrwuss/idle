@@ -404,7 +404,18 @@
 
   function init(h) {
     handlers = h;
-    root.PW.machine.init($('machine'), { open: h.openFromMachine, stroke: h.strokeFromMachine });
+    root.PW.machine.init($('machine'), {
+      open(tab, id, dept) { setFull(false); h.openFromMachine(tab, id, dept); },
+      stroke: h.strokeFromMachine,
+      expand() { if (!phone.matches || document.body.classList.contains('works-full')) return false; setFull(true); return true; },
+    });
+    $('btn-works-full').addEventListener('click', () => setFull(true));
+    $('btn-works-close').addEventListener('click', () => setFull(false));
+    $('m-status').addEventListener('click', () => setTab('works'));
+    document.querySelector('.era-card').addEventListener('click', (ev) => ev.currentTarget.classList.toggle('open'));
+    document.addEventListener('keydown', (ev) => { if (ev.key === 'Escape') setFull(false); });
+    phone.addEventListener('change', () => { if (!phone.matches) { setFull(false); if (ui.tab === 'works') setTab('actuators'); } });
+    setTab(ui.tab);
     gP = makeGauge($('g-pressure'), 'PSI');
     gT = makeGauge($('g-temp'), '°F');
     buildList($('list-actuators'), 'actuator', ACTUATORS, h.buy);
@@ -424,8 +435,16 @@
       }));
   }
 
+  // Phones get the one-handed layout (see the end of style.css): a Works tab, a bottom dock.
+  const phone = root.matchMedia ? root.matchMedia('(max-width: 760px)') : { matches: false, addEventListener() {} };
+  function setFull(on) {
+    document.body.classList.toggle('works-full', on);
+  }
+
   function setTab(tab) {
+    if (tab !== ui.tab && phone.matches) root.scrollTo(0, 0);
     ui.tab = tab;
+    document.body.dataset.view = tab;
     document.querySelectorAll('.tabs [data-tab]').forEach((b) => b.setAttribute('aria-selected', b.dataset.tab === tab));
     document.querySelectorAll('.tab-body').forEach((b) => (b.hidden = b.dataset.body !== tab));
     $('buyqty').hidden = !['actuators', 'pumps', 'system', 'company'].includes(tab);
@@ -538,6 +557,7 @@
     if (ui.tab === 'tech') renderTech(s);
     if (ui.tab === 'company') renderCompany(s, d);
     $('company-badge').hidden = d.order.factor >= 0.95;
+    if (phone.matches) renderPhoneStatus(s, d);
     if (ui.tab === 'overhaul') renderOverhaul(s);
     if (ui.tab === 'settings') renderStats(s, d);
 
@@ -546,6 +566,21 @@
     $('tech-badge').textContent = ready;
     $('tab-overhaul').classList.toggle('locked', !E.canOverhaul(s) && s.patents === 0);
     return d;
+  }
+
+  // The phone's one-line status: pressure, oil temperature, flow and accumulator.
+  function renderPhoneStatus(s, d) {
+    const bar = (f) => `<i><b style="width:${Math.round(Math.min(1, Math.max(0, f)) * 100)}%"></b></i>`;
+    const flow = d.demand > 0 ? Math.min(1, d.supply / d.demand) : 1;
+    const hot = s.temp > d.tempLimit ? 'bad' : d.tempEq > d.tempLimit ? 'warn' : '';
+    setPart($('m-status'),
+      `<span>${fmt(d.psi)} psi${bar(d.psi / TIERS[s.tier].psi)}</span>`
+      + `<span class="${hot}">${Math.round(s.temp)}°F${bar((s.temp - 60) / Math.max(1, d.tempLimit - 60))}</span>`
+      + `<span class="${d.utilization < 1 ? 'bad' : ''}">flow ${Math.round(flow * 100)}%${bar(flow)}</span>`
+      + `<span class="acc">acc ${Math.round(100 * s.accCharge / d.accCap)}%${bar(s.accCharge / d.accCap)}</span>`);
+    const n = $('alerts').querySelectorAll('.bad').length;
+    $('works-badge').hidden = !n;
+    $('works-badge').textContent = n;
   }
 
   function renderAlerts(s, d) {

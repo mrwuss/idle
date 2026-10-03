@@ -19,7 +19,9 @@
   promoted with `promote()`) boost strength and auto-hire in `managersTick()`; Engineering,
   IT, Safety and Management are in `HIREABLE` (not the Order Line): `engKhMult()`, `itMult()`,
   `safetyTick()`/`incidentRate()` (own seed in `s.safety`) and `mgmtMult()`.
-  machine.js pauses off-screen and drops to a low-quality mode on slow devices. The simulator
+  machine.js pauses off-screen and drops to a low-quality mode on slow devices. Phones (≤760px) use the
+  one-handed layout at the end of style.css, keyed on `body[data-view]` (set by `setTab()`), with a
+  phone-only Works tab and a full-screen machine (`body.works-full`, rotated in portrait; `hit()` handles it). The simulator
   bot calls `keepLineStaffed()` before buying anything. Support departments (IT, Safety incidents,
   Management, Purchasing discount) are live; achievements (`s.ach`) and first-time tips (`s.tips`)
   persist through Overhaul. Paks and the remaining department twists are still a design scaffold shown on the Company tab. Location unlocks
