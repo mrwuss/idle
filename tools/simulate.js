@@ -176,7 +176,8 @@ while (s.time < end) {
 
 const d = E.derive(s);
 console.log('\nFinal:', {
-  orderLine: d.order.factor.toFixed(2), staff: Object.fromEntries(Object.entries(s.depts).map(([k, v]) => [k, v.staff])),
+  orderLine: d.order.factor.toFixed(2), surplusBonus: '+' + Math.round((d.order.bonus - 1) * 100) + '%',
+  load: Object.fromEntries(Object.entries(d.order.depts).filter(([, o]) => o.open).map(([k, o]) => [k, +o.load.toFixed(2)])),
   income: fmt(d.income) + '/s', lifetime: fmt(s.lifetime), patentsAvailable: E.overhaulGain(s),
   tier: TIERS[s.tier].name, tech: Object.keys(s.tech).length + '/' + TECH.length,
   pumps: s.pumps, actuators: s.actuators, coolers: s.coolers,

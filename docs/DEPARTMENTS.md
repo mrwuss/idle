@@ -212,6 +212,13 @@ department-specific twists come next.
   (you + team strength) ÷ needed; see *Hiring people* below.
 - **The bottleneck:** the Order Line runs at the coverage of its weakest
   department. Income is `production × that factor`, and it never drops below 10%.
+- **Surplus staff pay off:** coverage above 100% isn't wasted. Each department
+  earns **+15% × (1 − 1/coverage)** income: +5% at 150%, +7.5% at 200%, +11% at
+  400%, approaching +15% (so +90% across the Order Line at most). There's no flat
+  cap, so more output always helps a little. Managers, IT,
+  Management and strong hires all raise output, so every team bonus shows up in
+  income even when nothing is a bottleneck. Surplus also buffers the next 10× of
+  growth before the department becomes a bottleneck again.
 - **Hiring:** the nth hire costs `10 s × opening production × 1.778^n`. Because
   1.778⁴ = 10, that works out to roughly **10 seconds of current production per
   hire you need**, whenever you need it. Hiring never gets trivially cheap
@@ -221,7 +228,8 @@ department-specific twists come next.
   ×2.24 and South ×3.16. Locations widen the market, and Outside Sales covers it.
 - **Overhaul** resets staff. Departments reopen at the new run's (tiny)
   production, so each run you staff up again as you grow.
-- **UI:** on the Company tab each card shows coverage, staff vs needed, and a
+- **UI:** on the Company tab each card shows coverage (an amber segment for surplus),
+  output vs needed with the manager/IT/Management boosts that make it up, any surplus bonus, and a
   hire button that follows the ×1/×10/×100/Max picker. The bottleneck card turns
   red, a **Staff the line to 100%** button prices the whole fix up front, and
   alerts plus the machine's overlay name the short-staffed department.
@@ -280,7 +288,7 @@ Hires are people, not head counts.
 
 | | Formula | LEA 3 | LEA 9 |
 |---|---|---|---|
-| Team strength | × (1 + 3% × LEA) | +9% | +27% |
+| Team strength (the manager still counts as a worker) | × (1 + 5% × LEA) | +15% | +45% |
 | Applicants reviewed | 3 + ⌊LEA / 3⌋ | 4 | 6 |
 | Hires per staffing check (every 2 s) | 1 + ⌊LEA / 4⌋ | 1 | 3 |
 
@@ -289,8 +297,8 @@ Hires are people, not head counts.
   screening, paying the normal hire cost. Managers keep head count where it
   needs to be, and better managers pick better people and fill gaps faster.
 - **Promote for Leadership, not effectiveness:** a high-LEA person with mediocre
-  job stats makes the best manager. On a small team, keeping your star working
-  can be worth more.
+  job stats makes the best manager. Managers keep doing their own job, so a
+  promotion never lowers a team's output.
 
 ## Engineering (implemented, v0.2.2)
 

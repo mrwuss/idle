@@ -22,14 +22,16 @@ update the tables here.
 | Production ($/s) | `Σ actuator income × utilization × thermal × (1 + 0.1 × patents)` |
 | Department staff needed | `1 + 4 × log10(production ÷ production when it opened)` |
 | Person's effectiveness | `0.45 + 0.11 × (2 × primary stat + secondary stat) / 3 + quirk` (≈0.55–1.9) |
-| Department coverage | `min(1, (1 + Σ effectiveness) ÷ needed)`; Outside Sales × `√(customer base ÷ 100)` |
+| Department output | `(1 + strength × IT × Management) × reach`; Outside Sales reach `√(customer base ÷ 100)` |
+| Department coverage | `min(1, output ÷ needed)` |
+| Surplus staff bonus | income × `(1 + Σ 0.15 × (1 − needed ÷ output))` over Order Line departments past 100% (+7.5% each at 200%; max +90%) |
 | Order Line factor | lowest coverage of any open department (the bottleneck), floored at 0.1 |
 | Hire cost (nth hire) | `10 s × production-at-opening × 1.778^n`, which is about 10 s of *current* production (n = head count) |
 | New applicants | `3 s × current production` |
-| Manager bonus | team strength × `(1 + 0.03 × Leadership)`; reviews `3 + ⌊LEA/3⌋` applicants |
+| Manager bonus | team strength (manager included) × `(1 + 0.05 × Leadership)`; reviews `3 + ⌊LEA/3⌋` applicants |
 | Know-how per second | `0.04 × √(income) × (1 + 0.05 × Engineering strength) × Engineering projects` |
 | Hand-pump charge | `max(0.25 gal, 2% of accumulator capacity)` per stroke |
-| Total income | `production × surge × Order Line factor` |
+| Total income | `production × surge × Order Line factor × surplus bonus` |
 | Patents (total) | `floor(2 × ∛(lifetime $ / 1,000,000))` (was √; the cube root stops the late-run snowball) |
 | Achievements | +1% income each (23 in all, kept through Overhaul) |
 | Safety streak | +1% income per 10 min without an incident, max +25% |
@@ -101,22 +103,26 @@ The simulator plays a greedy bot that always buys whatever gives the best
 on cooldown. A human will be slower early (reading, learning) and faster in
 places the bot is naïve about, so treat these as relative pacing.
 
-| Milestone | Target | Bot (first run, with departments and achievements) |
+| Milestone | Target | Bot (first run, with departments, achievements and surplus staff) |
 |---|---|---|
 | First splitter | < 3 min | 2m 45s |
-| 2-Wire Braid (3,000 psi) | ~10 min | 9m 15s |
-| First excavator | ~10 min | 11m 45s |
-| $1M lifetime (Overhaul unlocks) | 20–40 min | 17–20 min |
-| First forging press | ~45 min | 42–45 min |
-| $1B lifetime | 1–2 h | 1h 07m–1h 10m |
-| First ship lift | 1–2 h | 1h 11m |
-| All 17 techs | 3–5 h | ~1h 53m |
-| Run 1 plateau | 2–4 h | ~40M/s around 3–6 h (heat wall at 200°F) |
+| 2-Wire Braid (3,000 psi) | ~10 min | 9m 25s |
+| First excavator | ~10 min | 11m 35s |
+| $1M lifetime (Overhaul unlocks) | 20–40 min | 18m 13s |
+| First forging press | ~45 min | 39m |
+| $1B lifetime | 1–2 h | 1h 03m |
+| First ship lift | 1–2 h | 1h 03m |
+| All 17 techs | 3–5 h | ~1h 40m |
+| Run 1 plateau | 2–4 h | ~63M/s around 3–6 h (heat wall at 200°F) |
 
-The bot hires into the bottleneck before buying anything else. Achievements
-(+1% each; the bot earns about 14 in run 1) lift end-of-run income from ~30M/s
-to ~40M/s and pull the mid-game forward by about 10%. Runs vary by a minute or
-two because applicants come from a random seed.
+The bot hires into the bottleneck before buying anything else, promotes
+managers and keeps IT, Safety, Management and Purchasing staffed. Achievements
+(about 14 in run 1) add ~15%; surplus staff (managers, IT and Management push
+every department to ~150–170% coverage) add ~40% by the end of run 1. Runs vary
+by a minute or two because applicants come from a random seed.
+
+**Research is too fast:** the bot finishes the tree at ~1h40m against a 3–5 h
+target. Raise tech costs in the next balance pass.
 
 **Known balance notes:**
 

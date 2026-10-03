@@ -293,11 +293,18 @@
     } else {
       const neck = o.bottleneck === d.id && o.factor < 0.999;
       r.el.classList.toggle('neck', neck);
-      r.status.textContent = neck ? `Bottleneck · ${Math.round(c.coverage * 100)}%` : `Covered · ${Math.round(c.coverage * 100)}%`;
+      const pct = Math.round(c.load * 100), bonus = Math.round(c.bonus * 1000) / 10;
+      r.status.textContent = neck ? `Bottleneck · ${pct}%` : bonus > 0 ? `Covered · ${pct}% · +${bonus}% income` : `Covered · ${Math.min(100, pct)}%`;
       const reach = c.reach !== 1 ? ` · reach ×${c.reach.toFixed(2)}` : '';
       const extra = d.id === 'purchasing' && E.purchasingDiscount(s) < 1 ? ` · prices −${Math.round((1 - E.purchasingDiscount(s)) * 100)}%` : '';
-      r.staffText.textContent = `You + ${heads} hired · strength ${(1 + strength).toFixed(1)}${reach} · needs ${c.required.toFixed(1)}${extra}`;
+      // Output includes the manager, IT and Management boosts, so every bonus shows up here.
+      const boosts = [st.mgr && `manager +${Math.round((E.mgrBonus(st) - 1) * 100)}%`,
+        E.itMult(s) > 1 && `IT +${Math.round((E.itMult(s) - 1) * 100)}%`,
+        E.mgmtMult(s) > 1 && `Mgmt +${Math.round((E.mgmtMult(s) - 1) * 100)}%`].filter(Boolean);
+      r.staffText.textContent = `You + ${heads} hired · output ${c.effective.toFixed(1)} of ${c.required.toFixed(1)} needed${reach}${extra}`
+        + (boosts.length ? ` · ${boosts.join(', ')}` : '');
       r.cov.style.width = `${Math.min(100, c.coverage * 100)}%`;
+      r.cov.parentElement.style.setProperty('--sur', `${Math.min(1, Math.max(0, c.load - 1)) * 100}%`);
       r.cov.parentElement.classList.toggle('short', c.coverage < 0.999);
     }
 
@@ -371,6 +378,7 @@
     $('order-summary').textContent = o.factor < 0.999
       ? `· running at ${Math.round(o.factor * 100)}%, ${DEPARTMENTS.find((x) => x.id === o.bottleneck).name} is the bottleneck`
       : '· running at 100%';
+    if (o.bonus > 1.0005) $('order-summary').textContent += ` · surplus staff +${Math.round((o.bonus - 1) * 1000) / 10}% income`;
     $('order-summary').classList.toggle('bad', o.factor < 0.999);
     const sq = E.staffLineQuote(s), sb = $('btn-staff-line');
     sb.hidden = !sq.hires;

@@ -377,13 +377,14 @@
     hireGrowth: 1.778,
     hireBaseS: 10,
     deptFloor: 0.1,         // a neglected department never stops the line entirely
+    surplusBonus: 0.15,     // surplus staff: income +15% × (1 − 1/coverage) per department (+7.5% at 200%)
     poolSize: 3,            // applicants waiting per department
     rerollS: 3,             // a fresh batch of applicants costs this many seconds of production
     effBase: 0.45,          // effectiveness = effBase + effPerPoint × (2×primary + secondary)/3 + trait
     effPerPoint: 0.11,      // …so an average applicant counts as ~1.05 staff, a star ~1.6
     strokeShare: 0.02,
     engKhPerStrength: 0.05, // each staff-equivalent in Engineering adds 5% Know-how
-    mgrTeamPerPoint: 0.03,  // a manager adds 3% team strength per Leadership point
+    mgrTeamPerPoint: 0.05,  // manager: team strength +5% per Leadership point
     mgrPoolPer: 3,          // …and reviews 1 more applicant per 3 Leadership points
     mgrEvery: 2,            // seconds between a manager's staffing checks
     // Support departments
