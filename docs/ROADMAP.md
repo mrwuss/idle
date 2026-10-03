@@ -30,6 +30,7 @@ Design: [DEPARTMENTS.md](DEPARTMENTS.md)
 - [x] Engineering teams (Design / Controls / Project) and the Pak lines: Valve-Pak → Base-Pak → Sys-Pak
 - [x] People UI: compact department cards, department focus sheet, ID badges with explained stats
 - [ ] Named Sys-Pak contracts with deadlines
+- [x] Executive track: CRO / COO / CFO / CTO run their divisions, a President, a Board of Directors bought with Patents
 - [x] Company tab hiring: coverage bars, hire buttons, bottleneck highlight, "Staff the line to 100%"
 - [x] Hiring people: random applicants with stats, quirks and looks; effectiveness by department; team rosters
 - [x] The Works as a facility: office mezzanine with your staff, warehouse (racks, AMR robots, pickers, packing), shipping dock with trailers

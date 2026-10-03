@@ -45,6 +45,25 @@ function manageCompany(s) {
     while (st.p0 && E.headcount(st) < u.engineers && E.hireQuote(s, 'engineering', 1).cost < s.cash * 0.05) E.hire(s, 'engineering', 1);
     if (u.cost < s.cash * 0.25) E.buyEng(s, u.id);
   }
+  // Executives: promote the best insider (or hire outside when cheap); name a President at 3.
+  if (E.execOpen(s)) {
+    for (const x of E.DATA.EXECS) {
+      if (s.execs[x.id]) continue;
+      const c = E.execCandidates(s, x.id)[0];
+      if (c && c.skill >= 5) E.appointExec(s, x.id, c);
+      else if (E.execHireCost(s) < s.cash * 0.05) { E.fillExecPool(s, x.id); E.appointExec(s, x.id, { pool: 0 }); }
+    }
+    if (!s.president && E.canAppointPresident(s)) {
+      const best = E.DATA.EXECS.filter((x) => s.execs[x.id]).sort((a, b) => E.leadership(s.execs[b.id]) - E.leadership(s.execs[a.id]))[0];
+      E.appointPresident(s, best.id);
+    }
+  }
+  // Board: elect the first candidate when the seat costs under a fifth of our patents.
+  if (E.boardOpen(s)) {
+    E.fillBoardPool(s);
+    const cost = E.boardSeatCost(s);
+    if (cost != null && s.patents >= cost * 5) E.electDirector(s, 0);
+  }
   // Pak lines: aim as high as the chain allows; keep hiring engineers while they're cheap.
   if (E.pakOpen(s)) {
     E.setPakTarget(s, E.sysReady(s) ? 'sys' : 'base');
@@ -182,6 +201,8 @@ while (s.time < end) {
 const d = E.derive(s);
 console.log('\nFinal:', {
   orderLine: d.order.factor.toFixed(2), surplusBonus: '+' + Math.round((d.order.bonus - 1) * 100) + '%',
+  execs: Object.fromEntries(E.DATA.EXECS.map((x) => [x.id, s.execs[x.id] ? E.execSkill(s, x.id) : '-'])), president: E.presidentSkill(s),
+  board: s.board.map((m) => m.perk).join(','), execActions: s.execLog.length,
   paks: { ...s.pak.built, earned: fmt(s.pak.earned), target: s.pak.target },
   load: Object.fromEntries(Object.entries(d.order.depts).filter(([, o]) => o.open).map(([k, o]) => [k, +o.load.toFixed(2)])),
   income: fmt(d.income) + '/s', lifetime: fmt(s.lifetime), patentsAvailable: E.overhaulGain(s),

@@ -299,3 +299,64 @@ test('older saves gain an empty Pak line', () => {
   assert.equal(m.pak.target, 'valve');
   assert.deepEqual(m.pak.stock, { valve: 0, base: 0 });
 });
+
+/** A late shop: Management open (so executives are), every department staffed. */
+function lateGame() {
+  const s = midGame();
+  s.lifetime = 2e9; s.cash = 1e15;
+  E.tick(s, 1);
+  for (const d of E.HIREABLE) if (s.depts[d.id].p0) E.hire(s, d.id, 4);
+  return s;
+}
+
+test('executives open with Management and boost their division', () => {
+  const s = lateGame();
+  assert.ok(E.execOpen(s));
+  const before = E.orderLine(s, E.derive(s).production).depts.outside_sales.effective;
+  const c = E.execCandidates(s, 'cro')[0];
+  assert.ok(E.appointExec(s, 'cro', c));
+  assert.equal(E.execCount(s), 1);
+  assert.ok(E.execMult(s, 'inside_sales') > 1);
+  assert.equal(E.execMult(s, 'accounting'), 1);
+  assert.ok(E.orderLine(s, E.derive(s).production).depts.outside_sales.effective > before);
+});
+
+test('an executive promotes managers, staffs up and upgrades people', () => {
+  const s = lateGame();
+  for (const id of ['outside_sales', 'inside_sales']) s.depts[id].mgr = null;
+  E.appointExec(s, 'cro', { pool: 0 });
+  for (let i = 0; i < 6; i++) E.execTick(s, E.derive(s));
+  assert.ok(s.depts.outside_sales.mgr && s.depts.inside_sales.mgr, 'both sales teams get managers');
+  assert.ok(s.execLog.length > 0);
+  assert.ok(s.execLog.every((l) => l.x === 'cro'));
+});
+
+test('a President needs three executives and lifts everyone', () => {
+  const s = lateGame();
+  for (const x of ['cro', 'coo']) E.appointExec(s, x, { pool: 0 });
+  assert.equal(E.canAppointPresident(s), false);
+  E.appointExec(s, 'cfo', { pool: 0 });
+  const skill = E.execSkill(s, 'cro');
+  const inc = E.derive(s).income;
+  assert.ok(E.appointPresident(s, 'cfo'));
+  assert.equal(s.execs.cfo, null);
+  assert.ok(E.presidentMult(s) > 1);
+  assert.ok(E.execSkill(s, 'cro') >= skill);
+  assert.ok(E.derive(s).income > inc * 0.99);
+});
+
+test('board seats cost Patents, survive Overhaul and are not refunded', () => {
+  const s = lateGame();
+  s.overhauls = 2; s.patents = 10;
+  assert.ok(E.boardOpen(s));
+  E.fillBoardPool(s);
+  assert.equal(s.boardPool.length, 3);
+  const gain = E.overhaulGain(s);
+  assert.ok(E.electDirector(s, 0));
+  assert.equal(s.patents, 10 - E.DATA.BOARD_COSTS[0]);
+  assert.equal(E.overhaulGain(s), gain, 'spent patents do not come back as Overhaul gain');
+  const perk = s.board[0].perk;
+  s.lifetime = 1e13;
+  E.overhaul(s);
+  assert.equal(s.board[0].perk, perk);
+});
