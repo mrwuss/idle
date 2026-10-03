@@ -149,8 +149,9 @@ flowchart LR
   contracts board idea in the earlier roadmap.
 
 **Opening the chain over time:** Valve-Pak opens with Engineering (Era IV).
-Base-Pak opens after the first Valve-Pak ships. Sys-Pak needs PLC Automation and
-at least one controls engineer.
+Sys-Pak needs PLC Automation and at least one controls engineer. (Implemented
+with simpler rules: see *Pak lines (implemented)* below. Named Sys-Pak
+contracts with deadlines are still to build.)
 
 ## How it changes the loop
 
@@ -228,6 +229,13 @@ department-specific twists come next.
   ×2.24 and South ×3.16. Locations widen the market, and Outside Sales covers it.
 - **Overhaul** resets staff. Departments reopen at the new run's (tiny)
   production, so each run you staff up again as you grow.
+- **People UI (v0.2.5):** department cards are compact: status, coverage, a row of
+  headshots (manager first) and a quick hire. Tapping a card opens its **focus
+  sheet** (a bottom sheet on phones): plain-language health, where the output
+  comes from, the two stats that matter there, the manager's effects, the team
+  and applicants as headshots. Tapping any face opens an **ID badge** with all
+  eight stats explained, their fit for the job, their quirk, what they'd do as
+  manager, and Hire / Promote / team buttons.
 - **UI:** on the Company tab each card shows coverage (an amber segment for surplus),
   output vs needed with the manager/IT/Management boosts that make it up, any surplus bonus, and a
   hire button that follows the ×1/×10/×100/Max picker. The bottleneck card turns
@@ -306,7 +314,15 @@ Hires are people, not head counts.
   departments, weighing Mechanical first and Numbers second. Its quirks are
   *Licensed P.E.* and *Builds test rigs in the garage*. It isn't part of the
   Order Line, so it never becomes the bottleneck.
-- **Engineers:** each staff-equivalent adds **5% Know-how**.
+- **Three teams (v0.2.5).** Every engineer, the manager included, works on one
+  team; new hires join the smallest one, and you move people from their ID badge.
+  Team strength = effectiveness × manager × Management, like any department.
+  - **Design:** each staff-equivalent adds **5% Know-how** (people hired before
+    teams existed, and "you", are on Design).
+  - **Controls:** the six Controls nodes (Proportional Valves, Load Sensing, PLC,
+    Servo, Telematics, Digital Displacement) cost **−5% Know-how per
+    staff-equivalent**, down to half price. Strength 1+ is needed for Sys-Paks.
+  - **Project:** runs the Pak lines (below).
 - **Engineering projects** are one-time cash purchases that need enough engineers:
 
 | Project | Engineers | Cost | Know-how |
@@ -319,7 +335,27 @@ Hires are people, not head counts.
 
 - **Effect on pacing:** with Engineering staffed, the balance bot finishes the
   R&D tree around 2h instead of 3.5h, and end-of-run income is unchanged.
-- **Overhaul** resets projects and staff, like everything else in a run.
+- **Overhaul** resets projects, staff and the Pak line, like everything else in a run.
+
+### Pak lines (implemented, v0.2.5)
+
+- **Hours:** the Project team adds `√(Project strength)` engineering hours per
+  second (big teams coordinate less well, so the line keeps growing but never
+  runs away).
+- **The chain:** you pick a target; the line builds whatever it needs first and
+  sells each finished target through the Order Line:
+
+| Pak | Hours | Uses | Sells for | Grade |
+|---|---:|---|---|---|
+| Valve-Pak | 300 | — | 10 s of production | ×1.5 with Forged Manifolds |
+| Base-Pak | 1,500 | 1 Valve-Pak | 6 × 10 s | +10% per pump type above gear |
+| Sys-Pak | 6,000 | 4 Base-Paks | 60 × 10 s | same; needs PLC Automation + Controls strength 1 |
+
+- **Why climb:** per engineering hour, a Base-Pak pays ~1.5× a Valve-Pak and a
+  Sys-Pak ~2× (with a good pump grade). Prices follow production × the Order
+  Line factor, so a bottleneck also slows Pak revenue.
+- **UI:** the Company tab shows each Pak's price, hours, stock and build
+  progress, a "Build these" button, and the line's hours/s and average $/s.
 
 ## Support departments and Purchasing (implemented, v0.2.3)
 

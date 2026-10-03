@@ -151,19 +151,19 @@
     return `<svg class="avatar" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 24 Q3 16 12 16 Q21 16 21 24 Z" fill="${l.shirt}"/>
       <circle cx="12" cy="10" r="6" fill="${l.skin}"/>${hair}</svg>`;
   }
-  const statShort = Object.fromEntries(E.DATA.STATS.map((x, i) => [x.id, [x.short, i, x.name]]));
+  const STAT = Object.fromEntries(E.DATA.STATS.map((x, i) => [x.id, { ...x, i }]));
   const traitName = Object.fromEntries(E.DATA.TRAITS.map((t) => [t.id, t]));
-  function personRow(p, deptId, extra = '') {
+  const DEPT_BY_ID = Object.fromEntries(DEPARTMENTS.map((d) => [d.id, d]));
+  const ENG_TEAM_INFO = Object.fromEntries(DEPT_BY_ID.engineering.teams.map((t) => [t.id, t]));
+  const grade = (eff) => (eff >= 1.4 ? 'star' : eff >= 1.1 ? 'good' : eff < 0.85 ? 'weak' : 'ok');
+  const GRADE_WORD = { star: 'Star fit', good: 'Strong fit', ok: 'Solid fit', weak: 'Weak fit' };
+  const first = (n) => n.split(' ')[0];
+  /** A tappable headshot: opens the person's ID badge. */
+  function face(p, deptId, kind, idx, extra = '') {
     const eff = E.effectiveness(p, deptId);
-    const [a, b] = E.DATA.DEPT_STATS[deptId];
-    const tr = p.t && traitName[p.t];
-    const fits = tr && (tr.dept === deptId || tr.dept === 'any');
-    const grade = eff >= 1.4 ? 'star' : eff >= 1.1 ? 'good' : eff < 0.85 ? 'weak' : '';
-    return `<div class="person">${avatar(p.a)}
-      <div class="p-main"><span class="p-name">${p.n}</span>
-        <span class="p-stats" title="${statShort[a][2]} (counts double) · ${statShort[b][2]}">${statShort[a][0]} ${p.s[statShort[a][1]]} · ${statShort[b][0]} ${p.s[statShort[b][1]]}</span>
-        ${tr ? `<span class="p-trait${fits ? ' fits' : ''}" title="${fits ? `+${tr.bonus} here` : 'No bonus in this job'}">${tr.name}</span>` : ''}</div>
-      <span class="p-eff ${grade}" title="Counts as ${eff} staff here">×${eff.toFixed(2)}</span>${extra}</div>`;
+    return `<div class="face-wrap"><button class="face ${grade(eff)}${kind === 'mgr' ? ' mgr' : ''}" data-person="${deptId}|${kind}|${idx}" title="${p.n}: tap for ID">
+      <span class="face-img">${avatar(p.a)}${kind === 'mgr' ? '<i class="face-tag">MGR</i>' : ''}</span>
+      <span class="face-name">${first(p.n)}</span><span class="face-eff">×${eff.toFixed(2)}</span></button>${extra}</div>`;
   }
 
   function buildCompany() {
@@ -177,19 +177,23 @@
         <div class="dept-progress"><div></div></div>
         ${staffed(d.id) ? `<div class="dept-staff" hidden>
           <div class="staff-text"></div>
-          <div class="cov" title="Coverage: team strength ÷ staff needed"><div></div></div>
-          <div class="mgr-box"></div>
-          ${d.id === 'engineering' ? '<div class="eng-ups"></div>' : ''}
-          <div class="applicants"></div>
-          <details class="team"><summary></summary><ul></ul></details>
+          <div class="cov" title="Coverage: team output ÷ work needed"><div></div></div>
+          <div class="people-strip"></div>
+          <div class="card-actions">
+            <button class="btn mini" data-hire-best="${d.id}"></button>
+            <button class="btn mini ghost open-dept" data-open-dept="${d.id}">Team &amp; details ›</button>
+          </div>
         </div>` : ''}
         <div class="dept-era">Era ${ROMAN[d.era]} · ${ERAS[d.era]}</div>`;
       if (d.id === 'production') el.addEventListener('click', () => setTab('actuators'));
+      // Tapping an open department's card (not one of its buttons) opens its focus view.
+      if (staffed(d.id)) el.addEventListener('click', (ev) => {
+        if (!ev.target.closest('button') && el.querySelector('.dept-staff:not([hidden])')) openDept(d.id);
+      });
       const q = (sel) => el.querySelector(sel);
       deptEls[d.id] = { el, status: q('.dept-status'), prog: q('.dept-progress'), bar: q('.dept-progress div'),
-        staff: q('.dept-staff'), staffText: q('.staff-text'), cov: q('.cov div'),
-        applicants: q('.applicants'), team: q('.team'), teamSum: q('.team summary'), teamList: q('.team ul'),
-        twist: q('.dept-twist'), mgr: q('.mgr-box'), eng: q('.eng-ups') };
+        staff: q('.dept-staff'), staffText: q('.staff-text'), cov: q('.cov div'), strip: q('.people-strip'),
+        best: q('[data-hire-best]'), twist: q('.dept-twist') };
       return el;
     };
     const line = $('order-line'), support = $('support-depts');
@@ -204,10 +208,13 @@
       if (i) chain.insertAdjacentHTML('beforeend', '<span class="pak-arrow" aria-hidden="true">→</span>');
       const el = document.createElement('div');
       el.className = 'pak';
-      el.innerHTML = `<div class="dept-head"><span class="dept-name">${p.name}</span><span class="pak-value">×${p.value} value</span></div>
-        <div class="dept-role">${p.desc}</div><div class="dept-twist">Built from: ${p.recipe}</div><div class="dept-status"></div>`;
+      el.innerHTML = `<div class="dept-head"><span class="dept-name">${p.name}</span><span class="pak-value"></span></div>
+        <div class="dept-role">${p.desc}</div><div class="dept-twist">Built from: ${p.recipe}</div>
+        <div class="pak-stats"></div><div class="cov pak-prog"><div></div></div>
+        <div class="pak-foot"><span class="dept-status"></span><button class="btn mini" data-pak-target="${p.id}">Build these</button></div>`;
       chain.appendChild(el);
-      pakEls[p.id] = { el, status: el.querySelector('.dept-status') };
+      pakEls[p.id] = { el, status: el.querySelector('.dept-status'), value: el.querySelector('.pak-value'),
+        stats: el.querySelector('.pak-stats'), prog: el.querySelector('.pak-prog div'), btn: el.querySelector('[data-pak-target]') };
     });
   }
 
@@ -268,105 +275,268 @@
     return 'Opens: ' + parts.join(' or ');
   }
 
-  /** A department you hire into: coverage, manager, applicants, team (and Engineering projects). */
-  function renderStaffed(s, dd, d, r) {
-    const o = dd.order, st = s.depts[d.id], isEng = d.id === 'engineering';
-    const support = !o.depts[d.id];
-    const c = o.depts[d.id];
-    const strength = E.strength(st, d.id), heads = E.headcount(st);
-    r.staff.hidden = false;
-    r.twist.hidden = true;
-    if (support) {
-      const pct = (x) => `${Math.round((x - 1) * 100)}%`;
-      const sum = {
-        engineering: () => [`Know-how ×${E.engKhMult(s).toFixed(2)}`, `+${Math.round(strength * E.DATA.CONSTANTS.engKhPerStrength * 100)}% Know-how from the team`],
-        it: () => [`Order Line +${pct(E.itMult(s))}`, `every Order Line department works +${pct(E.itMult(s))} harder (max +100%)`],
+  /** Plain-language health of a hireable department: [status, detail, big number]. */
+  function deptHealth(s, dd, d) {
+    const st = s.depts[d.id], o = dd.order, c = o.depts[d.id];
+    const strength = E.strength(st, d.id), pct = (x) => `${Math.round((x - 1) * 100)}%`;
+    if (!c) {
+      return {
+        engineering: () => {
+          const ts = (id) => E.teamStrength(s, id);
+          return [`Know-how ×${E.engKhMult(s).toFixed(2)}`,
+            `Design ${ts('design').toFixed(1)} · Controls ${ts('controls').toFixed(1)} · Project ${ts('project').toFixed(1)}`,
+            `×${E.engKhMult(s).toFixed(2)}`,
+            `Design engineers raise Know-how (+${Math.round(ts('design') * E.DATA.CONSTANTS.engKhPerStrength * 100)}%). Controls engineers make Controls research cheaper and are needed for Sys-Paks. Project engineers build Paks (${fmt(E.pakHoursRate(s))} hrs/s).`];
+        },
+        it: () => [`Order Line +${pct(E.itMult(s))}`, `every Order Line team works +${pct(E.itMult(s))} harder (max +100%)`,
+          `+${pct(E.itMult(s))}`, `IT multiplies the output of every Order Line team by ×${E.itMult(s).toFixed(2)}. More IT strength, bigger boost, up to ×2.`],
         safety: () => {
           const rate = E.incidentRate(s, dd) * 60;
-          return [`${E.safeDays(s)} days safe`, rate > 0 ? `about one incident every ${fmt(Math.max(1, 1 / rate))} min · streak bonus +${pct(E.safetyStreakMult(s))}` : 'no incident risk below 3,000 psi'];
+          const risk = rate > 0 ? `about one incident every ${fmt(Math.max(1, 1 / rate))} min` : 'no incident risk below 3,000 psi';
+          return [`${E.safeDays(s)} days safe`, `${risk} · streak bonus +${pct(E.safetyStreakMult(s))}`, `${E.safeDays(s)}`,
+            `Incidents shut a production line for 30 s. Safety staff make them rarer; every incident-free shop day adds +1% income (max +25%, now +${pct(E.safetyStreakMult(s))}). Risk: ${risk}.`];
         },
-        management: () => [`Every team +${pct(E.mgmtMult(s))}`, `+${pct(E.mgmtMult(s))} to every team (max +50%) · +${E.mgmtPool(s)} applicant${E.mgmtPool(s) === 1 ? '' : 's'} for every department`],
-      }[d.id]();
-      r.status.textContent = sum[0];
-      r.staffText.textContent = `You + ${heads} hired · strength ${(1 + strength).toFixed(1)} · ${sum[1]}`;
-      r.cov.parentElement.hidden = true;
-    } else {
-      const neck = o.bottleneck === d.id && o.factor < 0.999;
-      r.el.classList.toggle('neck', neck);
-      const pct = Math.round(c.load * 100), bonus = Math.round(c.bonus * 1000) / 10;
-      r.status.textContent = neck ? `Bottleneck · ${pct}%` : bonus > 0 ? `Covered · ${pct}% · +${bonus}% income` : `Covered · ${Math.min(100, pct)}%`;
-      const reach = c.reach !== 1 ? ` · reach ×${c.reach.toFixed(2)}` : '';
-      const extra = d.id === 'purchasing' && E.purchasingDiscount(s) < 1 ? ` · prices −${Math.round((1 - E.purchasingDiscount(s)) * 100)}%` : '';
-      // Output includes the manager, IT and Management boosts, so every bonus shows up here.
-      const boosts = [st.mgr && `manager +${Math.round((E.mgrBonus(st) - 1) * 100)}%`,
-        E.itMult(s) > 1 && `IT +${Math.round((E.itMult(s) - 1) * 100)}%`,
-        E.mgmtMult(s) > 1 && `Mgmt +${Math.round((E.mgmtMult(s) - 1) * 100)}%`].filter(Boolean);
-      r.staffText.textContent = `You + ${heads} hired · output ${c.effective.toFixed(1)} of ${c.required.toFixed(1)} needed${reach}${extra}`
-        + (boosts.length ? ` · ${boosts.join(', ')}` : '');
+        management: () => [`Every team +${pct(E.mgmtMult(s))}`, `+${pct(E.mgmtMult(s))} to every team · +${E.mgmtPool(s)} applicants everywhere`,
+          `+${pct(E.mgmtMult(s))}`, `Management boosts every team in the company by ×${E.mgmtMult(s).toFixed(2)} (max ×1.5) and adds ${E.mgmtPool(s)} applicant${E.mgmtPool(s) === 1 ? '' : 's'} to every department.`],
+      }[d.id]().concat([strength]);
+    }
+    const neck = o.bottleneck === d.id && o.factor < 0.999;
+    const load = Math.round(c.load * 100), bonus = Math.round(c.bonus * 1000) / 10;
+    const status = neck ? `Bottleneck · ${load}%` : bonus > 0 ? `Covered · ${load}% · +${bonus}% income` : `Covered · ${Math.min(100, load)}%`;
+    const reach = c.reach !== 1 ? ` · reach ×${c.reach.toFixed(2)}` : '';
+    const detail = `Output ${c.effective.toFixed(1)} of ${c.required.toFixed(1)} needed${reach}`;
+    const story = neck
+      ? `Short-handed. This team handles ${c.effective.toFixed(1)} units of work but the shop needs ${c.required.toFixed(1)}, so the whole Order Line (and your income) runs at ${Math.round(o.factor * 100)}%. Hire here first.`
+      : bonus > 0 ? `Ahead of demand. This team handles ${c.effective.toFixed(1)} units of work and the shop needs ${c.required.toFixed(1)}. The extra capacity adds +${bonus}% income, and the cushion lasts as production grows.`
+      : `Keeping up. Need grows as production grows (+4 staff for every 10× production), so keep an eye on it.`;
+    return [status, detail, `${load}%`, story, strength, neck];
+  }
+  /** Chips that break down where a team's output comes from. */
+  function boostChips(s, dd, d) {
+    const st = s.depts[d.id], c = dd.order.depts[d.id] || {};
+    const out = [`<span class="chip-s">People ${(1 + E.strength(st, d.id) / E.mgrBonus(st)).toFixed(1)}</span>`];
+    if (st.mgr) out.push(`<span class="chip-s good">Manager +${Math.round((E.mgrBonus(st) - 1) * 100)}%</span>`);
+    if (E.itMult(s) > 1 && c.required) out.push(`<span class="chip-s good">IT +${Math.round((E.itMult(s) - 1) * 100)}%</span>`);
+    if (E.mgmtMult(s) > 1) out.push(`<span class="chip-s good">Management +${Math.round((E.mgmtMult(s) - 1) * 100)}%</span>`);
+    if (c.reach && c.reach !== 1) out.push(`<span class="chip-s good">Locations ×${c.reach.toFixed(2)}</span>`);
+    if (d.id === 'purchasing' && E.purchasingDiscount(s) < 1) out.push(`<span class="chip-s">Prices −${Math.round((1 - E.purchasingDiscount(s)) * 100)}%</span>`);
+    return out.join('');
+  }
+  const setBtn = (b, cost, label, cash) => {
+    if (!b) return;
+    const html = `$${fmt(cost)}<small>${label}</small>`;
+    if (b._html !== html) { b._html = html; b.innerHTML = html; }
+    b.disabled = cost > cash;
+  };
+
+  /** A department card on the Company tab: health, faces, quick hire. Details live in the focus sheet. */
+  function renderStaffed(s, dd, d, r) {
+    const o = dd.order, st = s.depts[d.id], c = o.depts[d.id];
+    const [status, detail, , , , neck] = deptHealth(s, dd, d);
+    r.staff.hidden = false;
+    r.twist.hidden = true;
+    r.status.textContent = status;
+    setPart(r.staffText, `You + ${E.headcount(st)} hired · ${detail}`, true);
+    r.cov.parentElement.hidden = !c;
+    if (c) {
+      r.el.classList.toggle('neck', !!neck);
       r.cov.style.width = `${Math.min(100, c.coverage * 100)}%`;
       r.cov.parentElement.style.setProperty('--sur', `${Math.min(1, Math.max(0, c.load - 1)) * 100}%`);
       r.cov.parentElement.classList.toggle('short', c.coverage < 0.999);
     }
-
-    // Manager
-    if (st.mgr) {
-      const lea = E.leadership(st.mgr);
-      setPart(r.mgr, `<div class="mgr">${avatar(st.mgr.a)}
-        <div class="p-main"><span class="p-name"><b>${st.mgr.n}</b> · Manager</span>
-          <span class="p-stats">LEA ${lea} · team +${Math.round((E.mgrBonus(st) - 1) * 100)}% · reviews ${E.poolSize(st, s)} applicants${support ? '' : ` · fills ${1 + Math.floor(lea / 4)}/check`}</span></div>
-        ${support ? '' : `<button class="btn mini ${st.auto ? '' : 'ghost'}" data-auto="${d.id}" title="When on, the manager hires the best applicant whenever the department falls short">${st.auto ? 'Auto-hire on' : 'Auto-hire off'}</button>`}
-      </div>`);
-    } else {
-      setPart(r.mgr, `<div class="mgr none">No manager yet. Promote someone with high <b>Leadership</b> (LEA) from the team: they'll boost everyone${support ? ' and review more applicants' : ', review more applicants and keep the department staffed'}.</div>`);
-    }
-
-    // Engineering projects
-    if (isEng) {
-      const key = E.DATA.ENG_UPGRADES.map((u) => (s.engUp[u.id] ? 1 : 0)).join('') + heads;
-      if (r.eng._key !== key) {
-        r.eng._key = key;
-        r.eng.innerHTML = `<div class="app-head">Engineering projects</div>` + E.DATA.ENG_UPGRADES.map((u) => {
-          const owned = s.engUp[u.id], ready = heads >= u.engineers;
-          return `<div class="eng-up${owned ? ' owned' : ''}"><div class="p-main"><span class="p-name">${u.name} <b>×${u.kh} KH</b></span>
-            <span class="p-stats">${owned ? 'Built' : ready ? u.desc : `Needs ${u.engineers} engineer${u.engineers > 1 ? 's' : ''} (have ${heads})`}</span></div>
-            ${owned ? '<span class="p-eff good">✓</span>' : `<button class="btn mini" data-eng="${u.id}">$${fmt(u.cost * dd.m.costMult)}<small>build</small></button>`}</div>`;
-        }).join('');
-      }
-      r.eng.querySelectorAll('[data-eng]').forEach((b) => (b.disabled = !E.canBuyEng(s, b.dataset.eng)));
-    }
-
-    // Applicants: rebuild rows only when they change; prices update in place so clicks aren't lost.
-    const one = E.hireQuote(s, d.id, 1), many = E.hireQuote(s, d.id, ui.qty), rr = E.rerollCost(s);
-    const key = st.pool.map((p) => p.n + p.a).join('|');
-    if (r.applicants._key !== key) {
-      r.applicants._key = key;
-      r.applicants.innerHTML = `<div class="app-head">Applicants${st.mgr ? ` · screened by ${st.mgr.n.split(' ')[0]}` : ''}</div>${st.pool.map((p, i) =>
-        personRow(p, d.id, `<button class="btn mini" data-hire="${d.id}" data-idx="${i}"></button>`)).join('')}
-        <div class="app-actions">
-          <button class="btn mini" data-hire-best="${d.id}"></button>
-          <button class="btn mini ghost" data-reroll="${d.id}"></button>
-        </div>`;
-    }
-    const setBtn = (b, cost, label) => {
-      const html = `$${fmt(cost)}<small>${label}</small>`;
-      if (b._html !== html) { b._html = html; b.innerHTML = html; }
-      b.disabled = cost > s.cash;
-    };
-    r.applicants.querySelectorAll('[data-hire]').forEach((b) => setBtn(b, one.cost, 'hire'));
-    setBtn(r.applicants.querySelector('[data-hire-best]'), many.cost, `hire best ${many.qty}`);
-    setBtn(r.applicants.querySelector('[data-reroll]'), rr, 'new applicants');
-
-    // Team roster, strongest first, with Leadership and a Promote button
-    const tkey = st.team.length + '|' + (st.mgr ? st.mgr.n : '') + '|' + st.staff;
-    if (r.teamList._key !== tkey) {
-      r.teamList._key = tkey;
+    const key = (st.mgr ? st.mgr.n : '') + '|' + st.team.length + '|' + st.staff;
+    if (r.strip._key !== key) {
+      r.strip._key = key;
       const team = st.team.map((p, i) => [p, i]).sort((x, y) => E.effectiveness(y[0], d.id) - E.effectiveness(x[0], d.id));
-      r.teamSum.textContent = `Team (${heads})${team.length ? ` · best: ${team[0][0].n} ×${E.effectiveness(team[0][0], d.id).toFixed(2)}` : ''}`;
-      r.teamList.innerHTML = (st.staff ? `<li class="muted">${st.staff} hired before named staff (×1.00 each)</li>` : '') +
-        team.map(([p, i]) => `<li>${personRow(p, d.id, `<span class="p-lea" title="Leadership">LEA ${E.leadership(p)}</span>
-          <button class="btn mini ghost" data-promote="${d.id}" data-idx="${i}">${st.mgr ? 'Make manager' : 'Promote'}</button>`)}</li>`).join('');
+      const shown = team.slice(0, 4), more = team.length - shown.length + st.staff;  // one row on a phone
+      r.strip.innerHTML = (st.mgr ? face(st.mgr, d.id, 'mgr', 0) : '<div class="face-wrap"><span class="face empty" title="No manager yet">?<span class="face-name">No mgr</span></span></div>')
+        + shown.map(([p, i]) => face(p, d.id, 'team', i)).join('')
+        + (more > 0 ? `<button class="face more" data-open-dept="${d.id}">+${more}</button>` : '')
+        + (!team.length && !st.staff ? '<span class="muted strip-empty">Just you so far. Open the team to hire.</span>' : '');
     }
-    r.team.hidden = !heads;
+    const many = E.hireQuote(s, d.id, ui.qty);
+    setBtn(r.best, many.cost, `hire best ${many.qty}`, s.cash);
+  }
+
+  // ---- Department focus sheet and ID badge -------------------------------------
+
+  function openDept(id) {
+    ui.sheet = id;
+    ui.person = null;
+    $('sheet').hidden = false;
+    $('idcard').hidden = true;
+    $('sheet-body')._key = null;
+    document.body.classList.add('modal-open');
+    render(lastState);
+  }
+  function closeSheet() { ui.sheet = null; ui.person = null; $('sheet').hidden = true; $('idcard').hidden = true; document.body.classList.remove('modal-open'); }
+  function openPerson(spec) {
+    const [dept, kind, idx] = spec.split('|');
+    ui.person = { dept, kind, idx: Number(idx) };
+    $('idcard').hidden = false;
+    $('id-body')._key = null;
+    document.body.classList.add('modal-open');
+    render(lastState);
+  }
+  function closePerson() { ui.person = null; $('idcard').hidden = true; if (!ui.sheet) document.body.classList.remove('modal-open'); }
+
+  function personOf(s, sp) {
+    const st = s.depts[sp.dept];
+    if (!st) return null;
+    return sp.kind === 'mgr' ? st.mgr : sp.kind === 'pool' ? st.pool[sp.idx] : st.team[sp.idx];
+  }
+
+  function renderSheet(s, dd) {
+    const d = DEPT_BY_ID[ui.sheet], st = s.depts[d.id], body = $('sheet-body'), foot = $('sheet-foot');
+    if (!E.departmentOpen(s, d)) return closeSheet();
+    const isEng = d.id === 'engineering';
+    const [, , big, story, , neck] = deptHealth(s, dd, d);
+    const key = [d.id, st.mgr && st.mgr.n + st.mgr.g, st.auto, st.staff, st.team.map((p) => p.n + (p.g || '')).join(','),
+      st.pool.map((p) => p.n).join(','), JSON.stringify(s.engUp)].join('#');
+    if (body._key !== key) {
+      body._key = key;
+      const [a, b] = E.DATA.DEPT_STATS[d.id];
+      const team = st.team.map((p, i) => [p, i]).sort((x, y) => E.effectiveness(y[0], d.id) - E.effectiveness(x[0], d.id));
+      const lea = st.mgr && E.leadership(st.mgr), support = !dd.order.depts[d.id];
+      const mgrHtml = st.mgr
+        ? `<div class="mgr-card">${face(st.mgr, d.id, 'mgr', 0)}<div class="mgr-info"><b>${st.mgr.n}</b>
+            <span>Leadership <b>${lea}</b>/10</span>
+            <ul class="plain"><li>Team works <b>+${Math.round((E.mgrBonus(st) - 1) * 100)}%</b> harder (5% per Leadership point)</li>
+            <li>Screens <b>${E.poolSize(st, s)}</b> applicants for you</li>
+            ${support ? '' : `<li>${st.auto ? `Hires up to <b>${1 + Math.floor(lea / 4)}</b> people every 2 s when the team falls behind` : 'Auto-hire is off'}</li>`}</ul>
+            ${support ? '' : `<button class="btn mini ${st.auto ? '' : 'ghost'}" data-auto="${d.id}">${st.auto ? 'Auto-hire: on' : 'Auto-hire: off'}</button>`}</div></div>`
+        : `<p class="mgr none">No manager yet. Tap someone with high <b>Leadership</b> and choose <b>Promote</b>: a manager boosts the whole team${support ? '' : ', screens more applicants and keeps the team staffed'}.</p>`;
+      const faces = (list) => list.map(([p, i]) => face(p, d.id, 'team', i)).join('');
+      const teamHtml = isEng
+        ? E.ENG_TEAMS.map((tid) => {
+          const members = team.filter(([p]) => E.engTeamOf(p) === tid);
+          return `<div class="eng-team"><div class="eng-team-head"><b>${ENG_TEAM_INFO[tid].name}</b> <span class="muted" data-k="ts-${tid}"></span></div>
+            <p class="muted">${ENG_TEAM_INFO[tid].role}</p>
+            <div class="faces">${(tid === 'design' && st.staff ? `<span class="face more">+${st.staff}</span>` : '') + faces(members) || '<span class="muted">Nobody yet. Tap an engineer to move them here.</span>'}</div></div>`;
+        }).join('')
+        : `<div class="faces">${faces(team)}${st.staff ? `<span class="face more" title="Hired before named staff">+${st.staff}</span>` : ''}${!team.length && !st.staff ? '<span class="muted">Nobody hired yet.</span>' : ''}</div>`;
+      const engHtml = isEng ? `<section><h4>Engineering projects</h4>${E.DATA.ENG_UPGRADES.map((u) => {
+        const owned = s.engUp[u.id];
+        return `<div class="eng-up${owned ? ' owned' : ''}"><div class="p-main"><span class="p-name">${u.name} <b>×${u.kh} Know-how</b></span>
+          <span class="p-stats" data-k="eng-${u.id}"></span></div>
+          ${owned ? '<span class="p-eff good">✓</span>' : `<button class="btn mini" data-eng="${u.id}"></button>`}</div>`;
+      }).join('')}</section>` : '';
+      body.innerHTML = `<header class="sh-head"><h3 id="sheet-title">${d.name}</h3><button class="sh-x" data-close="sheet" aria-label="Close">✕</button></header>
+        <p class="sh-role">${d.role}</p>
+        <section class="sh-health"><div class="sh-big" data-k="big"></div><p data-k="story"></p></section>
+        ${dd.order.depts[d.id] ? '<div class="cov sh-cov"><div></div></div>' : ''}
+        <div class="chips" data-k="chips"></div>
+        <section><h4>What makes someone good here</h4>
+          <div class="statfit"><div class="sf key"><b>${STAT[a].name}</b> <em>counts double</em><p>${STAT[a].desc}</p></div>
+          <div class="sf"><b>${STAT[b].name}</b><p>${STAT[b].desc}</p></div></div>
+          <p class="muted small">Each person counts as about 0.55–1.9 staff here, from these two stats plus any matching quirk. Tap a face for their ID badge.</p></section>
+        <section><h4>Manager</h4>${mgrHtml}</section>
+        <section><h4>Team <span class="muted">· ${E.headcount(st)}</span></h4>${teamHtml}</section>
+        ${engHtml}
+        <section><h4>Applicants${st.mgr ? ` <span class="muted">· screened by ${first(st.mgr.n)}</span>` : ''}</h4>
+          <div class="faces apps">${st.pool.map((p, i) => face(p, d.id, 'pool', i, `<button class="btn mini" data-hire="${d.id}" data-idx="${i}"></button>`)).join('')}</div></section>`;
+      foot.innerHTML = `<button class="btn ghost" data-reroll="${d.id}"></button><button class="btn primary" data-hire-best="${d.id}"></button>`;
+    }
+    // live numbers
+    const k = (name) => body.querySelector(`[data-k="${name}"]`);
+    setPart(k('big'), big, true);
+    k('big').className = 'sh-big' + (neck ? ' bad' : '');
+    setPart(k('story'), story, true);
+    setPart(k('chips'), boostChips(s, dd, d));
+    const c = dd.order.depts[d.id], cov = body.querySelector('.sh-cov');
+    if (c && cov) {
+      cov.firstChild.style.width = `${Math.min(100, c.coverage * 100)}%`;
+      cov.style.setProperty('--sur', `${Math.min(1, Math.max(0, c.load - 1)) * 100}%`);
+      cov.classList.toggle('short', c.coverage < 0.999);
+    }
+    if (isEng) {
+      for (const tid of E.ENG_TEAMS) {
+        const ts = E.teamStrength(s, tid);
+        const what = tid === 'design' ? `+${Math.round(ts * E.DATA.CONSTANTS.engKhPerStrength * 100)}% Know-how`
+          : tid === 'controls' ? `Controls research −${Math.round((1 - Math.max(E.DATA.CONSTANTS.controlsTechFloor, 1 - E.DATA.CONSTANTS.controlsTechPer * ts)) * 100)}%${ts >= 1 ? (s.tech.plc ? ' · Sys-Paks ready' : ' · Sys-Paks after PLC Automation') : ' · strength 1 needed for Sys-Paks'}`
+          : `${fmt(E.pakHoursRate(s))} hrs/s on the Pak line`;
+        setPart(k(`ts-${tid}`), `· strength ${ts.toFixed(1)} · ${what}`, true);
+      }
+      const heads = E.headcount(st);
+      for (const u of E.DATA.ENG_UPGRADES) {
+        const el = k(`eng-${u.id}`);
+        if (el) setPart(el, s.engUp[u.id] ? 'Built' : heads >= u.engineers ? u.desc : `Needs ${u.engineers} engineer${u.engineers > 1 ? 's' : ''} (have ${heads})`, true);
+        const btn = body.querySelector(`[data-eng="${u.id}"]`);
+        if (btn) { setBtn(btn, u.cost * dd.m.costMult, 'build', s.cash); btn.disabled = !E.canBuyEng(s, u.id); }
+      }
+    }
+    const one = E.hireQuote(s, d.id, 1), many = E.hireQuote(s, d.id, ui.qty);
+    body.querySelectorAll('[data-hire]').forEach((b) => setBtn(b, one.cost, 'hire', s.cash));
+    setBtn(foot.querySelector('[data-hire-best]'), many.cost, `hire best ${many.qty}`, s.cash);
+    setBtn(foot.querySelector('[data-reroll]'), E.rerollCost(s), 'new applicants', s.cash);
+  }
+
+  function renderPerson(s, dd) {
+    const sp = ui.person, p = personOf(s, sp), body = $('id-body'), foot = $('id-foot');
+    if (!p) return closePerson();
+    const d = DEPT_BY_ID[sp.dept], st = s.depts[sp.dept], isEng = sp.dept === 'engineering';
+    const key = [sp.dept, sp.kind, sp.idx, p.n, p.g, st.mgr && st.mgr.n].join('#');
+    if (body._key !== key) {
+      body._key = key;
+      const eff = E.effectiveness(p, sp.dept), g = grade(eff);
+      const [a, b] = E.DATA.DEPT_STATS[sp.dept];
+      const tr = p.t && traitName[p.t], fits = tr && (tr.dept === sp.dept || tr.dept === 'any');
+      const lea = E.leadership(p);
+      const empNo = `1972-${String((p.a * 7 + p.n.length * 131) % 10000).padStart(4, '0')}`;
+      const title = sp.kind === 'mgr' ? `${d.name} Manager` : sp.kind === 'pool' ? `Applicant · ${d.name}` : `${d.name}${isEng ? ` · ${ENG_TEAM_INFO[E.engTeamOf(p)].name} team` : ''}`;
+      const stats = E.DATA.STATS.map((x) => {
+        const v = x.id === 'leadership' ? lea : p.s[STAT[x.id].i];
+        const role = x.id === a ? 'key' : x.id === b ? 'key2' : x.id === 'leadership' ? 'lead' : '';
+        const tag = x.id === a ? 'counts double here' : x.id === b ? 'counts here' : x.id === 'leadership' ? 'for managing' : '';
+        return `<li class="${role}"><span class="st-name">${x.name}${tag ? ` <em>${tag}</em>` : ''}</span>
+          <span class="st-bar"><i style="width:${v * 10}%"></i></span><b>${v}</b><small>${x.desc}</small></li>`;
+      }).join('');
+      const tmp = { mgr: p, team: [] };
+      body.innerHTML = `<div class="idc ${g}">
+        <div class="idc-top"><span>IFP MSI · Cedar Rapids</span><span>${sp.kind === 'pool' ? 'APPLICANT' : 'EMPLOYEE ID'}</span></div>
+        <div class="idc-main"><div class="idc-photo">${avatar(p.a)}</div>
+          <div><h3>${p.n}</h3><div class="idc-title">${title}</div><div class="idc-no">No. ${empNo}</div></div>
+          <button class="sh-x" data-close="idcard" aria-label="Close">✕</button></div>
+        <div class="idc-fit"><b>${GRADE_WORD[g]}</b>: counts as <b>${eff.toFixed(2)}</b> staff in ${d.name}
+          <p>From ${STAT[a].name} ${p.s[STAT[a].i]} (counts double) and ${STAT[b].name} ${p.s[STAT[b].i]}${fits ? `, plus +${tr.bonus.toFixed(2)} from their quirk` : ''}. An average person counts as about 1.0.</p></div>
+        <h4>Stats <span class="muted">· 1 to 10</span></h4>
+        <ul class="idc-stats">${stats}</ul>
+        ${tr ? `<div class="idc-quirk"><b>Quirk:</b> ${tr.name}<p>${fits ? `Worth <b>+${tr.bonus.toFixed(2)}</b> staff in ${d.name}.` : `Helps in ${tr.dept === 'any' ? 'any job' : DEPT_BY_ID[tr.dept].name} (+${tr.bonus.toFixed(2)}), not here.`}</p></div>` : ''}
+        <div class="idc-lead"><b>As a manager</b> (Leadership ${lea}): the team works +${Math.round((E.mgrBonus(tmp) - 1) * 100)}% harder, ${E.poolSize(tmp, s)} applicants screened, up to ${1 + Math.floor(lea / 4)} hires every 2 s.</div>
+        ${isEng && sp.kind !== 'pool' ? `<h4>Engineering team</h4><div class="seg">${E.ENG_TEAMS.map((tid) =>
+          `<button class="btn mini${E.engTeamOf(p) === tid ? ' on' : ' ghost'}" data-engteam="${tid}" data-who="${sp.kind === 'mgr' ? 'mgr' : sp.idx}">${ENG_TEAM_INFO[tid].name}</button>`).join('')}</div>
+          <p class="muted small">${ENG_TEAM_INFO[E.engTeamOf(p)].role}</p>` : ''}
+      </div>`;
+      foot.innerHTML = `<button class="btn ghost" data-close="idcard">Close</button>`
+        + (sp.kind === 'pool' ? `<button class="btn primary" data-hire="${sp.dept}" data-idx="${sp.idx}"></button>`
+          : sp.kind === 'team' ? `<button class="btn primary" data-promote="${sp.dept}" data-idx="${sp.idx}">${st.mgr ? `Make manager<small>${first(st.mgr.n)} rejoins the team</small>` : 'Promote to manager<small>boosts the whole team</small>'}</button>` : '');
+    }
+    setBtn(foot.querySelector('[data-hire]'), E.hireQuote(s, sp.dept, 1).cost, 'hire', s.cash);
+  }
+
+  function renderPaks(s, dd) {
+    const open = E.pakOpen(s), rate = E.pakHoursRate(s), target = E.pakTarget(s), next = E.pakNext(s);
+    setPart($('pak-summary'), open ? `· ${fmt(rate)} engineering hrs/s · ≈ +$${fmt(E.pakIncome(s, dd))}/s` : '', true);
+    setPart($('pak-hint'), !open ? 'Opens with Engineering. Project engineers build packaged products from your own hardware.'
+      : rate <= 0 ? 'Nobody is on the Project team. Open Engineering, tap an engineer and move them to Project.'
+      : `Choose what the line builds. It makes the parts it needs first (a Base-Pak uses a Valve-Pak, a Sys-Pak uses four Base-Paks) and sells each finished one through the Order Line. Higher tiers pay more per engineering hour.`, true);
+    for (const p of PAKS) {
+      const r = pakEls[p.id], price = E.pakPrice(s, dd, p.id);
+      const sysBlocked = p.id === 'sys' && !E.sysReady(s);
+      r.el.classList.toggle('closed', !open);
+      r.el.classList.toggle('target', open && s.pak.target === p.id);
+      r.el.classList.toggle('building', open && rate > 0 && next === p.id);
+      setPart(r.value, open ? `sells $${fmt(price)}` : `×${p.value} value`, true);
+      setPart(r.stats, open ? `${fmt(p.hours)} hrs each · built ${fmt(s.pak.built[p.id])}${p.id !== 'sys' ? ` · in stock ${s.pak.stock[p.id]}` : ''}${E.pakGrade(s, p.id) > 1 ? ` · grade ×${E.pakGrade(s, p.id).toFixed(1)}` : ''}` : '', true);
+      r.prog.parentElement.hidden = !(open && rate > 0 && next === p.id);
+      if (next === p.id) r.prog.style.width = `${Math.min(100, (s.pak.work / p.hours) * 100)}%`;
+      setPart(r.status, !open ? 'Opens with Engineering'
+        : sysBlocked ? `Needs ${s.tech.plc ? '' : 'PLC Automation and '}a Controls engineer (strength 1)`
+        : next === p.id && rate > 0 ? `Building · ${fmt((p.hours - s.pak.work) / rate)}s left`
+        : s.pak.target === p.id ? 'Target' : '', true);
+      r.btn.hidden = !open || s.pak.target === p.id;
+      r.btn.disabled = sysBlocked;
+    }
   }
 
   function renderCompany(s, dd) {
@@ -399,11 +569,7 @@
         r.bar.style.width = `${Math.min(100, f * 100)}%`;
       }
     }
-    const eng = E.departmentOpen(s, DEPARTMENTS.find((d) => d.id === 'engineering'));
-    for (const p of PAKS) {
-      pakEls[p.id].el.classList.toggle('closed', !eng);
-      pakEls[p.id].status.textContent = eng ? 'Line coming in the Departments update' : 'Opens with Engineering';
-    }
+    renderPaks(s, dd);
   }
 
   // ---- Init ---------------------------------------------------------------
@@ -420,8 +586,24 @@
     $('btn-works-full').addEventListener('click', () => setFull(true));
     $('btn-works-close').addEventListener('click', () => setFull(false));
     $('m-status').addEventListener('click', () => setTab('works'));
+    // Department focus sheet and ID badges
+    document.addEventListener('click', (ev) => {
+      const od = ev.target.closest('[data-open-dept]');
+      if (od) return openDept(od.dataset.openDept);
+      const pe = ev.target.closest('[data-person]');
+      if (pe) return openPerson(pe.dataset.person);
+      const cl = ev.target.closest('[data-close]');
+      if (cl) return cl.dataset.close === 'idcard' ? closePerson() : closeSheet();
+    });
+    // Hiring or promoting from a badge closes it (main.js does the work on the same click).
+    $('id-foot').addEventListener('click', (ev) => {
+      if (ev.target.closest('[data-hire], [data-promote]')) setTimeout(() => { closePerson(); render(lastState); }, 0);
+    });
     document.querySelector('.era-card').addEventListener('click', (ev) => ev.currentTarget.classList.toggle('open'));
-    document.addEventListener('keydown', (ev) => { if (ev.key === 'Escape') setFull(false); });
+    document.addEventListener('keydown', (ev) => {
+      if (ev.key !== 'Escape') return;
+      if (ui.person) closePerson(); else if (ui.sheet) closeSheet(); else setFull(false);
+    });
     phone.addEventListener('change', () => { if (!phone.matches) { setFull(false); if (ui.tab === 'works') setTab('actuators'); } });
     setTab(ui.tab);
     gP = makeGauge($('g-pressure'), 'PSI');
@@ -507,7 +689,9 @@
     return 'Locked';
   }
 
+  let lastState = null;
   function render(s) {
+    lastState = s;
     const d = E.derive(s);
     const m = d.m;
 
@@ -564,12 +748,14 @@
     if (ui.tab === 'system') renderSystem(s, d);
     if (ui.tab === 'tech') renderTech(s);
     if (ui.tab === 'company') renderCompany(s, d);
+    if (ui.sheet) renderSheet(s, d);
+    if (ui.person) renderPerson(s, d);
     $('company-badge').hidden = d.order.factor >= 0.95;
     if (phone.matches) renderPhoneStatus(s, d);
     if (ui.tab === 'overhaul') renderOverhaul(s);
     if (ui.tab === 'settings') renderStats(s, d);
 
-    const ready = TECH.filter((t) => E.techAvailable(s, t.id) && s.kh >= t.cost).length;
+    const ready = TECH.filter((t) => E.techAvailable(s, t.id) && s.kh >= E.techCost(s, t.id)).length;
     $('tech-badge').hidden = !ready;
     $('tech-badge').textContent = ready;
     $('tab-overhaul').classList.toggle('locked', !E.canOverhaul(s) && s.patents === 0);
@@ -650,12 +836,13 @@
 
   function renderTech(s) {
     for (const t of TECH) {
-      const { el, cost } = techEls[t.id];
-      const done = !!s.tech[t.id], avail = E.techAvailable(s, t.id), ready = avail && s.kh >= t.cost;
+      const { el, cost: costEl } = techEls[t.id];
+      const cost = E.techCost(s, t.id), done = !!s.tech[t.id], avail = E.techAvailable(s, t.id), ready = avail && s.kh >= cost;
       el.className = 'tech ' + (done ? 'done' : avail ? 'available' + (ready ? ' ready' : '') : 'locked');
       el.disabled = !ready;
-      cost.textContent = done ? '✓ Researched' : avail ? `${fmt(t.cost)} KH` :
-        `${fmt(t.cost)} KH · needs ${t.requires.filter((r) => !s.tech[r]).map((r) => TECH.find((x) => x.id === r).name).join(', ')}`;
+      const price = `${fmt(cost)} KH${cost < t.cost ? ` <s>${fmt(t.cost)}</s> · Controls team` : ''}`;
+      setPart(costEl, done ? '✓ Researched' : avail ? price :
+        `${price} · needs ${t.requires.filter((r) => !s.tech[r]).map((r) => TECH.find((x) => x.id === r).name).join(', ')}`);
     }
   }
 
@@ -739,9 +926,10 @@
   function focusDept(id) {
     const r = deptEls[id];
     if (!r) return;
+    if (staffed(id) && lastState && E.departmentOpen(lastState, DEPT_BY_ID[id])) return openDept(id);
     r.el.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
     r.el.classList.remove('flash'); void r.el.offsetWidth; r.el.classList.add('flash');
   }
 
-  root.PW.ui = { init, render, animate, toast, floater, setTab, focusItem, focusDept, look, get qty() { return ui.qty; } };
+  root.PW.ui = { init, render, animate, toast, floater, setTab, focusItem, focusDept, look, openDept, closeSheet, get qty() { return ui.qty; } };
 })(window);

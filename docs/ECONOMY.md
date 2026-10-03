@@ -29,7 +29,9 @@ update the tables here.
 | Hire cost (nth hire) | `10 s × production-at-opening × 1.778^n`, which is about 10 s of *current* production (n = head count) |
 | New applicants | `3 s × current production` |
 | Manager bonus | team strength (manager included) × `(1 + 0.05 × Leadership)`; reviews `3 + ⌊LEA/3⌋` applicants |
-| Know-how per second | `0.04 × √(income) × (1 + 0.05 × Engineering strength) × Engineering projects` |
+| Know-how per second | `0.04 × √(income) × (1 + 0.05 × Design strength) × Engineering projects` |
+| Controls research | Know-how cost × `max(0.5, 1 − 0.05 × Controls strength)` |
+| Pak line | `√(Project strength)` hours/s; Pak price `value × grade × 10 s × production × Order Line factor` (Valve 1 / 300 h, Base 6 / 1,500 h + Valve, Sys 60 / 6,000 h + 4 Base) |
 | Hand-pump charge | `max(0.25 gal, 2% of accumulator capacity)` per stroke |
 | Total income | `production × surge × Order Line factor × surplus bonus` |
 | Patents (total) | `floor(2 × ∛(lifetime $ / 1,000,000))` (was √; the cube root stops the late-run snowball) |
@@ -103,22 +105,25 @@ The simulator plays a greedy bot that always buys whatever gives the best
 on cooldown. A human will be slower early (reading, learning) and faster in
 places the bot is naïve about, so treat these as relative pacing.
 
-| Milestone | Target | Bot (first run, with departments, achievements and surplus staff) |
+| Milestone | Target | Bot (first run: departments, achievements, surplus staff, Pak lines) |
 |---|---|---|
 | First splitter | < 3 min | 2m 45s |
-| 2-Wire Braid (3,000 psi) | ~10 min | 9m 25s |
-| First excavator | ~10 min | 11m 35s |
-| $1M lifetime (Overhaul unlocks) | 20–40 min | 18m 13s |
-| First forging press | ~45 min | 39m |
-| $1B lifetime | 1–2 h | 1h 03m |
+| 2-Wire Braid (3,000 psi) | ~10 min | 9m 20s |
+| First excavator | ~10 min | 13m 10s |
+| $1M lifetime (Overhaul unlocks) | 20–40 min | 18m 30s |
+| First forging press | ~45 min | 40m |
+| $1B lifetime | 1–2 h | 1h 02m |
 | First ship lift | 1–2 h | 1h 03m |
-| All 17 techs | 3–5 h | ~1h 40m |
-| Run 1 plateau | 2–4 h | ~63M/s around 3–6 h (heat wall at 200°F) |
+| All 17 techs | 3–5 h | ~1h 41m |
+| Run 1 plateau | 2–4 h | ~66M/s around 3–6 h (heat wall at 200°F) |
 
 The bot hires into the bottleneck before buying anything else, promotes
 managers and keeps IT, Safety, Management and Purchasing staffed. Achievements
 (about 14 in run 1) add ~15%; surplus staff (managers, IT and Management push
-every department to ~150–170% coverage) add ~40% by the end of run 1. Runs vary
+every department to ~150–170% coverage) add ~40% by the end of run 1. The bot
+also staffs Engineering and runs the Pak line toward Sys-Paks: Paks earn ~11%
+of run-1 lifetime ($128B of $1.12T). At 15 s per Pak value the extra cash tipped
+the bot past the heat wall (4× end income), so the price is kept at 10 s. Runs vary
 by a minute or two because applicants come from a random seed.
 
 **Research is too fast:** the bot finishes the tree at ~1h40m against a 3–5 h

@@ -61,8 +61,17 @@
 
   // Hiring buttons inside re-rendered department cards.
   document.addEventListener('click', (ev) => {
-    const b = ev.target.closest('[data-hire], [data-hire-best], [data-reroll], [data-promote], [data-auto], [data-eng]');
+    const b = ev.target.closest('[data-hire], [data-hire-best], [data-reroll], [data-promote], [data-auto], [data-eng], [data-engteam], [data-pak-target]');
     if (!b || b.disabled) return;
+    if (b.dataset.engteam) {
+      const who = b.dataset.who === 'mgr' ? 'mgr' : Number(b.dataset.who);
+      if (E.setEngTeam(state, who, b.dataset.engteam)) SFX.play('tab', 0.6);
+      return render();
+    }
+    if (b.dataset.pakTarget) {
+      if (E.setPakTarget(state, b.dataset.pakTarget)) SFX.play('upgrade');
+      return render();
+    }
     if (b.dataset.promote) {
       const p = state.depts[b.dataset.promote].team[Number(b.dataset.idx)];
       if (E.promote(state, b.dataset.promote, Number(b.dataset.idx))) {
@@ -248,10 +257,12 @@
       msg: '<b>Oil too hot.</b> Above its limit the oil thins and income drops. Buy coolers on the System tab.' },
     { id: 'surge', when: (s) => E.canSurge(s) && !E.mods(s).autoSurge,
       msg: '<b>Accumulator full.</b> Press <b>Surge</b> (or S) to dump it for a burst of extra income.' },
-    { id: 'tech', when: (s) => E.DATA.TECH.some((t) => E.techAvailable(s, t.id) && s.kh >= t.cost),
+    { id: 'tech', when: (s) => E.DATA.TECH.some((t) => E.techAvailable(s, t.id) && s.kh >= E.techCost(s, t.id)),
       msg: '<b>Research ready.</b> You have enough Know-how for a technology. Open the R&D tab.' },
     { id: 'tier', when: (s) => E.canUpgradeTier(s),
       msg: '<b>Pressure upgrade affordable.</b> Higher psi unlocks new actuators and makes every line pay more. See the System tab.' },
+    { id: 'engineering', when: (s) => E.pakOpen(s),
+      msg: '<b>Engineering is open.</b> Engineers join a team: Design (Know-how), Controls (cheaper Controls research) or Project (builds Paks you sell). Tap a face on the Company tab to see their ID and move them.' },
     { id: 'promote', when: (s) => E.HIREABLE.some((x) => !s.depts[x.id].mgr && E.headcount(s.depts[x.id]) >= 4),
       msg: '<b>Time for a manager.</b> Promote someone with high Leadership on the Company tab; managers boost their team and keep it staffed.' },
   ];
