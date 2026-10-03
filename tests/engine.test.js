@@ -241,3 +241,61 @@ test('a manager raises income once the team is past full coverage', () => {
   assert.ok(need().load > loadBefore, 'the manager lifts team output');
   assert.ok(E.derive(s).income > before, 'and it shows up in income');
 });
+
+/** A shop where Engineering is open, with `n` engineers hired. */
+function withEngineers(n) {
+  const s = midGame();
+  s.lifetime = 1e8; s.cash = 1e15;
+  E.tick(s, 1); // opens Engineering (snapshot)
+  E.hire(s, 'engineering', n);
+  return s;
+}
+
+test('new engineers spread across Design, Project and Controls', () => {
+  const s = withEngineers(6);
+  const counts = { design: 0, controls: 0, project: 0 };
+  for (const p of s.depts.engineering.team) counts[E.engTeamOf(p)]++;
+  // "You" (staff 1) already sit on Design, so the six hires fill the other teams first.
+  assert.ok(counts.project >= 2 && counts.controls >= 2, JSON.stringify(counts));
+  const kh = E.engKhMult(s);
+  const idx = s.depts.engineering.team.findIndex((p) => E.engTeamOf(p) === 'project');
+  assert.ok(E.setEngTeam(s, idx, 'design'));
+  assert.ok(E.engKhMult(s) > kh, 'moving someone to Design raises Know-how');
+});
+
+test('Controls engineers discount Controls research, down to the floor', () => {
+  const s = withEngineers(3);
+  const full = E.DATA.TECH.find((t) => t.id === 'plc').cost;
+  for (const i of s.depts.engineering.team.keys()) E.setEngTeam(s, i, 'controls');
+  assert.ok(E.techCost(s, 'plc') < full);
+  assert.equal(E.techCost(s, 'pascal'), E.DATA.TECH.find((t) => t.id === 'pascal').cost);
+  s.depts.engineering.team.push(...Array.from({ length: 200 }, () => ({ ...s.depts.engineering.team[0] })));
+  close(E.techCost(s, 'plc'), full * C.controlsTechFloor);
+});
+
+test('the Pak line builds inputs first, consumes them, and sells the target', () => {
+  const s = withEngineers(4);
+  for (const i of s.depts.engineering.team.keys()) E.setEngTeam(s, i, 'project');
+  E.setPakTarget(s, 'base');
+  const d = E.derive(s), rate = E.pakHoursRate(s);
+  assert.ok(rate > 0);
+  const cash = s.cash;
+  assert.equal(E.pakNext(s), 'valve');
+  const sold = E.pakTick(s, d, (300 + 1500) / rate + 1e-6);
+  assert.deepEqual(sold, ['base']);
+  assert.equal(s.pak.built.valve, 1);
+  assert.equal(s.pak.stock.valve, 0);
+  close(s.cash - cash, E.pakPrice(s, d, 'base'), 1e-6);
+  // Sys-Paks need PLC Automation and a Controls engineer; until then the line makes Base-Paks.
+  E.setPakTarget(s, 'sys');
+  assert.equal(E.pakTarget(s), 'base');
+});
+
+test('older saves gain an empty Pak line', () => {
+  const s = withEngineers(1);
+  const raw = JSON.parse(E.serialize(s));
+  delete raw.pak;
+  const m = E.deserialize(JSON.stringify(raw));
+  assert.equal(m.pak.target, 'valve');
+  assert.deepEqual(m.pak.stock, { valve: 0, base: 0 });
+});

@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>IFP MSI · Pressure Works</title>
   <meta name="description" content="A hydraulic idle game: pumps, pressure, heat and a lot of cylinders.">
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='14' fill='%2314181d' stroke='%23f2a900' stroke-width='3'/%3E%3Cpath d='M16 16 L24 9' stroke='%23e5484d' stroke-width='3' stroke-linecap='round'/%3E%3C/svg%3E">
@@ -141,7 +141,8 @@
         <div id="order-line" class="order-line"></div>
         <h3>Support</h3>
         <div id="support-depts" class="dept-grid"></div>
-        <h3>Project Engineering · Pak lines</h3>
+        <h3>Project Engineering · Pak lines <span class="muted" id="pak-summary"></span></h3>
+        <p class="hint" id="pak-hint"></p>
         <div id="pak-chain" class="pak-chain"></div>
       </div>
       <div class="tab-body" data-body="overhaul" hidden>
@@ -179,6 +180,16 @@
   </main>
 
   <div id="toast" class="toast" role="status" hidden></div>
+
+  <!-- Department focus (bottom sheet on phones) and a person's ID badge -->
+  <div id="sheet" class="sheet" hidden role="dialog" aria-modal="true" aria-labelledby="sheet-title">
+    <div class="sheet-backdrop" data-close="sheet"></div>
+    <div class="sheet-panel"><div class="sheet-body" id="sheet-body"></div><div class="sheet-foot" id="sheet-foot"></div></div>
+  </div>
+  <div id="idcard" class="sheet idsheet" hidden role="dialog" aria-modal="true" aria-label="Employee ID">
+    <div class="sheet-backdrop" data-close="idcard"></div>
+    <div class="sheet-panel"><div class="sheet-body" id="id-body"></div><div class="sheet-foot" id="id-foot"></div></div>
+  </div>
 
   <script src="src/data.js"></script>
   <script src="src/format.js"></script>

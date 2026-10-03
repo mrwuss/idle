@@ -45,6 +45,11 @@ function manageCompany(s) {
     while (st.p0 && E.headcount(st) < u.engineers && E.hireQuote(s, 'engineering', 1).cost < s.cash * 0.05) E.hire(s, 'engineering', 1);
     if (u.cost < s.cash * 0.25) E.buyEng(s, u.id);
   }
+  // Pak lines: aim as high as the chain allows; keep hiring engineers while they're cheap.
+  if (E.pakOpen(s)) {
+    E.setPakTarget(s, E.sysReady(s) ? 'sys' : 'base');
+    while (E.headcount(s.depts.engineering) < 40 && E.hireQuote(s, 'engineering', 1).cost < s.cash * 0.01) E.hire(s, 'engineering', 1);
+  }
 }
 
 /** Hire into the bottleneck until the Order Line is fully covered (or cash runs out). */
@@ -177,6 +182,7 @@ while (s.time < end) {
 const d = E.derive(s);
 console.log('\nFinal:', {
   orderLine: d.order.factor.toFixed(2), surplusBonus: '+' + Math.round((d.order.bonus - 1) * 100) + '%',
+  paks: { ...s.pak.built, earned: fmt(s.pak.earned), target: s.pak.target },
   load: Object.fromEntries(Object.entries(d.order.depts).filter(([, o]) => o.open).map(([k, o]) => [k, +o.load.toFixed(2)])),
   income: fmt(d.income) + '/s', lifetime: fmt(s.lifetime), patentsAvailable: E.overhaulGain(s),
   tier: TIERS[s.tier].name, tech: Object.keys(s.tech).length + '/' + TECH.length,

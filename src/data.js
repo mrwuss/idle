@@ -94,19 +94,19 @@
     { id: 'seal_chem', name: 'Seal Chemistry', cost: 250, requires: ['hvi_oil'],
       desc: 'PTFE and Viton seals. Unlocks 4-Spiral hose (5,000 psi).',
       effects: {} },
-    { id: 'prop_valves', name: 'Proportional Valves', cost: 600, requires: ['unloading'],
+    { id: 'prop_valves', controls: true, name: 'Proportional Valves', cost: 600, requires: ['unloading'],
       desc: 'Smooth, metered motion: actuators ×1.5 income.',
       effects: { actMult: 1.5 } },
-    { id: 'load_sensing', name: 'Load Sensing', cost: 2000, requires: ['prop_valves'],
+    { id: 'load_sensing', controls: true, name: 'Load Sensing', cost: 2000, requires: ['prop_valves'],
       desc: 'Pumps match the load: relief heat ×0.3 again. Unlocks the Load-Sensing Pump.',
       effects: { reliefHeat: 0.3 } },
-    { id: 'plc', name: 'PLC Automation', cost: 3000, requires: ['prop_valves'],
+    { id: 'plc', controls: true, name: 'PLC Automation', cost: 3000, requires: ['prop_valves'],
       desc: 'A ladder-logic program fires Surge automatically when the accumulator is full.',
       effects: { autoSurge: true } },
     { id: 'forged_manifold', name: 'Forged Manifolds', cost: 8000, requires: ['seal_chem'],
       desc: 'Fewer hoses, fewer leaks. Unlocks 6-Spiral hose (6,000 psi).',
       effects: {} },
-    { id: 'servo', name: 'Servo Valves', cost: 20000, requires: ['load_sensing'],
+    { id: 'servo', controls: true, name: 'Servo Valves', cost: 20000, requires: ['load_sensing'],
       desc: 'Closed-loop control to the micron: actuators ×2 income.',
       effects: { actMult: 2 } },
     { id: 'lean', name: 'Lean Manufacturing', cost: 50000, requires: ['servo'],
@@ -115,13 +115,13 @@
     { id: 'synthetic', name: 'Synthetic Fluid', cost: 40000, requires: ['hvi_oil', 'servo'],
       desc: 'Ester-based fluid shrugs off heat: overheating starts another 40°F later.',
       effects: { tempLimit: 40 } },
-    { id: 'telematics', name: 'Telematics', cost: 60000, requires: ['plc'],
+    { id: 'telematics', controls: true, name: 'Telematics', cost: 60000, requires: ['plc'],
       desc: 'Remote monitoring: offline progress at 100% (was 50%), up to 24 h.',
       effects: { offlineRate: 1, offlineCapH: 24 } },
     { id: 'intensifier', name: 'Pressure Intensifiers', cost: 250000, requires: ['forged_manifold', 'servo'],
       desc: 'Big piston pushes small piston. Unlocks Ultra-High Pressure (10,000 psi).',
       effects: {} },
-    { id: 'digital_displacement', name: 'Digital Displacement', cost: 500000, requires: ['load_sensing', 'telematics'],
+    { id: 'digital_displacement', controls: true, name: 'Digital Displacement', cost: 500000, requires: ['load_sensing', 'telematics'],
       desc: 'Unlocks the Digital Displacement pump. All pumps ×1.5 flow.',
       effects: { pumpMult: 1.5 } },
   ];
@@ -189,15 +189,17 @@
 
   // Project Engineering product lines: each tier is built from the one below.
   const PAKS = [
-    { id: 'valve', name: 'Valve-Pak', value: 1,
+    // hours: engineering hours to build one (Project engineers add hours/s);
+    // needs: Paks consumed from stock; value: sale price in units of pakSeconds of production.
+    { id: 'valve', name: 'Valve-Pak', value: 1, hours: 300, needs: {},
       desc: 'Manifold and valves only: a drop-in hydraulic control block.',
-      recipe: 'Manifold block + 2–6 valves' },
-    { id: 'base', name: 'Base-Pak', value: 8,
+      recipe: 'Manifold block + 2–6 valves (Forged Manifolds: worth ×1.5)' },
+    { id: 'base', name: 'Base-Pak', value: 6, hours: 1500, needs: { valve: 1 },
       desc: 'Simple power unit: reservoir, pump, motor, a valve or two, sometimes a cooler.',
-      recipe: '1 Valve-Pak + best pump + reservoir/motor kit (+ cooler)' },
-    { id: 'sys', name: 'Sys-Pak', value: 100,
+      recipe: '1 Valve-Pak + your best pump type + reservoir/motor kit' },
+    { id: 'sys', name: 'Sys-Pak', value: 60, hours: 6000, needs: { base: 4 },
       desc: 'Complex multi-function system built from several Base-Paks plus controls.',
-      recipe: '2–6 Base-Paks + control panel (needs Controls engineers)' },
+      recipe: '4 Base-Paks + control panel (needs PLC Automation and a Controls engineer)' },
   ];
 
   // ---- Territory ------------------------------------------------------------
@@ -241,14 +243,14 @@
   // each department weighs two stats, so the same person is a star in one
   // job and average in another. See docs/DEPARTMENTS.md "Hiring people".
   const STATS = [
-    { id: 'hustle',       name: 'Hustle',       short: 'HUS' },
-    { id: 'rapport',      name: 'Rapport',      short: 'RAP' },
-    { id: 'negotiation',  name: 'Negotiation',  short: 'NEG' },
-    { id: 'organization', name: 'Organization', short: 'ORG' },
-    { id: 'precision',    name: 'Precision',    short: 'PRE' },
-    { id: 'numbers',      name: 'Numbers',      short: 'NUM' },
-    { id: 'mechanical',   name: 'Mechanical',   short: 'MEC' },
-    { id: 'leadership',   name: 'Leadership',   short: 'LEA' },   // what makes a good manager
+    { id: 'hustle',       name: 'Hustle',       short: 'HUS', desc: 'Energy and drive: chasing leads, getting things moving.' },
+    { id: 'rapport',      name: 'Rapport',      short: 'RAP', desc: 'Getting along with customers and coworkers.' },
+    { id: 'negotiation',  name: 'Negotiation',  short: 'NEG', desc: 'Driving a hard bargain with suppliers.' },
+    { id: 'organization', name: 'Organization', short: 'ORG', desc: 'Keeping stock, schedules and paperwork in order.' },
+    { id: 'precision',    name: 'Precision',    short: 'PRE', desc: 'Careful, exact work: inspection, tolerances, safety.' },
+    { id: 'numbers',      name: 'Numbers',      short: 'NUM', desc: 'Comfort with math, money and data.' },
+    { id: 'mechanical',   name: 'Mechanical',   short: 'MEC', desc: 'Hands-on hydraulic know-how.' },
+    { id: 'leadership',   name: 'Leadership',   short: 'LEA', desc: 'Running a team: what makes a good manager.' },   // what makes a good manager
   ];
   // Primary stat counts double, secondary once.
   const DEPT_STATS = {
@@ -385,6 +387,12 @@
     strokeShare: 0.02,
     engKhPerStrength: 0.05, // each staff-equivalent in Engineering adds 5% Know-how
     mgrTeamPerPoint: 0.05,  // manager: team strength +5% per Leadership point
+    // Engineering teams and Pak lines
+    pakSeconds: 10,         // a Pak of value 1 sells for 10 s of production (through the Order Line)
+    pakHoursPerStrength: 1, // engineering hours/s = this × √(Project strength): big teams coordinate less well
+    pakGradePer: 0.1,       // Base-/Sys-Pak price +10% per pump type above gear you own
+    controlsTechPer: 0.05,  // Controls research −5% Know-how per Controls staff-equivalent…
+    controlsTechFloor: 0.5, // …down to half price
     mgrPoolPer: 3,          // …and reviews 1 more applicant per 3 Leadership points
     mgrEvery: 2,            // seconds between a manager's staffing checks
     // Support departments

@@ -47,6 +47,7 @@
       depts: freshDepts(),     // people hired, applicants, and production when each opened (p0)
       seed: (Math.random() * 2 ** 32) >>> 0, // drives applicant generation (deterministic quotes)
       engUp: {},               // Engineering projects bought this run
+      pak: { target: 'valve', building: 'valve', work: 0, stock: { valve: 0, base: 0 }, built: { valve: 0, base: 0, sys: 0 }, earned: 0 },
       mgrClock: 0,
       safety: { streak: 0, incident: null, seed: (Math.random() * 2 ** 32) >>> 0 },
       ach: {},                 // achievements earned (kept forever)
@@ -179,6 +180,7 @@
     safetyTick(s, d, dt);
     s.mgrClock += dt;
     if (s.mgrClock >= C.mgrEvery) { s.mgrClock = 0; managersTick(s, d); }
+    pakTick(s, d, dt);
     const earned = d.income * dt;
     s.cash += earned;
     s.runEarnings += earned;
@@ -202,10 +204,13 @@
     const earned = d.income * capped * m.offlineRate;
     const kh = d.khRate * capped * m.offlineRate;
     s.cash += earned; s.runEarnings += earned; s.lifetime += earned; s.kh += kh;
+    const pakBefore = s.pak.earned;
+    pakTick(s, d, capped * m.offlineRate);
+    const paks = s.pak.earned - pakBefore;
     s.temp = d.tempEq;
     if (s.safety) s.safety.streak += capped;
     s.time += capped;
-    return { seconds: capped, earned, kh, rate: m.offlineRate };
+    return { seconds: capped, earned: earned + paks, kh, rate: m.offlineRate };
   }
 
   // ---- Purchases -----------------------------------------------------------
@@ -275,9 +280,16 @@
     const t = TECHS[id];
     return !s.tech[id] && t.requires.every((r) => s.tech[r]);
   }
+  /** Know-how price; Controls engineers make the Controls branch cheaper. */
+  function techCost(s, id) {
+    const t = TECHS[id];
+    if (!t.controls) return t.cost;
+    return t.cost * Math.max(C.controlsTechFloor, 1 - C.controlsTechPer * teamStrength(s, 'controls'));
+  }
   function research(s, id) {
-    if (!techAvailable(s, id) || s.kh < TECHS[id].cost) return false;
-    s.kh -= TECHS[id].cost;
+    const cost = techCost(s, id);
+    if (!techAvailable(s, id) || s.kh < cost) return false;
+    s.kh -= cost;
     s.tech[id] = true;
     return true;
   }
@@ -494,9 +506,38 @@
 
   // ---- Engineering --------------------------------------------------------------
 
-  function engKhMult(s) {
+  /**
+   * Engineering has three teams. Each engineer (and the manager) works on one:
+   * Design (Know-how), Controls (cheaper Controls research, needed for Sys-Paks)
+   * or Project (builds Paks). People hired before teams existed are on Design.
+   */
+  const ENG_TEAMS = ['design', 'controls', 'project'];
+  const engTeamOf = (p) => (p && ENG_TEAMS.includes(p.g) ? p.g : 'design');
+  function teamStrength(s, team) {
     const st = s.depts.engineering;
-    let m = 1 + C.engKhPerStrength * (st ? strength(st, 'engineering') * mgmtMult(s) : 0);
+    if (!st || !st.p0) return 0;
+    let sum = team === 'design' ? st.staff : 0;
+    for (const p of st.team) if (engTeamOf(p) === team) sum += effectiveness(p, 'engineering');
+    if (st.mgr && engTeamOf(st.mgr) === team) sum += effectiveness(st.mgr, 'engineering');
+    return sum * mgrBonus(st) * mgmtMult(s);
+  }
+  /** New engineers join the smallest team (ties: Design, Project, Controls). */
+  function leastEngTeam(st) {
+    const n = { design: st.staff, project: 0, controls: 0 };
+    for (const p of [...st.team, st.mgr].filter(Boolean)) n[engTeamOf(p)]++;
+    return ['design', 'project', 'controls'].reduce((a, b) => (n[b] < n[a] ? b : a));
+  }
+  /** Move an engineer ('mgr' or a team index) to another team. */
+  function setEngTeam(s, who, team) {
+    const st = s.depts.engineering;
+    const p = who === 'mgr' ? st.mgr : st.team[who];
+    if (!p || !ENG_TEAMS.includes(team)) return false;
+    p.g = team;
+    return true;
+  }
+
+  function engKhMult(s) {
+    let m = 1 + C.engKhPerStrength * teamStrength(s, 'design');
     for (const u of DATA.ENG_UPGRADES) if (s.engUp[u.id]) m *= u.kh;
     return m;
   }
@@ -575,7 +616,9 @@
     const cost = hireQuote(s, id, 1).cost;
     if (cost > s.cash) return false;
     s.cash -= cost;
-    st.team.push(st.pool[index]);
+    const p = st.pool[index];
+    if (id === 'engineering') p.g = leastEngTeam(st);
+    st.team.push(p);
     st.pool[index] = newPerson(s);
     return true;
   }
@@ -665,6 +708,69 @@
     return got;
   }
 
+
+  // ---- Pak lines (Project engineering) -------------------------------------------
+  // Project engineers add engineering hours. The line builds toward the chosen
+  // target, making its inputs first (a Base-Pak needs a Valve-Pak, a Sys-Pak four
+  // Base-Paks), and sells each finished target through the Order Line.
+
+  const PAK = byId(DATA.PAKS);
+  const pakOpen = (s) => departmentOpen(s, DEPT.engineering);
+  const sysReady = (s) => !!s.tech.plc && teamStrength(s, 'controls') >= 1;
+  /** What the line is really aiming for (Sys-Pak falls back to Base-Pak until it's possible). */
+  const pakTarget = (s) => (s.pak.target === 'sys' && !sysReady(s) ? 'base' : s.pak.target);
+  function pakNext(s) {
+    const t = pakTarget(s), st = s.pak.stock;
+    if (t === 'valve') return 'valve';
+    if (t === 'base') return st.valve >= PAK.base.needs.valve ? 'base' : 'valve';
+    return st.base >= PAK.sys.needs.base ? 'sys' : st.valve >= PAK.base.needs.valve ? 'base' : 'valve';
+  }
+  const pakHoursRate = (s) => (pakOpen(s) ? C.pakHoursPerStrength * Math.sqrt(teamStrength(s, 'project')) : 0);
+  /** Price grade: Forged Manifolds for Valve-Paks; your best pump type for Base- and Sys-Paks. */
+  function pakGrade(s, id) {
+    if (id === 'valve') return s.tech.forged_manifold ? 1.5 : 1;
+    let best = 0;
+    PUMPS.forEach((p, i) => { if (s.pumps[p.id] > 0) best = i; });
+    return 1 + C.pakGradePer * best;
+  }
+  const pakPrice = (s, d, id) => PAK[id].value * pakGrade(s, id) * C.pakSeconds * d.production * d.order.factor;
+  /** Hours to build one target from scratch (inputs included). */
+  const pakChainHours = (id) => PAK[id].hours + Object.entries(PAK[id].needs).reduce((a, [k, n]) => a + n * pakChainHours(k), 0);
+  /** Average Pak income per second at the current target and staffing. */
+  function pakIncome(s, d) {
+    const t = pakTarget(s), rate = pakHoursRate(s);
+    return rate > 0 ? pakPrice(s, d, t) * rate / pakChainHours(t) : 0;
+  }
+  function setPakTarget(s, id) {
+    if (!PAK[id]) return false;
+    s.pak.target = id;
+    s.pak.building = pakNext(s);
+    return true;
+  }
+  /** Advance the line by dt seconds; returns the Paks sold. */
+  function pakTick(s, d, dt) {
+    let hours = pakHoursRate(s) * dt;
+    if (hours <= 0) return [];
+    const sold = [], P = s.pak;
+    for (let guard = 0; hours > 0 && guard < 10000; guard++) {
+      const id = pakNext(s);
+      if (P.building !== id) { P.building = id; P.work = 0; }
+      const need = PAK[id].hours - P.work;
+      if (hours < need) { P.work += hours; break; }
+      hours -= need;
+      P.work = 0;
+      for (const [k, n] of Object.entries(PAK[id].needs)) P.stock[k] -= n;
+      P.built[id]++;
+      if (id === pakTarget(s)) {
+        const price = pakPrice(s, d, id);
+        s.cash += price; s.runEarnings += price; s.lifetime += price; P.earned += price;
+        sold.push(id);
+      } else P.stock[id]++;
+    }
+    P.building = pakNext(s);
+    return sold;
+  }
+
   // ---- Save / load ---------------------------------------------------------
 
   function serialize(s) {
@@ -684,6 +790,8 @@
     for (const dept of HIREABLE) s.depts[dept.id] = { ...freshDept(), ...(s.depts[dept.id] || {}) };
     if (!Number.isFinite(s.seed)) s.seed = (Math.random() * 2 ** 32) >>> 0;
     s.safety = { ...newState().safety, ...(raw.safety || {}) };
+    const fresh = newState().pak, rp = raw.pak || {};
+    s.pak = { ...fresh, ...rp, stock: { ...fresh.stock, ...(rp.stock || {}) }, built: { ...fresh.built, ...(rp.built || {}) } };
     return s;
   }
 
@@ -698,6 +806,8 @@
     leadership, mgrBonus, poolSize, promote, setAuto, managersTick, engKhMult, canBuyEng, buyEng,
     itMult, mgmtMult, mgmtPool, purchasingDiscount, incidentRate, safeDays, safetyStreakMult, achievementMult,
     achStat, checkAchievements,
+    ENG_TEAMS, engTeamOf, teamStrength, setEngTeam, techCost,
+    pakOpen, sysReady, pakTarget, pakNext, pakHoursRate, pakGrade, pakPrice, pakChainHours, pakIncome, setPakTarget, pakTick,
     serialize, deserialize,
   };
   root.PW = root.PW || {};

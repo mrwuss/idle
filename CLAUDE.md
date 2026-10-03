@@ -24,5 +24,8 @@
   phone-only Works tab and a full-screen machine (`body.works-full`, rotated in portrait; `hit()` handles it). The simulator
   bot calls `keepLineStaffed()` before buying anything. Support departments (IT, Safety incidents,
   Management, Purchasing discount) are live; achievements (`s.ach`) and first-time tips (`s.tips`)
-  persist through Overhaul. Paks and the remaining department twists are still a design scaffold shown on the Company tab. Location unlocks
+  persist through Overhaul. Engineering people have a team (`p.g`: design/controls/project; `teamStrength()`), Controls
+  discounts `techCost()`, and Project runs the Pak line (`s.pak`, `pakTick()`, target via `setPakTarget()`).
+  The Company tab cards open a focus sheet (`openDept()`) and faces open an ID badge (`data-person`).
+  The remaining department twists are still a design scaffold. Location unlocks
   (`state.locations`, `checkLocations()`) are real and persist through Overhaul. The plans are in `docs/DEPARTMENTS.md` and `docs/TERRITORY.md`.
