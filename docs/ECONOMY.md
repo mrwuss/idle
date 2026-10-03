@@ -26,6 +26,8 @@ update the tables here.
 | Order Line factor | lowest coverage of any open department (the bottleneck), floored at 0.1 |
 | Hire cost (nth hire) | `10 s × production-at-opening × 1.778^n`, which is about 10 s of *current* production (n = head count) |
 | New applicants | `3 s × current production` |
+| Manager bonus | team strength × `(1 + 0.03 × Leadership)`; reviews `3 + ⌊LEA/3⌋` applicants |
+| Know-how per second | `0.04 × √(income) × (1 + 0.05 × Engineering strength) × Engineering projects` |
 | Hand-pump charge | `max(0.25 gal, 2% of accumulator capacity)` per stroke |
 | Total income | `production × surge × Order Line factor` |
 | Know-how per second | `0.04 × √(total income)` |

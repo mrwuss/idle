@@ -26,6 +26,22 @@ const clone = (s) => JSON.parse(JSON.stringify(s));
 // separately (keepLineStaffed), the way a player would buy, then hire.
 const steadyIncome = (s) => { const d = E.derive(s, { steady: true }); return d.production * d.surgeMult; };
 
+/** Promote the best leader once a team has a few people; invest in Engineering when cheap. */
+function manageCompany(s) {
+  for (const dept of E.HIREABLE) {
+    const st = s.depts[dept.id];
+    if (st.mgr || st.team.length < 4) continue;
+    const i = st.team.reduce((b, p, k, a) => (E.leadership(p) > E.leadership(a[b]) ? k : b), 0);
+    E.promote(s, dept.id, i);
+  }
+  for (const u of E.DATA.ENG_UPGRADES) {
+    if (s.engUp[u.id]) continue;
+    const st = s.depts.engineering;
+    while (st.p0 && E.headcount(st) < u.engineers && E.hireQuote(s, 'engineering', 1).cost < s.cash * 0.05) E.hire(s, 'engineering', 1);
+    if (u.cost < s.cash * 0.25) E.buyEng(s, u.id);
+  }
+}
+
 /** Hire into the bottleneck until the Order Line is fully covered (or cash runs out). */
 function keepLineStaffed(s) {
   for (let i = 0; i < 200; i++) {
@@ -122,6 +138,7 @@ const reportEvery = Number((args.find((a) => a.startsWith('--every=')) || '').sl
 while (s.time < end) {
   for (let i = 0; i < 50 && s.time % 5 === 0; i++) {
     keepLineStaffed(s);
+    manageCompany(s);
     const mv = bestMove(s);
     if (!mv || mv.cost > s.cash) break;
     mv.apply(s);

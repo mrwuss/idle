@@ -269,6 +269,50 @@ Hires are people, not head counts.
   strongest at the desks, "+N" for the rest) and on the warehouse floor (packer
   and pickers).
 
+## Managers (implemented, v0.2.2)
+
+- **Leadership (LEA)** is an eighth stat. People hired before it existed get one
+  derived from their look.
+- **Promoting:** anyone on a team can be promoted to **manager**. They leave the
+  head count but lift the whole team. Promoting someone else returns the old
+  manager to the team.
+- **What a manager does,** scaled by Leadership:
+
+| | Formula | LEA 3 | LEA 9 |
+|---|---|---|---|
+| Team strength | × (1 + 3% × LEA) | +9% | +27% |
+| Applicants reviewed | 3 + ⌊LEA / 3⌋ | 4 | 6 |
+| Hires per staffing check (every 2 s) | 1 + ⌊LEA / 4⌋ | 1 | 3 |
+
+- **Auto-hire** (on by default, toggle on the card): whenever their department
+  drops below 100% coverage, the manager hires the best applicant they're
+  screening, paying the normal hire cost. Managers keep head count where it
+  needs to be, and better managers pick better people and fill gaps faster.
+- **Promote for Leadership, not effectiveness:** a high-LEA person with mediocre
+  job stats makes the best manager. On a small team, keeping your star working
+  can be worth more.
+
+## Engineering (implemented, v0.2.2)
+
+- **Opening:** Engineering opens at $10M earned and hires like the Order Line
+  departments, weighing Mechanical first and Numbers second. Its quirks are
+  *Licensed P.E.* and *Builds test rigs in the garage*. It isn't part of the
+  Order Line, so it never becomes the bottleneck.
+- **Engineers:** each staff-equivalent adds **5% Know-how**.
+- **Engineering projects** are one-time cash purchases that need enough engineers:
+
+| Project | Engineers | Cost | Know-how |
+|---|---:|---:|---:|
+| CAD Workstations | 1 | $2M | ×1.25 |
+| Hydraulic Test Lab | 3 | $30M | ×1.5 |
+| Simulation (FEA / CFD) | 6 | $500M | ×1.5 |
+| Application Engineers | 10 | $8B | ×1.75 |
+| R&D Center | 16 | $150B | ×2 |
+
+- **Effect on pacing:** with Engineering staffed, the balance bot finishes the
+  R&D tree around 2h instead of 3.5h, and end-of-run income is unchanged.
+- **Overhaul** resets projects and staff, like everything else in a run.
+
 **Ideas next:** an HR or Management upgrade for 4–5 applicants or better stats; a
 morale or mentor effect; named "Employee of the Month" bonuses; retirements
 across Overhauls (a Hall of Fame).
@@ -283,7 +327,7 @@ across Overhauls (a Hall of Fame).
 | Warehouse | Inventory buffer and Rush Ship |
 | Quality | Yield, certifications, contamination |
 | Accounting | Collection delay (DSO) and interest |
-| Engineering | Design (Know-how), Controls (automation tech), Project (Pak lines) |
+| Engineering | Design (Know-how) ✓, Controls (automation tech), Project (Pak lines) |
 | IT · Safety · Management | ERP, incident streak, span of control |
 
 ## Build plan (when we implement)

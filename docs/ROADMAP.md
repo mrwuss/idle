@@ -22,7 +22,7 @@
 Design: [DEPARTMENTS.md](DEPARTMENTS.md)
 
 - [x] Order Line engine: staffing, coverage and the bottleneck (6 staffed departments + Production)
-- [ ] Support departments: Engineering (Design / Controls / Project), IT, Safety, Management
+- [ ] Support departments: IT, Safety, Management (Engineering ✓)
 - [ ] Move R&D under Engineering → Design; move PLC/Servo/Proportional/LS/DD/Telematics to Controls
 - [ ] Department signature mechanics: markets, conversion, supplier discount, inventory + Rush Ship, yield + certifications, DSO + interest, incident streak, span of control
 - [ ] Project Engineering Pak lines: Valve-Pak → Base-Pak → Sys-Pak
@@ -30,6 +30,9 @@ Design: [DEPARTMENTS.md](DEPARTMENTS.md)
 - [x] Hiring people: random applicants with stats, quirks and looks; effectiveness by department; team rosters
 - [x] The Works as a facility: office mezzanine with your staff, warehouse (racks, AMR robots, pickers, packing), shipping dock with trailers
 - [x] Hand-pump stroke scales with accumulator capacity
+- [x] Managers: promote anyone; Leadership drives team bonus, applicant screening and auto-hiring
+- [x] Engineering department: engineers boost Know-how; Engineering projects (CAD → R&D Center)
+- [x] Mobile performance: machine pauses off-screen, resolution capped on phones, automatic low-quality mode
 - [ ] Order Line drawn as a valve diagram
 - [x] Simulator bot hires for the bottleneck; pacing table re-run
 

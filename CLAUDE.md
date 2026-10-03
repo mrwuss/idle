@@ -14,7 +14,10 @@
 - Order Line staffing is live: `orderLine()` in engine.js makes the least-covered
   department a bottleneck on income, and `hire()`/`hirePerson()`/`staffLine()` fix it. Hires are people
   (`depts[id].team`, applicants in `.pool`) generated from the seeded `s.seed`, so
-  quotes match results; `effectiveness()` weighs each department's two stats. The simulator
+  quotes match results; `effectiveness()` weighs each department's two stats. Managers (`depts[id].mgr`,
+  promoted with `promote()`) boost strength and auto-hire in `managersTick()`; Engineering
+  is in `HIREABLE` (not the Order Line) and drives `engKhMult()` with `ENG_UPGRADES`.
+  machine.js pauses off-screen and drops to a low-quality mode on slow devices. The simulator
   bot calls `keepLineStaffed()` before buying anything. Support departments, Paks and
   department twists are still a design scaffold shown on the Company tab. Location unlocks
   (`state.locations`, `checkLocations()`) are real and persist through Overhaul. The plans are in `docs/DEPARTMENTS.md` and `docs/TERRITORY.md`.
