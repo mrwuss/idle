@@ -35,6 +35,7 @@ Design: [DEPARTMENTS.md](DEPARTMENTS.md)
 - [x] Managers: promote anyone; Leadership drives team bonus, applicant screening and auto-hiring
 - [x] Engineering department: engineers boost Know-how; Engineering projects (CAD → R&D Center)
 - [x] Mobile performance: machine pauses off-screen, resolution capped on phones, automatic low-quality mode
+- [x] One-handed phone layout: bottom tab bar, thumb dock (Stroke right, Surge left, buy quantity), top status line, Works tab with full-screen machine, no sideways scrolling
 - [ ] Order Line drawn as a valve diagram
 - [x] Simulator bot hires for the bottleneck; pacing table re-run
 

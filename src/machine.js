@@ -66,7 +66,9 @@
     colors = readColors();
     canvas.style.aspectRatio = `${W} / ${H}`;
     resize();
-    root.addEventListener('resize', resize);
+    // Track the element's own size: it changes with tabs and full-screen mode, not just the window.
+    if ('ResizeObserver' in root) new ResizeObserver(resize).observe(canvas);
+    else root.addEventListener('resize', resize);
     // Don't draw while the machine is scrolled out of view.
     if ('IntersectionObserver' in root) {
       new IntersectionObserver((entries) => { visible = entries[0].isIntersecting; }).observe(canvas);
@@ -79,12 +81,12 @@
   // when frames run long, so phones stay smooth.
   let quality = 1, slowFrames = 0, fastFrames = 0, skip = false, visible = true;
   function resize() {
-    const r0 = canvas.getBoundingClientRect();
+    // Layout width, not the bounding box: full-screen mode may rotate the canvas.
+    const cssW = canvas.offsetWidth;
+    if (!cssW) return; // hidden (another tab on a phone): keep the old size until it shows again
     // The canvas has ~2300 logical px; more backing pixels than ~1.5× its CSS size is wasted on phones.
-    const cap = quality ? (r0.width < 1300 ? 1.5 : 2) : 1;
+    const cap = quality ? (cssW < 1300 ? 1.5 : 2) : 1;
     dpr = Math.min(cap, root.devicePixelRatio || 1);
-    const r = canvas.getBoundingClientRect();
-    const cssW = Math.max(1, r.width);
     canvas.width = Math.round(cssW * dpr);
     canvas.height = Math.round(cssW * (H / W) * dpr);
     bg = null; // rebuild the static backdrop at the new size
@@ -96,7 +98,10 @@
 
   function hit(ev) {
     const r = canvas.getBoundingClientRect();
-    const x = ((ev.clientX - r.left) / r.width) * W, ya = ((ev.clientY - r.top) / r.height) * H;
+    // A bounding box taller than wide means full-screen portrait mode rotated the canvas 90° clockwise.
+    const rotated = r.height > r.width;
+    const x = (rotated ? (ev.clientY - r.top) / r.height : (ev.clientX - r.left) / r.width) * W;
+    const ya = (rotated ? (r.right - ev.clientX) / r.width : (ev.clientY - r.top) / r.height) * H;
     if (ya < OFFICE_H) {
       const room = ROOMS[Math.floor(x / ROOM_W)];
       return room ? { tab: 'company', dept: room.id } : null;
@@ -112,6 +117,7 @@
     return null;
   }
   function onClick(ev) {
+    if (handlers.expand && handlers.expand()) return; // phones: the first tap opens full screen
     const h = hit(ev);
     if (h && h.stroke && handlers.stroke) handlers.stroke(ev);
     else if (h && handlers.open) handlers.open(h.tab, h.id, h.dept);
