@@ -227,6 +227,41 @@
     }
   }
   setInterval(announceDepts, 1000);
+
+  // Achievements: checked once a second, each announced once (+1% income).
+  E.checkAchievements(state); // award silently after load or offline progress
+  setInterval(() => {
+    const got = E.checkAchievements(state);
+    if (!got.length) return;
+    SFX.play('research');
+    UI.toast(`<b>Achievement:</b> ${got.map((a) => a.name).join(', ')} <span class="muted">(+${got.length}% income)</span>`, 5000);
+  }, 1000);
+
+  // First-time tips: each explains a mechanic the first time it bites. Shown
+  // one at a time, and only while no other toast is up.
+  const TIPS = [
+    { id: 'starve', when: (s, d) => d.demand > 0 && d.utilization < 0.98 && s.accCharge <= 0,
+      msg: '<b>Flow-starved.</b> Your actuators want more GPM than the pumps give, so they slow down. Buy pumps until the flow bar balances.' },
+    { id: 'relief', when: (s, d) => d.overRelief > 0,
+      msg: '<b>Relief valve dumping.</b> Spare flow with a full accumulator goes over relief as pure heat. Add actuators to use it, or a bigger accumulator.' },
+    { id: 'hot', when: (s, d) => s.temp > d.tempLimit,
+      msg: '<b>Oil too hot.</b> Above its limit the oil thins and income drops. Buy coolers on the System tab.' },
+    { id: 'surge', when: (s) => E.canSurge(s) && !E.mods(s).autoSurge,
+      msg: '<b>Accumulator full.</b> Press <b>Surge</b> (or S) to dump it for a burst of extra income.' },
+    { id: 'tech', when: (s) => E.DATA.TECH.some((t) => E.techAvailable(s, t.id) && s.kh >= t.cost),
+      msg: '<b>Research ready.</b> You have enough Know-how for a technology. Open the R&D tab.' },
+    { id: 'tier', when: (s) => E.canUpgradeTier(s),
+      msg: '<b>Pressure upgrade affordable.</b> Higher psi unlocks new actuators and makes every line pay more. See the System tab.' },
+    { id: 'promote', when: (s) => E.HIREABLE.some((x) => !s.depts[x.id].mgr && E.headcount(s.depts[x.id]) >= 4),
+      msg: '<b>Time for a manager.</b> Promote someone with high Leadership on the Company tab; managers boost their team and keep it staffed.' },
+  ];
+  setInterval(() => {
+    if (!derived || !$('toast').hidden) return;
+    const tip = TIPS.find((t) => !state.tips[t.id] && t.when(state, derived));
+    if (!tip) return;
+    state.tips[tip.id] = true;
+    UI.toast(tip.msg, 8000);
+  }, 1000);
   E.checkLocations(state); // catch up silently after load or offline progress
   setInterval(announceLocations, 1000);
   setInterval(render, 200);

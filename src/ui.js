@@ -418,7 +418,7 @@
       b.addEventListener('click', () => setTab(b.dataset.tab)));
     document.querySelectorAll('#buyqty [data-qty]').forEach((b) =>
       b.addEventListener('click', () => {
-        ui.qty = b.dataset.qty === 'max' ? 'max' : Number(b.dataset.qty);
+        ui.qty = ['max', 'next'].includes(b.dataset.qty) ? b.dataset.qty : Number(b.dataset.qty);
         document.querySelectorAll('#buyqty [data-qty]').forEach((x) => x.setAttribute('aria-checked', x === b));
         h.qtyChanged && h.qtyChanged(ui.qty);
       }));
@@ -638,6 +638,14 @@
       ['Equilibrium temperature', Math.round(Math.min(d.tempEq, 9999)) + '°F'],
     ];
     setHtml('stats', rows.map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join(''));
+    const all = E.DATA.ACHIEVEMENTS, got = all.filter((a) => a.id in s.ach).length;
+    setHtml('ach-count', `${got}/${all.length} · +${got}% income`);
+    setHtml('ach', all.map((a) => {
+      const done = a.id in s.ach;
+      const pct = done ? 100 : Math.min(99, Math.floor(100 * E.achStat(s, a.stat) / a.goal));
+      return `<div class="ach${done ? ' got' : ''}" title="${a.desc}"><b>${done ? '★' : '☆'} ${a.name}</b>`
+        + `<span>${a.desc}</span><i style="width:${pct}%"></i></div>`;
+    }).join(''));
   }
 
   // ---- Per-frame animation ---------------------------------------------------

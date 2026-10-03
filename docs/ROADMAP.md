@@ -48,20 +48,22 @@ Design: [TERRITORY.md](TERRITORY.md)
 
 ## v0.3 — Make it feel good
 
-- [ ] First-time-user guidance: highlight the gear pump and jack, explain the flow bar on first starvation, explain heat on first overheat
+- [x] First-time tips: flow starvation, relief dumping, overheating, a full accumulator, research ready, pressure upgrade, first manager
+- [ ] Highlight the gear pump and jack for brand-new players
 - [x] Sound effects (Kenney CC0) with a mute toggle: stroke, buy, upgrade, research, Surge, overheat, new location, Overhaul
 - [ ] Ambient sound: pump whine tied to flow, relief squeal while dumping
 - [ ] Number popups on actuators, a screen shake on Surge
-- [ ] "Buy until next milestone" quantity option
-- [ ] Achievements (first 1,000 psi, deadheading for 60 s, 100 jacks…)
-- [ ] Unit tests for engine.js (cost curves, flow balance edge cases, save migration)
+- [x] "Next" buy quantity: up to the next ×2 milestone
+- [x] Achievements: 23 goals in the Logbook, +1% income each, kept through Overhaul
+- [x] Unit tests for engine.js (`npm test`: cost curves, flow balance, heat, hiring, save migration, offline, Overhaul)
 - [ ] GitHub Pages deploy
 
 ## v0.4 — Depth
 
 - [ ] Sys-Pak projects (named, timed contracts)
 - [ ] Contamination and filtration (owned by Quality)
-- [ ] Wear and incidents (owned by Safety)
+- [x] Incidents (owned by Safety)
+- [ ] Wear
 - [ ] IT auto-balance (auto-hire for the bottleneck)
 
 ## v0.5 — Circuits

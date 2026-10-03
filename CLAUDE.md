@@ -3,7 +3,8 @@
 - Vanilla HTML/CSS/JS with no build step and no dependencies. Scripts are classic
   `<script>` files that attach to `window.PW` (and `module.exports` in Node), so
   `index.html` works from `file://`.
-- `src/engine.js` must stay DOM-free: `tools/simulate.js` runs it in Node.
+- `src/engine.js` must stay DOM-free: `tools/simulate.js` and `tests/` run it in Node.
+  Run `npm test` (node:test, no dependencies) after engine changes.
 - All tunable numbers live in `src/data.js`. After changing balance, run
   `node tools/simulate.js` and update the tables in `docs/ECONOMY.md`.
 - Adding content to `data.js` is save-compatible: `deserialize()` merges saved
@@ -19,6 +20,7 @@
   IT, Safety and Management are in `HIREABLE` (not the Order Line): `engKhMult()`, `itMult()`,
   `safetyTick()`/`incidentRate()` (own seed in `s.safety`) and `mgmtMult()`.
   machine.js pauses off-screen and drops to a low-quality mode on slow devices. The simulator
-  bot calls `keepLineStaffed()` before buying anything. Support departments, Paks and
-  department twists are still a design scaffold shown on the Company tab. Location unlocks
+  bot calls `keepLineStaffed()` before buying anything. Support departments (IT, Safety incidents,
+  Management, Purchasing discount) are live; achievements (`s.ach`) and first-time tips (`s.tips`)
+  persist through Overhaul. Paks and the remaining department twists are still a design scaffold shown on the Company tab. Location unlocks
   (`state.locations`, `checkLocations()`) are real and persist through Overhaul. The plans are in `docs/DEPARTMENTS.md` and `docs/TERRITORY.md`.

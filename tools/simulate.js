@@ -170,6 +170,8 @@ while (s.time < end) {
     nextReport += reportEvery;
   }
   E.tick(s, 1);
+  for (const a of E.checkAchievements(s)) log(`ACH   ${a.name}`);
+  E.checkLocations(s);
 }
 
 const d = E.derive(s);

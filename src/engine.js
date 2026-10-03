@@ -49,6 +49,8 @@
       engUp: {},               // Engineering projects bought this run
       mgrClock: 0,
       safety: { streak: 0, incident: null, seed: (Math.random() * 2 ** 32) >>> 0 },
+      ach: {},                 // achievements earned (kept forever)
+      tips: {},                // first-time tips already shown (kept forever)
       time: 0,
       strokes: 0,
       lastSeen: Date.now(),
@@ -231,7 +233,9 @@
   function quote(s, kind, id, qty) {
     const [bucket, table] = KINDS[kind];
     const item = table[id], owned = s[bucket][id], cm = mods(s).costMult;
-    const n = qty === 'max' ? Math.max(1, maxAffordable(item, owned, s.cash, cm)) : qty;
+    const n = qty === 'max' ? Math.max(1, maxAffordable(item, owned, s.cash, cm))
+      : qty === 'next' ? (kind === 'cooler' || !nextMilestone(owned) ? 1 : nextMilestone(owned) - owned)
+      : qty;
     return { qty: n, cost: bulkCost(item, owned, n, cm) };
   }
 
@@ -312,6 +316,7 @@
     const keep = {
       patents: s.patents + overhaulGain(s), lifetime: s.lifetime,
       overhauls: s.overhauls + 1, strokes: s.strokes, time: s.time, locations: s.locations, seed: s.seed,
+      ach: s.ach, tips: s.tips,
     };
     Object.assign(s, newState(), keep);
     return true;
@@ -548,6 +553,7 @@
 
   /** Cost of the next `qty` hires (cost depends on headcount, not on who). */
   function hireQuote(s, id, qty) {
+    if (qty === 'next') qty = 1;
     const st = s.depts[id], g = C.hireGrowth;
     const base = C.hireBaseS * Math.max(1, st.p0 || derive(s).production) * mods(s).costMult;
     const first = base * g ** headcount(st);
@@ -625,6 +631,35 @@
     return true;
   }
 
+  // ---- Achievements ------------------------------------------------------------
+
+  function achStat(s, key) {
+    switch (key) {
+      case 'lifetime': return s.lifetime;
+      case 'strokes': return s.strokes;
+      case 'psi': return psi(s);
+      case 'actuators': return Object.values(s.actuators).reduce((a, b) => a + b, 0);
+      case 'pumps': return Object.values(s.pumps).reduce((a, b) => a + b, 0);
+      case 'techs': return Object.keys(s.tech).length;
+      case 'staff': return HIREABLE.reduce((a, d) => a + headcount(s.depts[d.id]) + (s.depts[d.id].mgr ? 1 : 0), 0);
+      case 'managers': return HIREABLE.filter((d) => s.depts[d.id].mgr).length;
+      case 'safeDays': return safeDays(s);
+      case 'locations': return Object.keys(s.locations).length;
+      case 'overhauls': return s.overhauls;
+      default: return 0;
+    }
+  }
+  /** Award any newly reached achievements; returns them (for announcements). */
+  function checkAchievements(s) {
+    const got = [];
+    for (const a of DATA.ACHIEVEMENTS) {
+      if (a.id in s.ach || achStat(s, a.stat) < a.goal) continue;
+      s.ach[a.id] = Math.round(s.time);
+      got.push(a);
+    }
+    return got;
+  }
+
   // ---- Save / load ---------------------------------------------------------
 
   function serialize(s) {
@@ -657,6 +692,7 @@
     effectiveness, headcount, strength, strokeGal, STAFFED, HIREABLE,
     leadership, mgrBonus, poolSize, promote, setAuto, managersTick, engKhMult, canBuyEng, buyEng,
     itMult, mgmtMult, mgmtPool, purchasingDiscount, incidentRate, safeDays, safetyStreakMult, achievementMult,
+    achStat, checkAchievements,
     serialize, deserialize,
   };
   root.PW = root.PW || {};
