@@ -22,7 +22,15 @@
     return `${s}s`;
   }
 
-  const FORMAT = { fmt, fmtTime };
+  // A person's look from their appearance number (used by the shop UI and the office in The Works).
+  const SKIN = ['#f1c27d', '#e0ac69', '#c68642', '#8d5524', '#5c3a21'];
+  const HAIR = ['#2b1d14', '#5a3a1e', '#a0522d', '#d6b370', '#9a9a9a', '#111111'];
+  const SHIRT = ['#3a7bd5', '#c94a3a', '#46c37b', '#f2a900', '#8f7aa6', '#4a5866', '#e07b6c'];
+  function look(a) {
+    return { skin: SKIN[a % 5], hair: HAIR[Math.floor(a / 5) % 6], shirt: SHIRT[Math.floor(a / 30) % 7], style: Math.floor(a / 210) % 3 };
+  }
+
+  const FORMAT = { fmt, fmtTime, look };
   root.PW = root.PW || {};
   root.PW.format = FORMAT;
   if (typeof module !== 'undefined') module.exports = FORMAT;

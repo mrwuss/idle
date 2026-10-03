@@ -28,7 +28,7 @@ python3 -m http.server 8000   # then visit http://localhost:8000
 - Spare flow charges the **accumulator**. Dump it with **Surge** for ×3–×4 income.
 - **Know-how** funds a 17-node **R&D tree** of real hydraulic breakthroughs.
 - **Overhaul** (prestige) trades everything for **Patents**, each one +10% income forever.
-- **Departments** open as you grow. Each needs more staff as production climbs, and the Order Line runs at its least-covered department, so hire on the **Company** tab.
+- **Departments** open as you grow. Each needs more staff as production climbs, and the Order Line runs at its least-covered department. Hire on the **Company** tab from a pool of applicants: random people whose stats and quirks suit some jobs better than others.
 - New **locations** unlock as you grow (Iowa → North → West → South). Each extends HQ and widens the customer base Outside Sales can reach.
 
 ## Project layout
@@ -40,7 +40,7 @@ src/data.js         every tunable number (pumps, actuators, tiers, coolers, tech
 src/engine.js       pure game logic, no DOM; shared by the browser and the simulator
 src/format.js       number/time formatting
 src/audio.js        sound effects + mute (clips in assets/audio, see CREDITS.md)
-src/machine.js      "The Works": the animated machine canvas, built from what you own
+src/machine.js      "The Works": the animated facility (office, production line, warehouse, shipping)
 src/ui.js           rendering, gauges, shop lists
 src/main.js         load/save, game loop, input
 tools/simulate.js   headless balance simulator (a greedy bot plays the real engine)

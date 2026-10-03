@@ -17,7 +17,10 @@
   // Order Line departments you staff (Production is the shop floor itself).
   const STAFFED = DATA.DEPARTMENTS.filter((d) => d.group === 'order' && d.id !== 'production');
   const DEPT = byId(DATA.DEPARTMENTS);
-  const freshDepts = () => Object.fromEntries(STAFFED.map((d) => [d.id, { staff: 0, p0: 0 }]));
+  // staff: legacy generic hires (saves from before named people); team: hired people;
+  // pool: applicants waiting; p0: production when the department opened.
+  const freshDept = () => ({ staff: 0, p0: 0, team: [], pool: [] });
+  const freshDepts = () => Object.fromEntries(STAFFED.map((d) => [d.id, freshDept()]));
 
   function newState() {
     return {
@@ -38,7 +41,8 @@
       temp: C.ambientF,
       surgeLeft: 0,
       locations: { hq: true }, // unlocked branches; kept through Overhaul
-      depts: freshDepts(),     // staff hired and production when each opened (p0)
+      depts: freshDepts(),     // people hired, applicants, and production when each opened (p0)
+      seed: (Math.random() * 2 ** 32) >>> 0, // drives applicant generation (deterministic quotes)
       time: 0,
       strokes: 0,
       lastSeen: Date.now(),
@@ -264,12 +268,15 @@
 
   // ---- Actions -------------------------------------------------------------
 
+  /** Accumulator charge from one hand-pump stroke: a share of capacity, so it scales with the bladder. */
+  const strokeGal = (cap) => Math.max(C.clickGal, cap * C.strokeShare);
+
   /** One stroke of the hand pump. */
   function click(s) {
     const d = derive(s);
     const gain = C.clickBase + d.m.clickPct * d.income;
     s.cash += gain; s.runEarnings += gain; s.lifetime += gain;
-    s.accCharge = Math.min(d.accCap, s.accCharge + C.clickGal);
+    s.accCharge = Math.min(d.accCap, s.accCharge + strokeGal(d.accCap));
     s.strokes++;
     return gain;
   }
@@ -292,7 +299,7 @@
     if (!canOverhaul(s)) return false;
     const keep = {
       patents: s.patents + overhaulGain(s), lifetime: s.lifetime,
-      overhauls: s.overhauls + 1, strokes: s.strokes, time: s.time, locations: s.locations,
+      overhauls: s.overhauls + 1, strokes: s.strokes, time: s.time, locations: s.locations, seed: s.seed,
     };
     Object.assign(s, newState(), keep);
     return true;
@@ -337,11 +344,54 @@
 
   // ---- Departments: the Order Line -------------------------------------------
 
+  // ---- People -------------------------------------------------------------------
+
+  /** Seeded random (mulberry32) so a quote for "hire N" matches what you get. */
+  function rand(s) {
+    let t = (s.seed = (s.seed + 0x6d2b79f5) >>> 0);
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  }
+  const pick = (s, list) => list[Math.floor(rand(s) * list.length)];
+
+  /** A random applicant: name, 7 stats (1–10, bell-ish), maybe a trait, and a look. */
+  function newPerson(s) {
+    const stats = DATA.STATS.map(() => 1 + Math.floor((rand(s) + rand(s)) * 5));
+    return {
+      n: `${pick(s, DATA.FIRST_NAMES)} ${pick(s, DATA.LAST_NAMES)}`,
+      s: stats.map((v) => Math.min(10, v)),
+      t: rand(s) < DATA.TRAIT_CHANCE ? pick(s, DATA.TRAITS).id : null,
+      a: Math.floor(rand(s) * 10000),
+    };
+  }
+  const STAT_INDEX = Object.fromEntries(DATA.STATS.map((x, i) => [x.id, i]));
+  const TRAIT = byId(DATA.TRAITS);
+
+  /** How many staff this person counts as in a department (≈0.55–1.9). */
+  function effectiveness(person, deptId) {
+    const [p1, p2] = DATA.DEPT_STATS[deptId];
+    const score = (2 * person.s[STAT_INDEX[p1]] + person.s[STAT_INDEX[p2]]) / 3;
+    const tr = person.t && TRAIT[person.t];
+    const bonus = tr && (tr.dept === deptId || tr.dept === 'any') ? tr.bonus : 0;
+    return Math.round((C.effBase + C.effPerPoint * score + bonus) * 100) / 100;
+  }
+
+  const headcount = (st) => st.staff + st.team.length;
+  const strength = (st, id) => st.staff + st.team.reduce((a, p) => a + effectiveness(p, id), 0);
+
+  function fillPool(s, id) {
+    const st = s.depts[id];
+    while (st.pool.length < C.poolSize) st.pool.push(newPerson(s));
+  }
+
+  // ---- Departments: the Order Line -------------------------------------------
+
   /**
    * Each open department needs more people as production grows: 1 to start,
    * plus `deptPerDecade` per 10× growth since it opened. Its coverage is
-   * staff ÷ required (Outside Sales reach grows with customer base). The line
-   * runs at its weakest department's coverage: the bottleneck.
+   * (you + team strength) ÷ required; Outside Sales reach grows with customer
+   * base. The line runs at its weakest department's coverage: the bottleneck.
    */
   function orderLine(s, production) {
     const out = { depts: {}, factor: 1, bottleneck: null };
@@ -349,66 +399,105 @@
     for (const dept of STAFFED) {
       const st = s.depts[dept.id];
       const open = departmentOpen(s, dept);
-      if (!open || !st.p0) { out.depts[dept.id] = { open, required: 1, effective: 1, coverage: 1 }; continue; }
+      if (!open || !st.p0) { out.depts[dept.id] = { open, required: 1, effective: 1, coverage: 1, reach: 1 }; continue; }
       const growth = Math.max(0, Math.log10(Math.max(production, 1) / st.p0));
       const required = 1 + C.deptPerDecade * growth;
-      const effective = (1 + st.staff) * (dept.id === 'outside_sales' ? reach : 1);
+      const r = dept.id === 'outside_sales' ? reach : 1;
+      const effective = (1 + strength(st, dept.id)) * r;
       const coverage = Math.min(1, effective / required);
-      out.depts[dept.id] = { open, required, effective, coverage };
+      out.depts[dept.id] = { open, required, effective, coverage, reach: r };
       if (coverage < out.factor) { out.factor = coverage; out.bottleneck = dept.id; }
     }
     out.factor = Math.max(C.deptFloor, out.factor);
     return out;
   }
 
-  /** Remember production at the moment each department opens (its baseline). */
+  /** Remember production at the moment each department opens, and post its first applicants. */
   function snapshotDepts(s, production) {
     const opened = [];
     for (const dept of STAFFED) {
       const st = s.depts[dept.id];
       if (!st.p0 && departmentOpen(s, dept)) { st.p0 = Math.max(1, production); opened.push(dept); }
+      if (st.p0 && st.pool.length < C.poolSize) fillPool(s, dept.id);
     }
     return opened;
   }
 
+  /** Cost of the next `qty` hires (cost depends on headcount, not on who). */
   function hireQuote(s, id, qty) {
     const st = s.depts[id], g = C.hireGrowth;
     const base = C.hireBaseS * Math.max(1, st.p0 || derive(s).production) * mods(s).costMult;
-    const first = base * g ** st.staff;
+    const first = base * g ** headcount(st);
     const n = qty === 'max'
       ? Math.max(1, Math.floor(Math.log(s.cash * (g - 1) / first + 1) / Math.log(g)))
       : qty;
     return { qty: n, cost: first * (g ** n - 1) / (g - 1) };
   }
+
+  /** Hire one specific applicant from the pool; a new applicant takes their place. */
+  function hirePerson(s, id, index) {
+    const st = s.depts[id];
+    if (!st || !departmentOpen(s, DEPT[id]) || !st.pool[index]) return false;
+    const cost = hireQuote(s, id, 1).cost;
+    if (cost > s.cash) return false;
+    s.cash -= cost;
+    st.team.push(st.pool[index]);
+    st.pool[index] = newPerson(s);
+    return true;
+  }
+  const bestIndex = (st, id) => st.pool.reduce((bi, p, i, arr) => (effectiveness(p, id) > effectiveness(arr[bi], id) ? i : bi), 0);
+
+  /** Hire `qty` people, always taking the best applicant available. */
   function hire(s, id, qty = 1) {
-    if (!s.depts[id] || !departmentOpen(s, DEPT[id])) return false;
+    const st = s.depts[id];
+    if (!st || !departmentOpen(s, DEPT[id])) return false;
+    fillPool(s, id);
     const q = hireQuote(s, id, qty);
     if (q.cost > s.cash) return false;
-    s.cash -= q.cost;
-    s.depts[id].staff += q.qty;
+    for (let i = 0; i < q.qty; i++) hirePerson(s, id, bestIndex(st, id));
     return true;
   }
 
-  /** Hires (per department) and total cost to bring the whole line to 100%. */
+  /** Throw out the current applicants and post the job again. */
+  const rerollCost = (s) => C.rerollS * Math.max(1, derive(s).production) * mods(s).costMult;
+  function rerollPool(s, id) {
+    const st = s.depts[id], c = rerollCost(s);
+    if (!st || !st.p0 || c > s.cash) return false;
+    s.cash -= c;
+    st.pool = [];
+    fillPool(s, id);
+    return true;
+  }
+
+  /**
+   * What it takes to bring the whole line to 100% by hiring the best
+   * applicant each time. Simulated on a copy, so it matches what staffLine does.
+   */
   function staffLineQuote(s) {
     const d = derive(s), plan = {};
+    const t = JSON.parse(JSON.stringify({ depts: s.depts, seed: s.seed }));
     let cost = 0, hires = 0;
     for (const dept of STAFFED) {
       const o = d.order.depts[dept.id];
       if (!o.open || o.coverage >= 1) continue;
-      const perHead = o.effective / (1 + s.depts[dept.id].staff);
-      const need = Math.max(0, Math.ceil(o.required / perHead - 1e-9) - 1 - s.depts[dept.id].staff);
-      if (!need) continue;
-      plan[dept.id] = need;
-      cost += hireQuote(s, dept.id, need).cost;
-      hires += need;
+      const st = t.depts[dept.id];
+      fillPool(t, dept.id);
+      let n = 0;
+      while ((1 + strength(st, dept.id)) * o.reach < o.required - 1e-9 && n < 1000) {
+        cost += hireQuote({ ...s, depts: t.depts }, dept.id, 1).cost;
+        const i = bestIndex(st, dept.id);
+        st.team.push(st.pool[i]);
+        st.pool[i] = newPerson(t);
+        n++;
+      }
+      if (n) { plan[dept.id] = n; hires += n; }
     }
     return { plan, cost, hires };
   }
   function staffLine(s) {
     const q = staffLineQuote(s);
     if (!q.hires || q.cost > s.cash) return false;
-    for (const [id, n] of Object.entries(q.plan)) hire(s, id, n);
+    for (const dept of STAFFED) if (q.plan[dept.id]) hire(s, dept.id, q.plan[dept.id]);
     return true;
   }
 
@@ -427,6 +516,9 @@
       else s[key] = raw[key];
     }
     s.tier = Math.min(s.tier, TIERS.length - 1);
+    // Older saves: departments were { staff, p0 } only.
+    for (const dept of STAFFED) s.depts[dept.id] = { ...freshDept(), ...(s.depts[dept.id] || {}) };
+    if (!Number.isFinite(s.seed)) s.seed = (Math.random() * 2 ** 32) >>> 0;
     return s;
   }
 
@@ -436,7 +528,8 @@
     nextTier, canUpgradeTier, upgradeTier, accCapacity, accUpgradeCost, upgradeAccumulator,
     techAvailable, research, click, canSurge, surge,
     patentsTotal, overhaulGain, canOverhaul, overhaul, opensMet, departmentOpen, regionOpen, checkLocations, customerBase, currentEra,
-    orderLine, snapshotDepts, hireQuote, hire, staffLineQuote, staffLine, STAFFED,
+    orderLine, snapshotDepts, hireQuote, hire, hirePerson, rerollPool, rerollCost, staffLineQuote, staffLine,
+    effectiveness, headcount, strength, strokeGal, STAFFED,
     serialize, deserialize,
   };
   root.PW = root.PW || {};

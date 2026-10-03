@@ -37,11 +37,12 @@
 
   UI.init({
     strokeFromMachine() { $('btn-stroke').click(); },
-    openFromMachine(tab, id) {
+    openFromMachine(tab, id, dept) {
       UI.setTab(tab);
       SFX.play('tab', 0.6);
       render();
       if (id) UI.focusItem('actuator', id);
+      if (dept) UI.focusDept(dept);
     },
     hire(id) {
       if (E.hire(state, id, UI.qty)) { SFX.play('buy'); render(); } else SFX.play('cant');
@@ -56,6 +57,22 @@
         render();
       }
     },
+  });
+
+  // Hiring buttons inside re-rendered department cards.
+  document.addEventListener('click', (ev) => {
+    const b = ev.target.closest('[data-hire], [data-hire-best], [data-reroll]');
+    if (!b || b.disabled) return;
+    let ok = false, who = null;
+    if (b.dataset.hire) {
+      const st = state.depts[b.dataset.hire], p = st.pool[Number(b.dataset.idx)];
+      ok = E.hirePerson(state, b.dataset.hire, Number(b.dataset.idx));
+      if (ok) who = p.n;
+    } else if (b.dataset.hireBest) ok = E.hire(state, b.dataset.hireBest, UI.qty);
+    else if (b.dataset.reroll) ok = E.rerollPool(state, b.dataset.reroll);
+    SFX.play(ok ? (b.dataset.reroll ? 'tab' : 'buy') : 'cant');
+    if (who) UI.toast(`Welcome aboard, <b>${who}</b>.`, 2500);
+    render();
   });
 
   // Upgrade buttons inside re-rendered cards.

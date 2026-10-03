@@ -12,7 +12,9 @@
 - Third-party assets: CC0 only, commit just the files used, and record each one in
   `CREDITS.md` (see `docs/ASSETS.md`). Sounds live in `assets/audio/`, mapped in `src/audio.js`.
 - Order Line staffing is live: `orderLine()` in engine.js makes the least-covered
-  department a bottleneck on income, and `hire()`/`staffLine()` fix it. The simulator
+  department a bottleneck on income, and `hire()`/`hirePerson()`/`staffLine()` fix it. Hires are people
+  (`depts[id].team`, applicants in `.pool`) generated from the seeded `s.seed`, so
+  quotes match results; `effectiveness()` weighs each department's two stats. The simulator
   bot calls `keepLineStaffed()` before buying anything. Support departments, Paks and
   department twists are still a design scaffold shown on the Company tab. Location unlocks
   (`state.locations`, `checkLocations()`) are real and persist through Overhaul. The plans are in `docs/DEPARTMENTS.md` and `docs/TERRITORY.md`.

@@ -21,9 +21,12 @@ update the tables here.
 | Thermal multiplier | 1 below the limit; `1 − (T − limit)/100` above, floored at 0.2 |
 | Production ($/s) | `Σ actuator income × utilization × thermal × (1 + 0.1 × patents)` |
 | Department staff needed | `1 + 4 × log10(production ÷ production when it opened)` |
-| Department coverage | `min(1, staff ÷ needed)`; Outside Sales staff count × `√(customer base ÷ 100)` |
+| Person's effectiveness | `0.45 + 0.11 × (2 × primary stat + secondary stat) / 3 + quirk` (≈0.55–1.9) |
+| Department coverage | `min(1, (1 + Σ effectiveness) ÷ needed)`; Outside Sales × `√(customer base ÷ 100)` |
 | Order Line factor | lowest coverage of any open department (the bottleneck), floored at 0.1 |
-| Hire cost (nth hire) | `10 s × production-at-opening × 1.778^n`, which is about 10 s of *current* production |
+| Hire cost (nth hire) | `10 s × production-at-opening × 1.778^n`, which is about 10 s of *current* production (n = head count) |
+| New applicants | `3 s × current production` |
+| Hand-pump charge | `max(0.25 gal, 2% of accumulator capacity)` per stroke |
 | Total income | `production × surge × Order Line factor` |
 | Know-how per second | `0.04 × √(total income)` |
 | Patents (total) | `floor(√(lifetime $ / 1,000,000))` |
@@ -105,7 +108,7 @@ places the bot is naïve about, so treat these as relative pacing.
 | All 17 techs | 3–5 h | ~3h 35m |
 | Run 1 plateau | 2–4 h | ~30M/s around 3–6 h (heat wall at 200°F) |
 
-Departments (v0.2) cost about 10–15% of pace: the bot hires into the bottleneck
+Departments cost about 5–10% of pace now that the bot picks the best of three applicants ($1M at ~19.5 min, $1B at ~77 min): the bot hires into the bottleneck
 before buying anything else, and end-of-run income is unchanged (~29M/s).
 
 **Known balance notes:**
