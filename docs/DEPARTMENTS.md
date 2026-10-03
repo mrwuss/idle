@@ -1,8 +1,8 @@
 # Departments — the business is a circuit too
 
-> Design v0.2 for the Departments system. The game already has a **Company** tab
-> placeholder that shows every department and when it opens. The mechanics are
-> the next major milestone (see [ROADMAP.md](ROADMAP.md)).
+> Design v0.3. **Order Line staffing is in the game** (see "How staffing works").
+> The support departments and each department's twist are next (see
+> [ROADMAP.md](ROADMAP.md)).
 
 ## The idea
 
@@ -198,55 +198,48 @@ income yet.
 - Support departments sit above the pipe like the accumulator and gauges on
   the hydraulic schematic.
 
-## First-pass numbers
+## How staffing works (implemented, v0.2)
 
-These are starting points to put into the simulator, not final balance.
+The seven Order Line departments are in the game. Six of them are staffed;
+Production is the shop floor itself. Support departments and the
+department-specific twists come next.
 
-### Capacity that scales with the run
+- **Opening:** each department opens on its own as the company grows, and you
+  cover it yourself at first (staff 1). The game remembers how much the shop was
+  producing at that moment.
+- **Growing pains:** every time production grows 10× beyond that, the
+  department needs **4 more people**. Its **coverage** is staff ÷ needed.
+- **The bottleneck:** the Order Line runs at the coverage of its weakest
+  department. Income is `production × that factor`, and it never drops below 10%.
+- **Hiring:** the nth hire costs `10 s × opening production × 1.778^n`. Because
+  1.778⁴ = 10, that works out to roughly **10 seconds of current production per
+  hire you need**, whenever you need it. Hiring never gets trivially cheap
+  or impossibly expensive.
+- **Locations help Outside Sales:** each rep's reach is multiplied by
+  `√(customer base ÷ HQ's)`. Opening North makes every rep count ×1.58, West
+  ×2.24 and South ×3.16. Locations widen the market, and Outside Sales covers it.
+- **Overhaul** resets staff. Departments reopen at the new run's (tiny)
+  production, so each run you staff up again as you grow.
+- **UI:** on the Company tab each card shows coverage, staff vs needed, and a
+  hire button that follows the ×1/×10/×100/Max picker. The bottleneck card turns
+  red, a **Staff the line to 100%** button prices the whole fix up front, and
+  alerts plus the machine's overlay name the short-staffed department.
 
-Fixed dollar numbers break the moment Patents speed a run up, so department
-numbers scale off **production at the moment the department opens** (call it
-`P₀`, snapshotted into state):
+**Pacing impact** (balance simulator): $1M at 21 min (was 18), $1B at 82 min
+(was 75), end-of-run income unchanged.
 
-| Quantity | Rule |
+## Still to build
+
+| Department | Twist (from the design above) |
 |---|---|
-| Owner-run capacity | `2 × P₀`. The owner can cover it for a while, but production keeps growing past it. |
-| Capacity per staff member | `0.25 × P₀ × milestone(staff)` (×2 at 10, 25, 50, 100) |
-| Hire cost | `60 s × P₀ × 1.15^staff` |
-| Before opening | unlimited capacity (the stage isn't modelled yet) |
-
-**Target:** keeping every department off the bottleneck should take about
-20–30% of total spending. If it's more, departments feel like a tax. If it's
-less, they don't matter.
-
-### Department twists
-
-| Department | Formula sketch |
-|---|---|
-| Outside Sales | Capacity = lead value/s. **Markets** are one-time purchases, each ×1.25 order value; some require an actuator (Marine needs a Ship Lift, Energy needs a Forging Press). |
-| Inside Sales | Orders in = `min(leads × conversion, Inside Sales capacity)`. Conversion starts at 25%, +1% per 10 staff, capped at 60%; CRM and Same-day quotes add flat %. |
-| Purchasing | Equipment cost × `1 / (1 + 0.02 × √staff)`, floored at ×0.6. Replaces the Lean Manufacturing tech. |
-| Warehouse | Buffer = `60 s × throughput × level`. Fills when upstream outruns downstream, drains to cover dips. **Rush Ship** when full: shipping ×2 for 30 s. |
-| Production | Unchanged: the existing hydraulic income. |
-| Quality | Defect rate `15% / (1 + staff / 10)`; yield = 1 − defects. **ISO 9001** and **AS9100** are one-time certifications that open the Industrial and Aerospace markets. |
-| Accounting | Income goes into **receivables** and turns into cash after DSO (base 120 s, down to 10 s with staff). Interest of 0.1%/min on cash, capped at 10 min of income so it can't run away. |
-| Engineering · Design | Know-how × `(1 + 0.10 × design staff)` |
-| Engineering · Controls | Controls-branch tech costs × `(1 − 0.05 × staff)`, floor ×0.5 |
-| Engineering · Project | Engineering-hours/s = project staff. Valve-Pak 60 h; Base-Pak 300 h + 1 Valve-Pak; Sys-Pak 2,000 h + 3 Base-Paks, and needs ≥ 4 controls engineers. A Pak sells for `30 s × current production × Pak value` (×1, ×8, ×100). |
-| IT | ERP levels, +15% capacity to every Order Line department each; each level costs ×10 the last. Hosts PLC and Telematics. |
-| Safety | Incident chance/min `0.02 × (psi / 3000) × (temp / limit) / (1 + staff / 5)`. An incident stops one actuator line for 30 s. The streak bonus is +1% per shop-day (10 real minutes) without one, capped at +50%. |
-| Management | Each manager covers 8 staff (more with upgrades). Efficiency `= min(1, managers × 8 / total staff)^0.5` applies to every department. **Focus:** one department ×2 for 5 min, then a 15 min cooldown. |
-
-### Realized income
-
-```
-leads      = Outside Sales capacity × market value multiplier
-orders     = min(leads × conversion, Inside Sales capacity)
-throughput = min(orders, Purchasing, Warehouse (+ buffer), Production, Quality, Accounting) × management efficiency
-income     = throughput × yield × safety streak × surge × patents   → receivables → cash after DSO
-```
-
-Any department that hasn't opened is left out of the `min()`.
+| Outside Sales | Markets: one-time purchases that raise order value |
+| Inside Sales | Conversion rate |
+| Purchasing | Supplier discounts on equipment (replaces Lean Manufacturing) |
+| Warehouse | Inventory buffer and Rush Ship |
+| Quality | Yield, certifications, contamination |
+| Accounting | Collection delay (DSO) and interest |
+| Engineering | Design (Know-how), Controls (automation tech), Project (Pak lines) |
+| IT · Safety · Management | ERP, incident streak, span of control |
 
 ## Build plan (when we implement)
 

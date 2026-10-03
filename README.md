@@ -28,7 +28,8 @@ python3 -m http.server 8000   # then visit http://localhost:8000
 - Spare flow charges the **accumulator**. Dump it with **Surge** for ×3–×4 income.
 - **Know-how** funds a 17-node **R&D tree** of real hydraulic breakthroughs.
 - **Overhaul** (prestige) trades everything for **Patents**, each one +10% income forever.
-- As you grow, new **locations** unlock: Iowa → North → West → South. The **Company** tab shows them on a map with their customer base, alongside the eleven departments that run the business (those come in the next update).
+- **Departments** open as you grow. Each needs more staff as production climbs, and the Order Line runs at its least-covered department, so hire on the **Company** tab.
+- New **locations** unlock as you grow (Iowa → North → West → South). Each extends HQ and widens the customer base Outside Sales can reach.
 
 ## Project layout
 

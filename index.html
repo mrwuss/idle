@@ -83,7 +83,7 @@
         <button role="tab" data-tab="pumps">Pumps</button>
         <button role="tab" data-tab="system">System</button>
         <button role="tab" data-tab="tech">R&amp;D <span class="badge" id="tech-badge" hidden></span></button>
-        <button role="tab" data-tab="company">Company</button>
+        <button role="tab" data-tab="company">Company <span class="badge" id="company-badge" hidden>!</span></button>
         <button role="tab" data-tab="overhaul" id="tab-overhaul">Overhaul</button>
         <button role="tab" data-tab="settings">Logbook</button>
       </nav>
@@ -122,14 +122,17 @@
           <div class="era-label">Era <span id="era-num">I</span> · <b id="era-name">The First Shop</b></div>
           <p class="muted">Every fluid-power company runs on eleven departments. Orders flow through the
             <b>Order Line</b> like oil through a circuit, and the narrowest department sets the pace.
-            Departments open as the shop grows. Hiring staff arrives in a future update; for now, you run every open department yourself.</p>
+            Departments open as the shop grows. You cover each one yourself at first; as production grows, each needs more people, and the line runs at its least-covered department. Opening new locations lets each Outside Sales rep reach more customers.</p>
         </div>
         <h3>Territory <span class="muted">· 4 locations · 13 states + Gulf · <span id="customer-base"></span></span></h3>
         <div class="territory">
           <svg id="territory-map" class="territory-map" viewBox="0 0 188 368" role="img" aria-label="Territory map"></svg>
           <div id="region-list" class="region-list"></div>
         </div>
-        <h3>Order Line <span class="muted">· leads in → cash out</span></h3>
+        <div class="order-head">
+          <h3>Order Line <span class="muted">· leads in → cash out <span id="order-summary"></span></span></h3>
+          <button id="btn-staff-line" class="btn" hidden></button>
+        </div>
         <div id="order-line" class="order-line"></div>
         <h3>Support</h3>
         <div id="support-depts" class="dept-grid"></div>

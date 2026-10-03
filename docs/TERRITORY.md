@@ -95,7 +95,9 @@ realized income      = min(Order Line throughput, demand ceiling)
   maxed out: 30% of production unsold. Grow Outside Sales or open the next
   location."* Opening a new location is the big release.
 
-Until Departments ship there is no ceiling, and customer base is only shown.
+**Implemented so far:** each Outside Sales rep's reach is multiplied by
+`√(customer base ÷ HQ's)`, so opening locations makes Outside Sales easier to
+keep covered. Markets and the hard demand ceiling are still to come.
 
 ## Industries by state (flavor for markets and projects)
 

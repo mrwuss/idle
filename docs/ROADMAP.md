@@ -21,20 +21,21 @@
 
 Design: [DEPARTMENTS.md](DEPARTMENTS.md)
 
-- [ ] Order Line engine: 7 core departments, bottleneck formula, unlock by era
+- [x] Order Line engine: staffing, coverage and the bottleneck (6 staffed departments + Production)
 - [ ] Support departments: Engineering (Design / Controls / Project), IT, Safety, Management
 - [ ] Move R&D under Engineering → Design; move PLC/Servo/Proportional/LS/DD/Telematics to Controls
 - [ ] Department signature mechanics: markets, conversion, supplier discount, inventory + Rush Ship, yield + certifications, DSO + interest, incident streak, span of control
 - [ ] Project Engineering Pak lines: Valve-Pak → Base-Pak → Sys-Pak
-- [ ] Turn the Company tab placeholder into the Order Line valve diagram with hiring
-- [ ] Extend the simulator bot to hire for the bottleneck; re-run the pacing table
+- [x] Company tab hiring: coverage bars, hire buttons, bottleneck highlight, "Staff the line to 100%"
+- [ ] Order Line drawn as a valve diagram
+- [x] Simulator bot hires for the bottleneck; pacing table re-run
 
 ## v0.2.5 — Territory
 
 Design: [TERRITORY.md](TERRITORY.md)
 
-- [ ] Demand ceiling = customer base of open locations × market penetration
-- [ ] Outside Sales drives penetration; "customers maxed out" alert
+- [x] Locations widen Outside Sales reach (√ customer base)
+- [ ] Markets (Outside Sales purchases) and a "customers maxed out" alert
 - [ ] Location-tagged Sys-Pak projects and per-state industry markets
 
 ## v0.3 — Make it feel good

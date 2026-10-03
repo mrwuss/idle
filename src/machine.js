@@ -802,7 +802,11 @@
     const tier = TIERS[s.tier];
     text('THE WORKS', 18, 26, { size: 15, color: colors.text, font: colors.head, weight: '600' });
     text(`${tier.name} · ${fmt(d.psi)} psi · ${fmt(d.hydraulicHP)} HP delivered`, 18, 42, { size: 10 });
-    if (d.surging) text('SURGE', 18, 60, { size: 13, color: colors.cool, font: colors.head, weight: '600' });
+    if (d.order && d.order.factor < 0.999) {
+      const neck = E.DATA.DEPARTMENTS.find((x) => x.id === d.order.bottleneck).name.toUpperCase();
+      text(`ORDER LINE ${Math.round(d.order.factor * 100)}% · ${neck} SHORT-STAFFED`, 18, 58, { size: 10, color: colors.pressure, weight: '600' });
+    }
+    if (d.surging) text('SURGE', 18, 76, { size: 13, color: colors.cool, font: colors.head, weight: '600' });
     if (d.demand === 0) text('Buy a Bottle Jack Bay to start the line →', 600, 300, { size: 13, color: colors.oil });
   }
 

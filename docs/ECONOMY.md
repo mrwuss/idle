@@ -19,7 +19,12 @@ update the tables here.
 | Relief heat (HP) | `systemPsi × surplus / 1714 × reliefFactor` (only when accumulator is full) |
 | Equilibrium temp (°F) | `80 + heat / (0.25 + Σ cooler k)` |
 | Thermal multiplier | 1 below the limit; `1 − (T − limit)/100` above, floored at 0.2 |
-| Total income | `Σ actuator income × utilization × thermal × surge × (1 + 0.1 × patents)` |
+| Production ($/s) | `Σ actuator income × utilization × thermal × (1 + 0.1 × patents)` |
+| Department staff needed | `1 + 4 × log10(production ÷ production when it opened)` |
+| Department coverage | `min(1, staff ÷ needed)`; Outside Sales staff count × `√(customer base ÷ 100)` |
+| Order Line factor | lowest coverage of any open department (the bottleneck), floored at 0.1 |
+| Hire cost (nth hire) | `10 s × production-at-opening × 1.778^n`, which is about 10 s of *current* production |
+| Total income | `production × surge × Order Line factor` |
 | Know-how per second | `0.04 × √(total income)` |
 | Patents (total) | `floor(√(lifetime $ / 1,000,000))` |
 
@@ -88,19 +93,26 @@ The simulator plays a greedy bot that always buys whatever gives the best
 on cooldown. A human will be slower early (reading, learning) and faster in
 places the bot is naïve about, so treat these as relative pacing.
 
-| Milestone | Target | Bot (first run) |
+| Milestone | Target | Bot (first run, with departments) |
 |---|---|---|
 | First splitter | < 3 min | 2m 45s |
-| 2-Wire Braid (3,000 psi) | ~10 min | 8m 20s |
-| First excavator | ~10 min | 10m 15s |
-| $1M lifetime (Overhaul unlocks) | 20–40 min | 17m 41s |
-| First forging press | ~45 min | 46m 35s |
-| $1B lifetime | 1–2 h | 1h 15m |
-| First ship lift | 1–2 h | 1h 20m |
-| All 17 techs | 3–5 h | ~3h 20m |
+| 2-Wire Braid (3,000 psi) | ~10 min | 10m 45s |
+| First excavator | ~10 min | 14m 20s |
+| $1M lifetime (Overhaul unlocks) | 20–40 min | 20m 36s |
+| First forging press | ~45 min | 52m 55s |
+| $1B lifetime | 1–2 h | 1h 22m |
+| First ship lift | 1–2 h | 1h 27m |
+| All 17 techs | 3–5 h | ~3h 35m |
 | Run 1 plateau | 2–4 h | ~30M/s around 3–6 h (heat wall at 200°F) |
 
-**Known balance notes (v0.1):**
+Departments (v0.2) cost about 10–15% of pace: the bot hires into the bottleneck
+before buying anything else, and end-of-run income is unchanged (~29M/s).
+
+**Known balance notes:**
+
+- Patents snowball across many Overhauls (the simulator's prestige-every-time-patents-double
+  policy reaches thousands of patents in ~6 hours). Tame this with a diminishing
+  patent bonus or a steeper patent formula before balancing late runs.
 
 - The bot never buys Ultra-High Pressure in run 1. At 10,000 psi every pump's
   losses jump by about 67%, and the cooling bill outweighs the gain. That's
