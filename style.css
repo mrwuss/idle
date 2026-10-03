@@ -214,6 +214,14 @@ b { color: var(--oil); font-weight: 600; }
 .stats { display: grid; grid-template-columns: auto 1fr; gap: 4px 16px; margin: 0; font-size: 13px; }
 .stats dt { color: var(--muted); }
 .stats dd { margin: 0; font-family: var(--font-mono); text-align: right; }
+.ach-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 6px; }
+.ach { position: relative; overflow: hidden; background: #0f1317; border: 1px solid var(--edge); border-radius: 4px; padding: 6px 8px 8px; font-size: 12px; opacity: .6; }
+.ach b { display: block; font-weight: 600; color: var(--text); }
+.ach span { color: var(--muted); font-size: 11px; }
+.ach i { position: absolute; left: 0; bottom: 0; height: 2px; background: var(--muted); }
+.ach.got { opacity: 1; border-color: var(--oil); }
+.ach.got b { color: var(--oil); }
+.ach.got i { background: var(--oil); }
 .row-btns { display: flex; gap: 8px; flex-wrap: wrap; margin: 8px 0; }
 textarea { width: 100%; background: #0f1317; color: var(--text); border: 1px solid var(--edge); border-radius: 4px; font: 11px var(--font-mono); padding: 6px; resize: vertical; }
 

@@ -17,7 +17,7 @@
   // Order Line departments you staff (Production is the shop floor itself).
   const STAFFED = DATA.DEPARTMENTS.filter((d) => d.group === 'order' && d.id !== 'production');
   // Departments you hire people into: the Order Line plus Engineering.
-  const HIREABLE = [...STAFFED, DATA.DEPARTMENTS.find((d) => d.id === 'engineering')];
+  const HIREABLE = [...STAFFED, ...['engineering', 'it', 'safety', 'management'].map((id) => DATA.DEPARTMENTS.find((d) => d.id === id))];
   const DEPT = byId(DATA.DEPARTMENTS);
   // staff: legacy generic hires (saves from before named people); team: hired people;
   // pool: applicants waiting; p0: production when the department opened.
@@ -48,6 +48,9 @@
       seed: (Math.random() * 2 ** 32) >>> 0, // drives applicant generation (deterministic quotes)
       engUp: {},               // Engineering projects bought this run
       mgrClock: 0,
+      safety: { streak: 0, incident: null, seed: (Math.random() * 2 ** 32) >>> 0 },
+      ach: {},                 // achievements earned (kept forever)
+      tips: {},                // first-time tips already shown (kept forever)
       time: 0,
       strokes: 0,
       lastSeen: Date.now(),
@@ -78,6 +81,7 @@
       if (e.offlineCapH) m.offlineCapH = Math.max(m.offlineCapH, e.offlineCapH);
     }
     m.patentMult = 1 + C.patentBonus * s.patents;
+    m.costMult *= purchasingDiscount(s);
     return m;
   }
 
@@ -124,7 +128,8 @@
     for (const a of ACTUATORS) {
       const n = s.actuators[a.id];
       const runs = P >= a.psi;
-      const inc = runs && n ? n * a.rate * Math.sqrt(P / a.psi) * milestoneMult(n) * m.actMult : 0;
+      const down = s.safety && s.safety.incident && s.safety.incident.id === a.id;
+      const inc = runs && n && !down ? n * a.rate * Math.sqrt(P / a.psi) * milestoneMult(n) * m.actMult : 0;
       if (runs) demand += n * a.gpm;
       perActuator[a.id] = inc;
       rawIncome += inc;
@@ -153,7 +158,7 @@
     const sMult = surging ? m.surgeMult : 1;
 
     // What the shop floor can do, then what the Order Line lets through.
-    const production = rawIncome * utilization * tMult * m.patentMult;
+    const production = rawIncome * utilization * tMult * m.patentMult * safetyStreakMult(s) * achievementMult(s);
     const order = orderLine(s, production);
     const income = production * sMult * order.factor;
     const khRate = C.khPerSqrtIncome * Math.sqrt(income) * engKhMult(s);
@@ -171,6 +176,7 @@
   function tick(s, dt) {
     const d = derive(s);
     snapshotDepts(s, d.production);
+    safetyTick(s, d, dt);
     s.mgrClock += dt;
     if (s.mgrClock >= C.mgrEvery) { s.mgrClock = 0; managersTick(s, d); }
     const earned = d.income * dt;
@@ -197,6 +203,7 @@
     const kh = d.khRate * capped * m.offlineRate;
     s.cash += earned; s.runEarnings += earned; s.lifetime += earned; s.kh += kh;
     s.temp = d.tempEq;
+    if (s.safety) s.safety.streak += capped;
     s.time += capped;
     return { seconds: capped, earned, kh, rate: m.offlineRate };
   }
@@ -226,7 +233,9 @@
   function quote(s, kind, id, qty) {
     const [bucket, table] = KINDS[kind];
     const item = table[id], owned = s[bucket][id], cm = mods(s).costMult;
-    const n = qty === 'max' ? Math.max(1, maxAffordable(item, owned, s.cash, cm)) : qty;
+    const n = qty === 'max' ? Math.max(1, maxAffordable(item, owned, s.cash, cm))
+      : qty === 'next' ? (kind === 'cooler' || !nextMilestone(owned) ? 1 : nextMilestone(owned) - owned)
+      : qty;
     return { qty: n, cost: bulkCost(item, owned, n, cm) };
   }
 
@@ -298,7 +307,7 @@
 
   // ---- Prestige: Overhaul --------------------------------------------------
 
-  const patentsTotal = (lifetime) => Math.floor(Math.sqrt(lifetime / C.patentDivisor));
+  const patentsTotal = (lifetime) => Math.floor(C.patentScale * Math.cbrt(lifetime / C.patentDivisor));
   const overhaulGain = (s) => Math.max(0, patentsTotal(s.lifetime) - s.patents);
   const canOverhaul = (s) => s.lifetime >= C.overhaulMin && overhaulGain(s) > 0;
 
@@ -307,6 +316,7 @@
     const keep = {
       patents: s.patents + overhaulGain(s), lifetime: s.lifetime,
       overhauls: s.overhauls + 1, strokes: s.strokes, time: s.time, locations: s.locations, seed: s.seed,
+      ach: s.ach, tips: s.tips,
     };
     Object.assign(s, newState(), keep);
     return true;
@@ -349,6 +359,53 @@
     return Math.max(0, ...DATA.DEPARTMENTS.filter((d) => departmentOpen(s, d)).map((d) => d.era));
   }
 
+  // ---- Support departments ------------------------------------------------------
+
+  const openStrength = (s, id) => {
+    const st = s.depts && s.depts[id];
+    return st && st.p0 && departmentOpen(s, DEPT[id]) ? strength(st, id) : 0;
+  };
+  /** IT: every Order Line department works harder (ERP, networks, the help desk). */
+  const itMult = (s) => 1 + Math.min(C.itMax, C.itPerStrength * openStrength(s, 'it'));
+  /** Management: every team works better, and every manager sees more applicants. */
+  const mgmtMult = (s) => 1 + Math.min(C.mgmtMax, C.mgmtPerStrength * openStrength(s, 'management'));
+  const mgmtPool = (s) => Math.floor(openStrength(s, 'management') / C.mgmtPoolPer);
+  /** Purchasing: supplier deals lower every equipment price. */
+  const purchasingDiscount = (s) => Math.max(C.purchasingFloor, 1 / (1 + C.purchasingPer * openStrength(s, 'purchasing')));
+
+  /** Safety: incidents/second, rising with pressure and heat, falling with Safety staff. */
+  function incidentRate(s, d) {
+    if (d.psi < C.incidentMinPsi || d.demand === 0) return 0;
+    const heat = Math.max(0.5, s.temp / d.tempLimit);
+    return (C.incidentPerMin / 60) * (d.psi / 3000) * heat / (1 + C.safetyPer * openStrength(s, 'safety'));
+  }
+  function safetyRand(s) {
+    let t = (s.safety.seed = (s.safety.seed + 0x6d2b79f5) >>> 0);
+    t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  }
+  function safetyTick(s, d, dt) {
+    const sf = s.safety;
+    if (sf.incident) {
+      sf.incident.left -= dt;
+      if (sf.incident.left <= 0) sf.incident = null;
+      return;
+    }
+    if (safetyRand(s) < incidentRate(s, d) * dt) {
+      const lines = ACTUATORS.filter((a) => s.actuators[a.id] > 0 && d.psi >= a.psi);
+      if (lines.length) {
+        const a = lines[Math.floor(safetyRand(s) * lines.length)];
+        sf.incident = { id: a.id, left: C.incidentSeconds, kind: Math.floor(safetyRand(s) * 3) };
+        sf.streak = 0;
+        return;
+      }
+    }
+    sf.streak += dt;
+  }
+  const safeDays = (s) => Math.floor((s.safety ? s.safety.streak : 0) / C.safeDayS);
+  const safetyStreakMult = (s) => 1 + Math.min(C.safeDayMax, C.safeDayBonus * safeDays(s));
+  const achievementMult = (s) => 1 + (DATA.CONSTANTS.achievementBonus || 0) * Object.keys(s.ach || {}).length;
+
   // ---- Departments: the Order Line -------------------------------------------
 
   // ---- People -------------------------------------------------------------------
@@ -388,7 +445,7 @@
   /** Leadership (people hired before the stat existed get one from their look). */
   const leadership = (p) => p.s[LEAD] ?? 1 + (p.a % 10);
   const mgrBonus = (st) => (st.mgr ? 1 + C.mgrTeamPerPoint * leadership(st.mgr) : 1);
-  const poolSize = (st) => C.poolSize + (st.mgr ? Math.floor(leadership(st.mgr) / C.mgrPoolPer) : 0);
+  const poolSize = (st, s) => C.poolSize + (st.mgr ? Math.floor(leadership(st.mgr) / C.mgrPoolPer) : 0) + (s ? mgmtPool(s) : 0);
 
   const headcount = (st) => st.staff + st.team.length;
   /** Team strength: everyone's effectiveness, lifted by the manager. */
@@ -396,7 +453,7 @@
 
   function fillPool(s, id) {
     const st = s.depts[id];
-    while (st.pool.length < poolSize(st)) st.pool.push(newPerson(s));
+    while (st.pool.length < poolSize(st, s)) st.pool.push(newPerson(s));
   }
 
   // ---- Managers ---------------------------------------------------------------
@@ -438,7 +495,7 @@
 
   function engKhMult(s) {
     const st = s.depts.engineering;
-    let m = 1 + C.engKhPerStrength * (st ? strength(st, 'engineering') : 0);
+    let m = 1 + C.engKhPerStrength * (st ? strength(st, 'engineering') * mgmtMult(s) : 0);
     for (const u of DATA.ENG_UPGRADES) if (s.engUp[u.id]) m *= u.kh;
     return m;
   }
@@ -466,6 +523,7 @@
   function orderLine(s, production) {
     const out = { depts: {}, factor: 1, bottleneck: null };
     const reach = Math.sqrt(customerBase(s) / Math.max(1, customerBase(null, 'hq')));
+    const it = itMult(s), mg = mgmtMult(s);
     for (const dept of STAFFED) {
       const st = s.depts[dept.id];
       const open = departmentOpen(s, dept);
@@ -473,7 +531,7 @@
       const growth = Math.max(0, Math.log10(Math.max(production, 1) / st.p0));
       const required = 1 + C.deptPerDecade * growth;
       const r = dept.id === 'outside_sales' ? reach : 1;
-      const effective = (1 + strength(st, dept.id)) * r;
+      const effective = (1 + strength(st, dept.id) * it * mg) * r;
       const coverage = Math.min(1, effective / required);
       out.depts[dept.id] = { open, required, effective, coverage, reach: r };
       if (coverage < out.factor) { out.factor = coverage; out.bottleneck = dept.id; }
@@ -488,13 +546,14 @@
     for (const dept of HIREABLE) {
       const st = s.depts[dept.id];
       if (!st.p0 && departmentOpen(s, dept)) { st.p0 = Math.max(1, production); opened.push(dept); }
-      if (st.p0 && st.pool.length < poolSize(st)) fillPool(s, dept.id);
+      if (st.p0 && st.pool.length < poolSize(st, s)) fillPool(s, dept.id);
     }
     return opened;
   }
 
   /** Cost of the next `qty` hires (cost depends on headcount, not on who). */
   function hireQuote(s, id, qty) {
+    if (qty === 'next') qty = 1;
     const st = s.depts[id], g = C.hireGrowth;
     const base = C.hireBaseS * Math.max(1, st.p0 || derive(s).production) * mods(s).costMult;
     const first = base * g ** headcount(st);
@@ -553,7 +612,8 @@
       const st = t.depts[dept.id];
       fillPool(t, dept.id);
       let n = 0;
-      while ((1 + strength(st, dept.id)) * o.reach < o.required - 1e-9 && n < 1000) {
+      const boost = itMult(s) * mgmtMult(s);
+      while ((1 + strength(st, dept.id) * boost) * o.reach < o.required - 1e-9 && n < 1000) {
         cost += hireQuote({ ...s, depts: t.depts }, dept.id, 1).cost;
         const i = bestIndex(st, dept.id);
         st.team.push(st.pool[i]);
@@ -569,6 +629,35 @@
     if (!q.hires || q.cost > s.cash) return false;
     for (const dept of STAFFED) if (q.plan[dept.id]) hire(s, dept.id, q.plan[dept.id]);
     return true;
+  }
+
+  // ---- Achievements ------------------------------------------------------------
+
+  function achStat(s, key) {
+    switch (key) {
+      case 'lifetime': return s.lifetime;
+      case 'strokes': return s.strokes;
+      case 'psi': return psi(s);
+      case 'actuators': return Object.values(s.actuators).reduce((a, b) => a + b, 0);
+      case 'pumps': return Object.values(s.pumps).reduce((a, b) => a + b, 0);
+      case 'techs': return Object.keys(s.tech).length;
+      case 'staff': return HIREABLE.reduce((a, d) => a + headcount(s.depts[d.id]) + (s.depts[d.id].mgr ? 1 : 0), 0);
+      case 'managers': return HIREABLE.filter((d) => s.depts[d.id].mgr).length;
+      case 'safeDays': return safeDays(s);
+      case 'locations': return Object.keys(s.locations).length;
+      case 'overhauls': return s.overhauls;
+      default: return 0;
+    }
+  }
+  /** Award any newly reached achievements; returns them (for announcements). */
+  function checkAchievements(s) {
+    const got = [];
+    for (const a of DATA.ACHIEVEMENTS) {
+      if (a.id in s.ach || achStat(s, a.stat) < a.goal) continue;
+      s.ach[a.id] = Math.round(s.time);
+      got.push(a);
+    }
+    return got;
   }
 
   // ---- Save / load ---------------------------------------------------------
@@ -589,6 +678,7 @@
     // Older saves: departments were { staff, p0 } only, and had no Engineering roster.
     for (const dept of HIREABLE) s.depts[dept.id] = { ...freshDept(), ...(s.depts[dept.id] || {}) };
     if (!Number.isFinite(s.seed)) s.seed = (Math.random() * 2 ** 32) >>> 0;
+    s.safety = { ...newState().safety, ...(raw.safety || {}) };
     return s;
   }
 
@@ -601,6 +691,8 @@
     orderLine, snapshotDepts, hireQuote, hire, hirePerson, rerollPool, rerollCost, staffLineQuote, staffLine,
     effectiveness, headcount, strength, strokeGal, STAFFED, HIREABLE,
     leadership, mgrBonus, poolSize, promote, setAuto, managersTick, engKhMult, canBuyEng, buyEng,
+    itMult, mgmtMult, mgmtPool, purchasingDiscount, incidentRate, safeDays, safetyStreakMult, achievementMult,
+    achStat, checkAchievements,
     serialize, deserialize,
   };
   root.PW = root.PW || {};

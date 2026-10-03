@@ -30,8 +30,11 @@ update the tables here.
 | Know-how per second | `0.04 × √(income) × (1 + 0.05 × Engineering strength) × Engineering projects` |
 | Hand-pump charge | `max(0.25 gal, 2% of accumulator capacity)` per stroke |
 | Total income | `production × surge × Order Line factor` |
-| Know-how per second | `0.04 × √(total income)` |
-| Patents (total) | `floor(√(lifetime $ / 1,000,000))` |
+| Patents (total) | `floor(2 × ∛(lifetime $ / 1,000,000))` (was √; the cube root stops the late-run snowball) |
+| Achievements | +1% income each (23 in all, kept through Overhaul) |
+| Safety streak | +1% income per 10 min without an incident, max +25% |
+| IT / Management | Order Line strength × (1 + 4% × IT strength, max ×2) × (1 + 2% × Management strength, max ×1.5) |
+| Purchasing | equipment cost × `max(0.7, 1 / (1 + 1% × Purchasing strength))` |
 
 ## Content tables
 
@@ -98,26 +101,28 @@ The simulator plays a greedy bot that always buys whatever gives the best
 on cooldown. A human will be slower early (reading, learning) and faster in
 places the bot is naïve about, so treat these as relative pacing.
 
-| Milestone | Target | Bot (first run, with departments) |
+| Milestone | Target | Bot (first run, with departments and achievements) |
 |---|---|---|
 | First splitter | < 3 min | 2m 45s |
-| 2-Wire Braid (3,000 psi) | ~10 min | 10m 45s |
-| First excavator | ~10 min | 14m 20s |
-| $1M lifetime (Overhaul unlocks) | 20–40 min | 20m 36s |
-| First forging press | ~45 min | 52m 55s |
-| $1B lifetime | 1–2 h | 1h 22m |
-| First ship lift | 1–2 h | 1h 27m |
-| All 17 techs | 3–5 h | ~3h 35m |
-| Run 1 plateau | 2–4 h | ~30M/s around 3–6 h (heat wall at 200°F) |
+| 2-Wire Braid (3,000 psi) | ~10 min | 9m 15s |
+| First excavator | ~10 min | 11m 45s |
+| $1M lifetime (Overhaul unlocks) | 20–40 min | 17–20 min |
+| First forging press | ~45 min | 42–45 min |
+| $1B lifetime | 1–2 h | 1h 07m–1h 10m |
+| First ship lift | 1–2 h | 1h 11m |
+| All 17 techs | 3–5 h | ~1h 53m |
+| Run 1 plateau | 2–4 h | ~40M/s around 3–6 h (heat wall at 200°F) |
 
-Departments cost about 5–10% of pace now that the bot picks the best of three applicants ($1M at ~19.5 min, $1B at ~77 min): the bot hires into the bottleneck
-before buying anything else, and end-of-run income is unchanged (~29M/s).
+The bot hires into the bottleneck before buying anything else. Achievements
+(+1% each; the bot earns about 14 in run 1) lift end-of-run income from ~30M/s
+to ~40M/s and pull the mid-game forward by about 10%. Runs vary by a minute or
+two because applicants come from a random seed.
 
 **Known balance notes:**
 
-- Patents snowball across many Overhauls (the simulator's prestige-every-time-patents-double
-  policy reaches thousands of patents in ~6 hours). Tame this with a diminishing
-  patent bonus or a steeper patent formula before balancing late runs.
+- Patents used to snowball (8,240 in ~6.5 h of prestige-whenever-they-double).
+  With the cube-root formula the bot reaches 512 patents in 5h30m over 9
+  Overhauls, and the gap between runs grows (~1 h, then ~2 h).
 
 - The bot never buys Ultra-High Pressure in run 1. At 10,000 psi every pump's
   losses jump by about 67%, and the cooling bill outweighs the gain. That's
@@ -146,4 +151,5 @@ before buying anything else, and end-of-run income is unchanged (~29M/s).
 node tools/simulate.js            # 6 simulated hours, progress every 30 min
 node tools/simulate.js 12 --quiet # only first-time events
 node tools/simulate.js 8 --overhaul # bot overhauls whenever it would double its patents
+npm test                          # engine unit tests (node:test, no dependencies)
 ```

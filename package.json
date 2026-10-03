@@ -1,0 +1,9 @@
+{
+  "name": "pressure-works",
+  "private": true,
+  "description": "A hydraulic idle game. No build step and no dependencies; this file only holds scripts.",
+  "scripts": {
+    "test": "node --test",
+    "simulate": "node tools/simulate.js"
+  }
+}

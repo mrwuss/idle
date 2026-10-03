@@ -555,6 +555,16 @@
       STATION_DRAW[a.id](cx, e, active);
       ctx.restore();
 
+      // incident: the line is down
+      if (s.safety && s.safety.incident && s.safety.incident.id === a.id) {
+        const on = Math.sin(t.beacon * 1.5) > 0;
+        ctx.globalAlpha = on ? 0.22 : 0.1; rect(cx - STATION_W / 2 + 2, 236, STATION_W - 4, BELT - 236, colors.pressure); ctx.globalAlpha = 1;
+        rrect(cx - 44, 286, 88, 34, 4, 'rgba(17,20,24,0.9)', colors.pressure, 1.5);
+        text('LINE DOWN', cx, 300, { size: 11, align: 'center', color: colors.pressure, weight: '700' });
+        text(`${Math.ceil(s.safety.incident.left)}s`, cx, 314, { size: 10, align: 'center', color: colors.pressure });
+        if (Math.random() < 0.5) puff(cx + (Math.random() - 0.5) * 40, 330, 'spray');
+      }
+
       // finished part → conveyor (fires once per cycle at full extension)
       const prev = t.prevPhase[a.id] ?? ph;
       if (active && speed > 0 && prev < 0.3 && ph >= 0.3) spawnProduct(a.id, cx);
@@ -952,14 +962,16 @@
       rect(x - 18, y - 66, 36, 30, '#e8eef4', colors.steel, 1);
       text('DAYS', x, y - 56, { size: 7, align: 'center', color: '#333' });
       text('SAFE', x, y - 48, { size: 7, align: 'center', color: '#333' });
-      text(String(Math.floor(t.clock / 10) % 1000), x, y - 39, { size: 8, align: 'center', color: '#1f7a3f', weight: '700' });
+      text(String(safeDaysNow), x, y - 39, { size: 8, align: 'center', color: safeDaysNow ? '#1f7a3f' : '#c0392b', weight: '700' });
     } else if (kind === 'plant') {
       rect(x - 7, y - 16, 14, 16, '#7a5230');
       for (let k = 0; k < 5; k++) { ctx.beginPath(); ctx.ellipse(x + (k - 2) * 4, y - 24 - Math.abs(k - 2) * 3, 4, 9, (k - 2) * 0.4, 0, Math.PI * 2); ctx.fillStyle = '#2f7a46'; ctx.fill(); }
     }
   }
 
+  let safeDaysNow = 0;
   function drawOffice(s, d) {
+    safeDaysNow = E.safeDays(s);
     const order = d.order;
     ROOMS.forEach((room, i) => {
       const rx = i * ROOM_W;
@@ -997,7 +1009,13 @@
         const pct = Math.round(o.coverage * 100);
         text(`${pct}%`, rx + ROOM_W - 16, 104, { size: 10, align: 'right', color: neck ? colors.pressure : o.coverage < 1 ? colors.oil : colors.ok, weight: '600' });
       } else {
-        text(`KH ×${E.engKhMult(s).toFixed(1)}`, rx + ROOM_W - 16, 104, { size: 10, align: 'right', color: colors.cool, weight: '600' });
+        const chip = {
+          engineering: () => `KH ×${E.engKhMult(s).toFixed(1)}`,
+          it: () => `LINE +${Math.round((E.itMult(s) - 1) * 100)}%`,
+          safety: () => `${E.safeDays(s)} DAYS SAFE`,
+          management: () => `TEAMS +${Math.round((E.mgmtMult(s) - 1) * 100)}%`,
+        }[room.id];
+        if (chip) text(chip(), rx + ROOM_W - 16, 104, { size: 10, align: 'right', color: colors.cool, weight: '600' });
       }
       const heads = E.headcount(st) + (st.mgr ? 1 : 0);
       text(`${heads + 1} STAFF${st.mgr && st.auto && o ? ' · AUTO' : ''}`, rx + 16, 118, { size: 8, color: colors.muted });

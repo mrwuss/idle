@@ -139,6 +139,7 @@
   const deptEls = {}, pakEls = {};
   const ROMAN = ['I', 'II', 'III', 'IV', 'V', 'VI'];
   const staffed = (id) => E.HIREABLE.some((d) => d.id === id);
+  const INCIDENTS = ['Burst hose', 'Blown seal', 'Pinched-finger near miss'];
 
   // ---- People ----------------------------------------------------------------
   const look = root.PW.format.look;
@@ -270,21 +271,32 @@
   /** A department you hire into: coverage, manager, applicants, team (and Engineering projects). */
   function renderStaffed(s, dd, d, r) {
     const o = dd.order, st = s.depts[d.id], isEng = d.id === 'engineering';
+    const support = !o.depts[d.id];
     const c = o.depts[d.id];
     const strength = E.strength(st, d.id), heads = E.headcount(st);
     r.staff.hidden = false;
     r.twist.hidden = true;
-    if (isEng) {
-      const kh = E.engKhMult(s);
-      r.status.textContent = `Know-how ×${kh.toFixed(2)}`;
-      r.staffText.textContent = `You + ${heads} engineers · strength ${(1 + strength).toFixed(1)} · +${Math.round(strength * E.DATA.CONSTANTS.engKhPerStrength * 100)}% Know-how from the team`;
+    if (support) {
+      const pct = (x) => `${Math.round((x - 1) * 100)}%`;
+      const sum = {
+        engineering: () => [`Know-how ×${E.engKhMult(s).toFixed(2)}`, `+${Math.round(strength * E.DATA.CONSTANTS.engKhPerStrength * 100)}% Know-how from the team`],
+        it: () => [`Order Line +${pct(E.itMult(s))}`, `every Order Line department works +${pct(E.itMult(s))} harder (max +100%)`],
+        safety: () => {
+          const rate = E.incidentRate(s, dd) * 60;
+          return [`${E.safeDays(s)} days safe`, rate > 0 ? `about one incident every ${fmt(Math.max(1, 1 / rate))} min · streak bonus +${pct(E.safetyStreakMult(s))}` : 'no incident risk below 3,000 psi'];
+        },
+        management: () => [`Every team +${pct(E.mgmtMult(s))}`, `+${pct(E.mgmtMult(s))} to every team (max +50%) · +${E.mgmtPool(s)} applicant${E.mgmtPool(s) === 1 ? '' : 's'} for every department`],
+      }[d.id]();
+      r.status.textContent = sum[0];
+      r.staffText.textContent = `You + ${heads} hired · strength ${(1 + strength).toFixed(1)} · ${sum[1]}`;
       r.cov.parentElement.hidden = true;
     } else {
       const neck = o.bottleneck === d.id && o.factor < 0.999;
       r.el.classList.toggle('neck', neck);
       r.status.textContent = neck ? `Bottleneck · ${Math.round(c.coverage * 100)}%` : `Covered · ${Math.round(c.coverage * 100)}%`;
       const reach = c.reach !== 1 ? ` · reach ×${c.reach.toFixed(2)}` : '';
-      r.staffText.textContent = `You + ${heads} hired · strength ${(1 + strength).toFixed(1)}${reach} · needs ${c.required.toFixed(1)}`;
+      const extra = d.id === 'purchasing' && E.purchasingDiscount(s) < 1 ? ` · prices −${Math.round((1 - E.purchasingDiscount(s)) * 100)}%` : '';
+      r.staffText.textContent = `You + ${heads} hired · strength ${(1 + strength).toFixed(1)}${reach} · needs ${c.required.toFixed(1)}${extra}`;
       r.cov.style.width = `${Math.min(100, c.coverage * 100)}%`;
       r.cov.parentElement.classList.toggle('short', c.coverage < 0.999);
     }
@@ -294,11 +306,11 @@
       const lea = E.leadership(st.mgr);
       setPart(r.mgr, `<div class="mgr">${avatar(st.mgr.a)}
         <div class="p-main"><span class="p-name"><b>${st.mgr.n}</b> · Manager</span>
-          <span class="p-stats">LEA ${lea} · team +${Math.round((E.mgrBonus(st) - 1) * 100)}% · reviews ${E.poolSize(st)} applicants${isEng ? '' : ` · fills ${1 + Math.floor(lea / 4)}/check`}</span></div>
-        ${isEng ? '' : `<button class="btn mini ${st.auto ? '' : 'ghost'}" data-auto="${d.id}" title="When on, the manager hires the best applicant whenever the department falls short">${st.auto ? 'Auto-hire on' : 'Auto-hire off'}</button>`}
+          <span class="p-stats">LEA ${lea} · team +${Math.round((E.mgrBonus(st) - 1) * 100)}% · reviews ${E.poolSize(st, s)} applicants${support ? '' : ` · fills ${1 + Math.floor(lea / 4)}/check`}</span></div>
+        ${support ? '' : `<button class="btn mini ${st.auto ? '' : 'ghost'}" data-auto="${d.id}" title="When on, the manager hires the best applicant whenever the department falls short">${st.auto ? 'Auto-hire on' : 'Auto-hire off'}</button>`}
       </div>`);
     } else {
-      setPart(r.mgr, `<div class="mgr none">No manager yet. Promote someone with high <b>Leadership</b> (LEA) from the team: they'll boost everyone${isEng ? '' : ', review more applicants and keep the department staffed'}.</div>`);
+      setPart(r.mgr, `<div class="mgr none">No manager yet. Promote someone with high <b>Leadership</b> (LEA) from the team: they'll boost everyone${support ? ' and review more applicants' : ', review more applicants and keep the department staffed'}.</div>`);
     }
 
     // Engineering projects
@@ -406,7 +418,7 @@
       b.addEventListener('click', () => setTab(b.dataset.tab)));
     document.querySelectorAll('#buyqty [data-qty]').forEach((b) =>
       b.addEventListener('click', () => {
-        ui.qty = b.dataset.qty === 'max' ? 'max' : Number(b.dataset.qty);
+        ui.qty = ['max', 'next'].includes(b.dataset.qty) ? b.dataset.qty : Number(b.dataset.qty);
         document.querySelectorAll('#buyqty [data-qty]').forEach((x) => x.setAttribute('aria-checked', x === b));
         h.qtyChanged && h.qtyChanged(ui.qty);
       }));
@@ -544,6 +556,11 @@
     if (d.overRelief > 0) out.push(['warn', `Relief valve dumping ${fmt(d.overRelief)} GPM over the relief valve: ${fmt(d.reliefHP)} HP of heat.`]);
     if (s.temp > d.tempLimit) out.push(['bad', `Oil at ${Math.round(s.temp)}°F and thinning: income ×${d.thermalMult.toFixed(2)}. Add cooling.`]);
     else if (d.tempEq > d.tempLimit) out.push(['warn', `Oil heading for ${Math.round(Math.min(d.tempEq, 999))}°F, above the ${d.tempLimit}°F limit.`]);
+    const inc = s.safety && s.safety.incident;
+    if (inc) {
+      const name = ACTUATORS.find((a) => a.id === inc.id).name;
+      out.push(['bad', `${INCIDENTS[inc.kind || 0]} at the ${name}: line down ${Math.ceil(inc.left)}s. Safety staff make incidents rarer.`]);
+    }
     if (d.order.factor < 0.999) {
       const neck = DEPARTMENTS.find((x) => x.id === d.order.bottleneck).name;
       out.push([d.order.factor < 0.8 ? 'bad' : 'warn', `Order Line at ${Math.round(d.order.factor * 100)}%: ${neck} is short-staffed. Hire on the Company tab.`]);
@@ -621,6 +638,14 @@
       ['Equilibrium temperature', Math.round(Math.min(d.tempEq, 9999)) + '°F'],
     ];
     setHtml('stats', rows.map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join(''));
+    const all = E.DATA.ACHIEVEMENTS, got = all.filter((a) => a.id in s.ach).length;
+    setHtml('ach-count', `${got}/${all.length} · +${got}% income`);
+    setHtml('ach', all.map((a) => {
+      const done = a.id in s.ach;
+      const pct = done ? 100 : Math.min(99, Math.floor(100 * E.achStat(s, a.stat) / a.goal));
+      return `<div class="ach${done ? ' got' : ''}" title="${a.desc}"><b>${done ? '★' : '☆'} ${a.name}</b>`
+        + `<span>${a.desc}</span><i style="width:${pct}%"></i></div>`;
+    }).join(''));
   }
 
   // ---- Per-frame animation ---------------------------------------------------

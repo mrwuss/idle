@@ -259,6 +259,9 @@
     quality:       ['precision', 'mechanical'],
     accounting:    ['numbers', 'precision'],
     engineering:   ['mechanical', 'numbers'],
+    it:            ['numbers', 'organization'],
+    safety:        ['precision', 'organization'],
+    management:    ['leadership', 'organization'],
   };
   // Quirks: a bonus to effectiveness in one department ('any' = everywhere).
   const TRAITS = [
@@ -279,6 +282,12 @@
     { id: 'collector', name: 'Collects invoices relentlessly', dept: 'accounting',  bonus: 0.20 },
     { id: 'pe',        name: 'Licensed P.E.',                dept: 'engineering',   bonus: 0.30 },
     { id: 'tinkerer',  name: 'Builds test rigs in the garage', dept: 'engineering', bonus: 0.20 },
+    { id: 'erp',       name: 'Survived three ERP migrations', dept: 'it',           bonus: 0.30 },
+    { id: 'printer',   name: 'Fixes printers with a look',   dept: 'it',            bonus: 0.15 },
+    { id: 'osha',      name: 'OSHA 30 certified',            dept: 'safety',        bonus: 0.30 },
+    { id: 'emt',       name: 'Former EMT',                   dept: 'safety',        bonus: 0.20 },
+    { id: 'mba',       name: 'An MBA that actually helps',   dept: 'management',    bonus: 0.25 },
+    { id: 'birthdays', name: "Remembers everyone's birthday", dept: 'management',   bonus: 0.20 },
     { id: 'coffee',    name: 'Makes the good coffee',        dept: 'any',           bonus: 0.08 },
     { id: 'mentor',    name: 'Natural mentor',               dept: 'any',           bonus: 0.12 },
     { id: 'veteran',   name: '30 years in fluid power',      dept: 'any',           bonus: 0.18 },
@@ -311,6 +320,34 @@
     'Chen', 'Dietrich', 'Engstrom', 'Flores', 'Gustafson', 'Hoffman', 'Iverson', 'Johansson', 'Kim', 'Lindqvist',
     'Mueller', 'Novak', 'Okafor', 'Patel', 'Rasmussen', 'Svoboda', 'Tran', 'Ulrich', 'Vogel', 'Weber', 'Yang',
     'Ziegler', 'Becker', 'Cruz', 'Duffy', 'Hernandez', 'Kaur', 'Lopez', 'Moreno', 'Nelson', 'Reyes', 'Sorensen'];
+
+  // ---- Achievements: +1% income each, kept forever --------------------------------
+  // `stat` is computed by engine.achStat(); `goal` is the threshold.
+  const ACHIEVEMENTS = [
+    { id: 'open',      name: 'Open for Business',     stat: 'lifetime',  goal: 100,   desc: 'Earn your first $100.' },
+    { id: 'strokes1',  name: 'Pump It Up',            stat: 'strokes',   goal: 100,   desc: 'Stroke the hand pump 100 times.' },
+    { id: 'strokes2',  name: 'Forearms of Steel',     stat: 'strokes',   goal: 1000,  desc: 'Stroke the hand pump 1,000 times.' },
+    { id: 'psi3k',     name: 'Three Grand',           stat: 'psi',       goal: 3000,  desc: 'Run the system at 3,000 psi.' },
+    { id: 'psi5k',     name: 'Spiral Staircase',      stat: 'psi',       goal: 5000,  desc: 'Run the system at 5,000 psi.' },
+    { id: 'psi10k',    name: 'Ultra',                 stat: 'psi',       goal: 10000, desc: 'Run the system at 10,000 psi.' },
+    { id: 'acts100',   name: 'Hundred Cylinders',     stat: 'actuators', goal: 100,   desc: 'Own 100 actuators.' },
+    { id: 'acts500',   name: 'Cylinder Forest',       stat: 'actuators', goal: 500,   desc: 'Own 500 actuators.' },
+    { id: 'pumps100',  name: 'Pump Room',             stat: 'pumps',     goal: 100,   desc: 'Own 100 pumps.' },
+    { id: 'm1',        name: 'Millionaire Shop',      stat: 'lifetime',  goal: 1e6,   desc: 'Earn $1M in total.' },
+    { id: 'b1',        name: 'Billion-Dollar Bottle Jack', stat: 'lifetime', goal: 1e9, desc: 'Earn $1B in total.' },
+    { id: 't1',        name: 'Tera-Pascal Energy',    stat: 'lifetime',  goal: 1e12,  desc: 'Earn $1T in total.' },
+    { id: 'tech5',     name: 'Learning Curve',        stat: 'techs',     goal: 5,     desc: 'Research 5 technologies.' },
+    { id: 'techAll',   name: 'Fluid Power Scholar',   stat: 'techs',     goal: 17,    desc: 'Research every technology in one run.' },
+    { id: 'staff25',   name: 'Payroll',               stat: 'staff',     goal: 25,    desc: 'Employ 25 people.' },
+    { id: 'staff100',  name: 'Company Picnic',        stat: 'staff',     goal: 100,   desc: 'Employ 100 people.' },
+    { id: 'manager',   name: 'Corner Office',         stat: 'managers',  goal: 1,     desc: 'Promote your first manager.' },
+    { id: 'managers6', name: 'Leadership Team',       stat: 'managers',  goal: 6,     desc: 'Have 6 managers at once.' },
+    { id: 'safe10',    name: 'Ten Days Safe',         stat: 'safeDays',  goal: 10,    desc: 'Go 10 shop days without an incident.' },
+    { id: 'north',     name: 'Heading North',         stat: 'locations', goal: 2,     desc: 'Open your second location.' },
+    { id: 'allLoc',    name: 'Iowa to the Gulf',      stat: 'locations', goal: 4,     desc: 'Open all four locations.' },
+    { id: 'overhaul1', name: 'Tear It Down',          stat: 'overhauls', goal: 1,     desc: 'Overhaul the shop once.' },
+    { id: 'overhaul5', name: 'Serial Rebuilder',      stat: 'overhauls', goal: 5,     desc: 'Overhaul the shop five times.' },
+  ];
 
   const CONSTANTS = {
     ambientF: 80,           // reservoir sits at shop temperature
@@ -348,15 +385,32 @@
     engKhPerStrength: 0.05, // each staff-equivalent in Engineering adds 5% Know-how
     mgrTeamPerPoint: 0.03,  // a manager adds 3% team strength per Leadership point
     mgrPoolPer: 3,          // …and reviews 1 more applicant per 3 Leadership points
-    mgrEvery: 2,            // seconds between a manager's staffing checks      // a hand-pump stroke adds this share of accumulator capacity
+    mgrEvery: 2,            // seconds between a manager's staffing checks
+    // Support departments
+    itPerStrength: 0.04,    // IT: every Order Line department's strength +4% per IT staff-equivalent…
+    itMax: 1,               // …up to +100%
+    mgmtPerStrength: 0.02,  // Management: every team +2% per staff-equivalent…
+    mgmtMax: 0.5,           // …up to +50%, and +1 applicant everywhere per 6 strength
+    mgmtPoolPer: 6,
+    purchasingPer: 0.01,    // Purchasing: equipment costs ÷ (1 + 1% × strength), floored at ×0.7
+    purchasingFloor: 0.7,
+    incidentPerMin: 0.3,    // Safety: incidents/min at 3,000 psi and the heat limit, with no safety staff
+    incidentMinPsi: 3000,   // no incidents below 2-Wire Braid (when Safety opens)
+    incidentSeconds: 30,    // an incident shuts one actuator line for this long
+    safetyPer: 0.25,        // incident rate ÷ (1 + 0.25 × Safety strength)
+    safeDayS: 600,          // a "shop day" without incident, for the streak bonus…
+    safeDayBonus: 0.01,     // …+1% income each…
+    safeDayMax: 0.25,       // …up to +25%      // a hand-pump stroke adds this share of accumulator capacity
     overhaulMin: 1e6,       // lifetime $ before the first Overhaul is offered
-    patentDivisor: 1e6,     // patents = floor(√(lifetime $ / 1e6))
+    patentDivisor: 1e6,     // patents = floor(patentScale × ∛(lifetime $ / 1e6))
+    patentScale: 2,
+    achievementBonus: 0.01, // +1% income per achievement
     patentBonus: 0.10,      // +10% income per patent (additive)
     startCash: 10,
   };
 
   const DATA = { PUMPS, ACTUATORS, TIERS, COOLERS, TECH, ERAS, DEPARTMENTS, PAKS, REGIONS, STATES,
-    STATS, DEPT_STATS, TRAITS, TRAIT_CHANCE, FIRST_NAMES, LAST_NAMES, ENG_UPGRADES, CONSTANTS };
+    STATS, DEPT_STATS, TRAITS, TRAIT_CHANCE, FIRST_NAMES, LAST_NAMES, ENG_UPGRADES, ACHIEVEMENTS, CONSTANTS };
   root.PW = root.PW || {};
   root.PW.DATA = DATA;
   if (typeof module !== 'undefined') module.exports = DATA;

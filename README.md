@@ -18,6 +18,7 @@ python3 -m http.server 8000   # then visit http://localhost:8000
 ```
 
 **Controls:** `Space` strokes the hand pump · `S` fires Surge · `M` mutes sound · progress autosaves every 10 s.
+The buy-quantity bar has ×1, ×10, ×100, **Next** (up to the next ×2 milestone) and Max.
 
 ## How it works (in 30 seconds)
 
@@ -30,6 +31,8 @@ python3 -m http.server 8000   # then visit http://localhost:8000
 - **Overhaul** (prestige) trades everything for **Patents**, each one +10% income forever.
 - **Departments** open as you grow. Each needs more staff as production climbs, and the Order Line runs at its least-covered department. Hire on the **Company** tab from a pool of applicants: random people whose stats and quirks suit some jobs better than others. Promote your best leaders to **manager** and they'll keep the department staffed.
 - **Engineering** opens mid-game: engineers and Engineering projects multiply Know-how.
+- **Support departments** (IT, Safety, Management, Purchasing) boost the Order Line, prevent incidents and cut equipment costs.
+- **Achievements** in the Logbook each add +1% income, and first-time tips explain each mechanic when it first matters.
 - New **locations** unlock as you grow (Iowa → North → West → South). Each extends HQ and widens the customer base Outside Sales can reach.
 
 ## Project layout
@@ -45,6 +48,7 @@ src/machine.js      "The Works": the animated facility (office, production line,
 src/ui.js           rendering, gauges, shop lists
 src/main.js         load/save, game loop, input
 tools/simulate.js   headless balance simulator (a greedy bot plays the real engine)
+tests/              engine unit tests (`npm test`, uses node:test, no dependencies)
 docs/               design documents and sketches
 ```
 

@@ -93,6 +93,7 @@
         <button data-qty="1" aria-checked="true">×1</button>
         <button data-qty="10">×10</button>
         <button data-qty="100">×100</button>
+        <button data-qty="next" title="Buy up to the next ×2 milestone">Next</button>
         <button data-qty="max">Max</button>
       </div>
 
@@ -152,6 +153,11 @@
         <div class="card">
           <h3>Logbook</h3>
           <dl id="stats" class="stats"></dl>
+        </div>
+        <div class="card">
+          <h3>Achievements <span class="muted" id="ach-count"></span></h3>
+          <p class="muted">Each one adds +1% to all income, and they survive Overhaul.</p>
+          <div id="ach" class="ach-grid"></div>
         </div>
         <div class="card">
           <h3>Save data</h3>
