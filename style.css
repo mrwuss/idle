@@ -312,7 +312,9 @@ textarea { width: 100%; background: #0f1317; color: var(--text); border: 1px sol
 .staff-row { display: flex; gap: 8px; align-items: center; justify-content: space-between; flex-wrap: wrap; }
 .staff-text { font: 10px var(--font-mono); color: var(--muted); min-width: 0; }
 .dept-staff .btn { min-width: 0; padding: 4px 8px; font-size: 11px; }
-.cov { height: 4px; background: #0f1317; border-radius: 2px; overflow: hidden; }
+.cov { position: relative; height: 4px; background: #0f1317; border-radius: 2px; overflow: hidden; }
+/* coverage past 100% shows as an amber segment from the right (full at 200%) */
+.cov::after { content: ''; position: absolute; top: 0; right: 0; bottom: 0; width: var(--sur, 0); background: var(--oil); }
 .cov div { height: 100%; background: var(--ok); width: 0; transition: width .25s; }
 .cov.short div { background: var(--oil); }
 .dept.neck { border-color: var(--pressure); box-shadow: 0 0 0 1px var(--pressure) inset; }

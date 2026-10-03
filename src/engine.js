@@ -160,7 +160,7 @@
     // What the shop floor can do, then what the Order Line lets through.
     const production = rawIncome * utilization * tMult * m.patentMult * safetyStreakMult(s) * achievementMult(s);
     const order = orderLine(s, production);
-    const income = production * sMult * order.factor;
+    const income = production * sMult * order.factor * order.bonus;
     const khRate = C.khPerSqrtIncome * Math.sqrt(income) * engKhMult(s);
 
     return {
@@ -448,8 +448,9 @@
   const poolSize = (st, s) => C.poolSize + (st.mgr ? Math.floor(leadership(st.mgr) / C.mgrPoolPer) : 0) + (s ? mgmtPool(s) : 0);
 
   const headcount = (st) => st.staff + st.team.length;
-  /** Team strength: everyone's effectiveness, lifted by the manager. */
-  const strength = (st, id) => (st.staff + st.team.reduce((a, p) => a + effectiveness(p, id), 0)) * mgrBonus(st);
+  /** Team strength: everyone's effectiveness (the manager still works too), lifted by the manager. */
+  const strength = (st, id) => (st.staff + st.team.reduce((a, p) => a + effectiveness(p, id), 0)
+    + (st.mgr ? effectiveness(st.mgr, id) : 0)) * mgrBonus(st);
 
   function fillPool(s, id) {
     const st = s.depts[id];
@@ -521,19 +522,23 @@
    * base. The line runs at its weakest department's coverage: the bottleneck.
    */
   function orderLine(s, production) {
-    const out = { depts: {}, factor: 1, bottleneck: null };
+    const out = { depts: {}, factor: 1, bottleneck: null, bonus: 1 };
     const reach = Math.sqrt(customerBase(s) / Math.max(1, customerBase(null, 'hq')));
     const it = itMult(s), mg = mgmtMult(s);
     for (const dept of STAFFED) {
       const st = s.depts[dept.id];
       const open = departmentOpen(s, dept);
-      if (!open || !st.p0) { out.depts[dept.id] = { open, required: 1, effective: 1, coverage: 1, reach: 1 }; continue; }
+      if (!open || !st.p0) { out.depts[dept.id] = { open, required: 1, effective: 1, coverage: 1, load: 1, bonus: 0, reach: 1 }; continue; }
       const growth = Math.max(0, Math.log10(Math.max(production, 1) / st.p0));
       const required = 1 + C.deptPerDecade * growth;
       const r = dept.id === 'outside_sales' ? reach : 1;
       const effective = (1 + strength(st, dept.id) * it * mg) * r;
-      const coverage = Math.min(1, effective / required);
-      out.depts[dept.id] = { open, required, effective, coverage, reach: r };
+      const load = effective / required, coverage = Math.min(1, load);
+      // Staffing past 100% isn't wasted: surplus pays an efficiency bonus that keeps
+      // growing with diminishing returns (+5% at 150%, +7.5% at 200%, toward +15%).
+      const bonus = load > 1 ? C.surplusBonus * (1 - 1 / load) : 0;
+      out.bonus += bonus;
+      out.depts[dept.id] = { open, required, effective, coverage, load, bonus, reach: r };
       if (coverage < out.factor) { out.factor = coverage; out.bottleneck = dept.id; }
     }
     out.factor = Math.max(C.deptFloor, out.factor);

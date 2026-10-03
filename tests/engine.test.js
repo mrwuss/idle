@@ -208,3 +208,36 @@ test('Purchasing discount never goes below the floor', () => {
   s.depts.purchasing.staff = 100000;
   assert.ok(E.purchasingDiscount(s) >= C.purchasingFloor - 1e-12);
 });
+
+test('staffing past 100% pays an income bonus with diminishing returns', () => {
+  const s = midGame();
+  s.cash = 1e15;
+  if (E.staffLineQuote(s).hires) E.staffLine(s);
+  const id = E.STAFFED.find((d) => s.depts[d.id].p0).id;
+  const base = E.derive(s).income;
+  E.hire(s, id, 3);
+  const o = E.orderLine(s, E.derive(s).production);
+  assert.ok(o.depts[id].load > 1);
+  close(o.depts[id].bonus, C.surplusBonus * (1 - 1 / o.depts[id].load));
+  assert.ok(E.derive(s).income > base);
+  s.depts[id].staff = 1e6; // absurdly overstaffed: approaches, never passes, the maximum
+  const b = E.orderLine(s, E.derive(s).production).depts[id].bonus;
+  assert.ok(b < C.surplusBonus && b > C.surplusBonus * 0.99);
+});
+
+test('a manager raises income once the team is past full coverage', () => {
+  const s = midGame();
+  s.cash = 1e15;
+  // a department that needs real staff, staffed to just past 100%
+  const id = E.STAFFED.find((d) => s.depts[d.id].p0).id;
+  s.depts[id].p0 = 1;
+  const need = () => E.orderLine(s, E.derive(s).production).depts[id];
+  while (need().load < 1) E.hire(s, id, 1);
+  assert.ok(need().load < 2, 'test needs a team between 100% and 200%');
+  const before = E.derive(s).income, loadBefore = need().load;
+  const st = s.depts[id];
+  const best = st.team.reduce((bi, p, i, t) => (E.leadership(p) > E.leadership(t[bi]) ? i : bi), 0);
+  E.promote(s, id, best);
+  assert.ok(need().load > loadBefore, 'the manager lifts team output');
+  assert.ok(E.derive(s).income > before, 'and it shows up in income');
+});
