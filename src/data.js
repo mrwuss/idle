@@ -236,6 +236,63 @@
     { id: 'GULF', name: 'Gulf offshore', region: 'south', customers: 100, x: 2, y: 5, offshore: true },
   ];
 
+  // ---- People (hiring) ---------------------------------------------------------
+  // Applicants are random people. Seven stats (1–10) and an optional trait;
+  // each department weighs two stats, so the same person is a star in one
+  // job and average in another. See docs/DEPARTMENTS.md "Hiring people".
+  const STATS = [
+    { id: 'hustle',       name: 'Hustle',       short: 'HUS' },
+    { id: 'rapport',      name: 'Rapport',      short: 'RAP' },
+    { id: 'negotiation',  name: 'Negotiation',  short: 'NEG' },
+    { id: 'organization', name: 'Organization', short: 'ORG' },
+    { id: 'precision',    name: 'Precision',    short: 'PRE' },
+    { id: 'numbers',      name: 'Numbers',      short: 'NUM' },
+    { id: 'mechanical',   name: 'Mechanical',   short: 'MEC' },
+  ];
+  // Primary stat counts double, secondary once.
+  const DEPT_STATS = {
+    outside_sales: ['hustle', 'rapport'],
+    inside_sales:  ['rapport', 'mechanical'],
+    purchasing:    ['negotiation', 'numbers'],
+    warehouse:     ['organization', 'hustle'],
+    quality:       ['precision', 'mechanical'],
+    accounting:    ['numbers', 'precision'],
+  };
+  // Quirks: a bonus to effectiveness in one department ('any' = everywhere).
+  const TRAITS = [
+    { id: 'golf',      name: 'Single-digit golf handicap',  dept: 'outside_sales', bonus: 0.25 },
+    { id: 'oems',      name: 'Knows every OEM in Iowa',      dept: 'outside_sales', bonus: 0.30 },
+    { id: 'farm',      name: 'Grew up on a farm',            dept: 'outside_sales', bonus: 0.15 },
+    { id: 'xref',      name: 'Cross-references from memory', dept: 'inside_sales',  bonus: 0.30 },
+    { id: 'bilingual', name: 'Bilingual',                    dept: 'inside_sales',  bonus: 0.15 },
+    { id: 'mechanic',  name: 'Former diesel mechanic',       dept: 'inside_sales',  bonus: 0.20 },
+    { id: 'haggler',   name: 'Never pays list price',        dept: 'purchasing',    bonus: 0.30 },
+    { id: 'excel',     name: 'Spreadsheet wizard',           dept: 'purchasing',    bonus: 0.15 },
+    { id: 'forklift',  name: 'Forklift certified',           dept: 'warehouse',     bonus: 0.25 },
+    { id: 'tetris',    name: 'Packs a truck like Tetris',    dept: 'warehouse',     bonus: 0.30 },
+    { id: 'night',     name: 'Night-shift legend',           dept: 'warehouse',     bonus: 0.15 },
+    { id: 'navy',      name: 'Ex-Navy hydraulics tech',      dept: 'quality',       bonus: 0.30 },
+    { id: 'sigma',     name: 'Six Sigma Green Belt',         dept: 'quality',       bonus: 0.25 },
+    { id: 'cpa',       name: 'CPA',                          dept: 'accounting',    bonus: 0.30 },
+    { id: 'collector', name: 'Collects invoices relentlessly', dept: 'accounting',  bonus: 0.20 },
+    { id: 'coffee',    name: 'Makes the good coffee',        dept: 'any',           bonus: 0.08 },
+    { id: 'mentor',    name: 'Natural mentor',               dept: 'any',           bonus: 0.12 },
+    { id: 'veteran',   name: '30 years in fluid power',      dept: 'any',           bonus: 0.18 },
+  ];
+  const TRAIT_CHANCE = 0.35;
+  // Fictional names, mixed and combined at random.
+  const FIRST_NAMES = ['Ava', 'Ben', 'Carmen', 'Dale', 'Esther', 'Frank', 'Gloria', 'Hank', 'Imani', 'Jorge',
+    'Kayla', 'Luis', 'Marisol', 'Ned', 'Olga', 'Priya', 'Quinn', 'Rosa', 'Sven', 'Tamika', 'Ulrich', 'Vera',
+    'Walt', 'Xiomara', 'Yusuf', 'Zoe', 'Arjun', 'Bev', 'Cody', 'Dana', 'Eli', 'Fatima', 'Gus', 'Hana', 'Ike',
+    'Jada', 'Karl', 'Linh', 'Moe', 'Nadia', 'Otis', 'Paige', 'Raj', 'Shirley', 'Trent', 'Uma', 'Vince',
+    'Wanda', 'Yolanda', 'Zack', 'Abdi', 'Brooke', 'Chuck', 'Deb', 'Emeka', 'Fern', 'Garrett', 'Hope', 'Jin', 'Lars'];
+  const LAST_NAMES = ['Anderson', 'Bauer', 'Castillo', 'Dvorak', 'Eriksen', 'Fischer', 'Garcia', 'Hansen',
+    'Ibrahim', 'Jensen', 'Kowalski', 'Larsen', 'Martinez', 'Nguyen', 'Olson', 'Petersen', 'Quintero', 'Ramirez',
+    'Schmidt', 'Thompson', 'Underwood', 'Vang', 'Wagner', 'Xiong', 'Yoder', 'Zimmerman', 'Adeyemi', 'Brandt',
+    'Chen', 'Dietrich', 'Engstrom', 'Flores', 'Gustafson', 'Hoffman', 'Iverson', 'Johansson', 'Kim', 'Lindqvist',
+    'Mueller', 'Novak', 'Okafor', 'Patel', 'Rasmussen', 'Svoboda', 'Tran', 'Ulrich', 'Vogel', 'Weber', 'Yang',
+    'Ziegler', 'Becker', 'Cruz', 'Duffy', 'Hernandez', 'Kaur', 'Lopez', 'Moreno', 'Nelson', 'Reyes', 'Sorensen'];
+
   const CONSTANTS = {
     ambientF: 80,           // reservoir sits at shop temperature
     baseK: 0.25,            // natural heat rejection of a bare reservoir (HP/°F)
@@ -251,7 +308,7 @@
     surgeSeconds: 15,
     surgeMult: 3,
     clickBase: 1,           // $ per hand-pump stroke
-    clickGal: 0.25,         // accumulator charge per stroke
+    clickGal: 0.25,         // minimum accumulator charge per stroke
     khPerSqrtIncome: 0.04,  // Know-how/s = 0.04 × √($/s)
     milestones: [25, 50, 100, 200, 300, 400, 500],
     offlineRate: 0.5,
@@ -264,13 +321,19 @@
     hireGrowth: 1.778,
     hireBaseS: 10,
     deptFloor: 0.1,         // a neglected department never stops the line entirely
+    poolSize: 3,            // applicants waiting per department
+    rerollS: 3,             // a fresh batch of applicants costs this many seconds of production
+    effBase: 0.45,          // effectiveness = effBase + effPerPoint × (2×primary + secondary)/3 + trait
+    effPerPoint: 0.11,      // …so an average applicant counts as ~1.05 staff, a star ~1.6
+    strokeShare: 0.02,      // a hand-pump stroke adds this share of accumulator capacity
     overhaulMin: 1e6,       // lifetime $ before the first Overhaul is offered
     patentDivisor: 1e6,     // patents = floor(√(lifetime $ / 1e6))
     patentBonus: 0.10,      // +10% income per patent (additive)
     startCash: 10,
   };
 
-  const DATA = { PUMPS, ACTUATORS, TIERS, COOLERS, TECH, ERAS, DEPARTMENTS, PAKS, REGIONS, STATES, CONSTANTS };
+  const DATA = { PUMPS, ACTUATORS, TIERS, COOLERS, TECH, ERAS, DEPARTMENTS, PAKS, REGIONS, STATES,
+    STATS, DEPT_STATS, TRAITS, TRAIT_CHANCE, FIRST_NAMES, LAST_NAMES, CONSTANTS };
   root.PW = root.PW || {};
   root.PW.DATA = DATA;
   if (typeof module !== 'undefined') module.exports = DATA;

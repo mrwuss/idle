@@ -27,6 +27,9 @@ Design: [DEPARTMENTS.md](DEPARTMENTS.md)
 - [ ] Department signature mechanics: markets, conversion, supplier discount, inventory + Rush Ship, yield + certifications, DSO + interest, incident streak, span of control
 - [ ] Project Engineering Pak lines: Valve-Pak → Base-Pak → Sys-Pak
 - [x] Company tab hiring: coverage bars, hire buttons, bottleneck highlight, "Staff the line to 100%"
+- [x] Hiring people: random applicants with stats, quirks and looks; effectiveness by department; team rosters
+- [x] The Works as a facility: office mezzanine with your staff, warehouse (racks, AMR robots, pickers, packing), shipping dock with trailers
+- [x] Hand-pump stroke scales with accumulator capacity
 - [ ] Order Line drawn as a valve diagram
 - [x] Simulator bot hires for the bottleneck; pacing table re-run
 

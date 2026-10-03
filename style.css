@@ -78,15 +78,15 @@ b { color: var(--oil); font-weight: 600; }
 }
 
 /* ---- the works (machine canvas) ---- */
-.works { max-width: 1280px; margin: 0 auto; padding: 16px 20px 0; }
+.works { margin: 0 auto; padding: 16px 20px 0; }
 .works-scroll { overflow-x: auto; border: 1px solid var(--edge); border-radius: var(--radius); background: var(--bg); }
-#machine { display: block; width: 100%; aspect-ratio: 1680 / 560; }
+#machine { display: block; width: 100%; aspect-ratio: 2300 / 796; }
 .works-hint { margin: 6px 2px 0; font-size: 12px; color: var(--muted); }
 @media (max-width: 860px) {
   .works { padding: 12px 16px 0; }
-  #machine { width: 900px; max-width: none; }
+  #machine { width: 1150px; max-width: none; }
 }
-.item.flash { animation: flash 1.2s ease-out; }
+.item.flash, .dept.flash { animation: flash 1.2s ease-out; }
 @keyframes flash { 0% { box-shadow: 0 0 0 2px var(--oil); } 100% { box-shadow: 0 0 0 2px transparent; } }
 
 /* ---- gauges ---- */
@@ -314,3 +314,29 @@ textarea { width: 100%; background: #0f1317; color: var(--text); border: 1px sol
 #order-summary.bad { color: var(--pressure); }
 .order-head { display: flex; gap: 12px; align-items: center; justify-content: space-between; flex-wrap: wrap; }
 .order-head h3 { margin-block: 14px 6px; }
+
+/* ---- people ---- */
+.order-line { grid-template-columns: repeat(auto-fill, minmax(270px, 1fr)); }
+.staff-text { font: 10px var(--font-mono); color: var(--muted); }
+.applicants { display: grid; gap: 4px; margin-top: 4px; }
+.app-head { font: 600 10px var(--font-mono); text-transform: uppercase; letter-spacing: .1em; color: var(--muted); }
+.person { display: grid; grid-template-columns: 24px 1fr auto auto; gap: 6px; align-items: center; min-width: 0; }
+.avatar { width: 24px; height: 24px; border-radius: 50%; background: #0f1317; }
+.p-main { display: flex; flex-direction: column; min-width: 0; }
+.p-name { font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.p-stats { font: 10px var(--font-mono); color: var(--muted); }
+.p-trait { font-size: 10px; color: var(--muted); font-style: italic; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.p-trait.fits { color: var(--ok); font-style: normal; }
+.p-eff { font: 600 12px var(--font-mono); color: var(--text); }
+.p-eff.star { color: var(--oil); }
+.p-eff.good { color: var(--ok); }
+.p-eff.weak { color: var(--muted); }
+.btn.mini { min-width: 0; padding: 3px 7px; font-size: 11px; }
+.btn.mini small { font-size: 9px; }
+.btn.ghost { background: transparent; }
+.app-actions { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 2px; }
+.team summary { cursor: pointer; font: 10px var(--font-mono); color: var(--muted); }
+.team ul { list-style: none; padding: 0; margin: 6px 0 0; display: grid; gap: 4px; max-height: 220px; overflow-y: auto; }
+.team li .person { grid-template-columns: 24px 1fr auto; }
+
+.order-line .dept, .dept-grid .dept { align-self: start; }

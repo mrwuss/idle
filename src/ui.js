@@ -140,6 +140,31 @@
   const ROMAN = ['I', 'II', 'III', 'IV', 'V', 'VI'];
   const staffed = (id) => E.STAFFED.some((d) => d.id === id);
 
+  // ---- People ----------------------------------------------------------------
+  const look = root.PW.format.look;
+  function avatar(a) {
+    const l = look(a);
+    const hair = l.style === 0 ? `<path d="M5 9 Q12 1 19 9 L19 7 Q12 -1 5 7 Z" fill="${l.hair}"/>`
+      : l.style === 1 ? `<path d="M4 11 Q4 2 12 2 Q20 2 20 11 L18 8 Q12 4 6 8 Z" fill="${l.hair}"/>`
+      : `<path d="M5 8 Q12 2 19 8 L19 15 L17 15 L17 9 Q12 6 7 9 L7 15 L5 15 Z" fill="${l.hair}"/>`;
+    return `<svg class="avatar" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 24 Q3 16 12 16 Q21 16 21 24 Z" fill="${l.shirt}"/>
+      <circle cx="12" cy="10" r="6" fill="${l.skin}"/>${hair}</svg>`;
+  }
+  const statShort = Object.fromEntries(E.DATA.STATS.map((x, i) => [x.id, [x.short, i, x.name]]));
+  const traitName = Object.fromEntries(E.DATA.TRAITS.map((t) => [t.id, t]));
+  function personRow(p, deptId, extra = '') {
+    const eff = E.effectiveness(p, deptId);
+    const [a, b] = E.DATA.DEPT_STATS[deptId];
+    const tr = p.t && traitName[p.t];
+    const fits = tr && (tr.dept === deptId || tr.dept === 'any');
+    const grade = eff >= 1.4 ? 'star' : eff >= 1.1 ? 'good' : eff < 0.85 ? 'weak' : '';
+    return `<div class="person">${avatar(p.a)}
+      <div class="p-main"><span class="p-name">${p.n}</span>
+        <span class="p-stats" title="${statShort[a][2]} (counts double) · ${statShort[b][2]}">${statShort[a][0]} ${p.s[statShort[a][1]]} · ${statShort[b][0]} ${p.s[statShort[b][1]]}</span>
+        ${tr ? `<span class="p-trait${fits ? ' fits' : ''}" title="${fits ? `+${tr.bonus} here` : 'No bonus in this job'}">${tr.name}</span>` : ''}</div>
+      <span class="p-eff ${grade}" title="Counts as ${eff} staff here">×${eff.toFixed(2)}</span>${extra}</div>`;
+  }
+
   function buildCompany() {
     const card = (d) => {
       const el = document.createElement('div');
@@ -150,15 +175,18 @@
         ${d.teams ? `<div class="dept-teams">${d.teams.map((t) => `<span title="${t.role}">${t.name}</span>`).join('')}</div>` : ''}
         <div class="dept-progress"><div></div></div>
         ${staffed(d.id) ? `<div class="dept-staff" hidden>
-          <div class="staff-row"><span class="staff-text"></span><button class="btn hire"></button></div>
-          <div class="cov" title="Coverage: staff ÷ staff needed"><div></div></div>
+          <div class="staff-text"></div>
+          <div class="cov" title="Coverage: team strength ÷ staff needed"><div></div></div>
+          <div class="applicants"></div>
+          <details class="team"><summary></summary><ul></ul></details>
         </div>` : ''}
         <div class="dept-era">Era ${ROMAN[d.era]} · ${ERAS[d.era]}</div>`;
       if (d.id === 'production') el.addEventListener('click', () => setTab('actuators'));
       const q = (sel) => el.querySelector(sel);
-      if (staffed(d.id)) q('.hire').addEventListener('click', (ev) => { ev.stopPropagation(); handlers.hire(d.id); });
       deptEls[d.id] = { el, status: q('.dept-status'), prog: q('.dept-progress'), bar: q('.dept-progress div'),
-        staff: q('.dept-staff'), staffText: q('.staff-text'), hire: q('.hire'), cov: q('.cov div') };
+        staff: q('.dept-staff'), staffText: q('.staff-text'), cov: q('.cov div'),
+        applicants: q('.applicants'), team: q('.team'), teamSum: q('.team summary'), teamList: q('.team ul'),
+        twist: q('.dept-twist') };
       return el;
     };
     const line = $('order-line'), support = $('support-depts');
@@ -263,13 +291,37 @@
         r.el.classList.toggle('neck', neck);
         r.status.textContent = neck ? `Bottleneck · ${Math.round(c.coverage * 100)}%` : `Covered · ${Math.round(c.coverage * 100)}%`;
         r.staff.hidden = false;
-        const reach = d.id === 'outside_sales' && c.effective !== 1 + st.staff ? ` · reach ×${(c.effective / (1 + st.staff)).toFixed(2)}` : '';
-        r.staffText.textContent = `Staff ${1 + st.staff} (you + ${st.staff}) · needs ${c.required.toFixed(1)}${reach}`;
+        r.twist.hidden = true;
+        const strength = E.strength(st, d.id), heads = E.headcount(st);
+        const reach = c.reach !== 1 ? ` · reach ×${c.reach.toFixed(2)}` : '';
+        r.staffText.textContent = `You + ${heads} hired · strength ${(1 + strength).toFixed(1)}${reach} · needs ${c.required.toFixed(1)}`;
         r.cov.style.width = `${Math.min(100, c.coverage * 100)}%`;
         r.cov.parentElement.classList.toggle('short', c.coverage < 0.999);
-        const q = E.hireQuote(s, d.id, ui.qty);
-        r.hire.disabled = q.cost > s.cash;
-        r.hire.innerHTML = `$${fmt(q.cost)}<small>hire ${q.qty}</small>`;
+        const one = E.hireQuote(s, d.id, 1), many = E.hireQuote(s, d.id, ui.qty), rr = E.rerollCost(s);
+        // Rebuild rows only when the applicants change; prices update in place so clicks aren't lost.
+        const key = st.pool.map((p) => p.n + p.a).join('|');
+        if (r.applicants._key !== key) {
+          r.applicants._key = key;
+          r.applicants.innerHTML = `<div class="app-head">Applicants</div>${st.pool.map((p, i) =>
+            personRow(p, d.id, `<button class="btn mini" data-hire="${d.id}" data-idx="${i}"></button>`)).join('')}
+            <div class="app-actions">
+              <button class="btn mini" data-hire-best="${d.id}"></button>
+              <button class="btn mini ghost" data-reroll="${d.id}"></button>
+            </div>`;
+        }
+        const setBtn = (b, cost, label) => {
+          const html = `$${fmt(cost)}<small>${label}</small>`;
+          if (b._html !== html) { b._html = html; b.innerHTML = html; }
+          b.disabled = cost > s.cash;
+        };
+        r.applicants.querySelectorAll('[data-hire]').forEach((b) => setBtn(b, one.cost, 'hire'));
+        setBtn(r.applicants.querySelector('[data-hire-best]'), many.cost, `hire best ${many.qty}`);
+        setBtn(r.applicants.querySelector('[data-reroll]'), rr, 'new applicants');
+        const team = st.team.slice().sort((x, y) => E.effectiveness(y, d.id) - E.effectiveness(x, d.id));
+        setPart(r.teamSum, `Team (${heads})${team.length ? ` · best: ${team[0].n} ×${E.effectiveness(team[0], d.id).toFixed(2)}` : ''}`, true);
+        setPart(r.teamList, (st.staff ? `<li class="muted">${st.staff} hired before named staff (×1.00 each)</li>` : '') +
+          team.map((p) => `<li>${personRow(p, d.id)}</li>`).join(''));
+        r.team.hidden = !heads;
       } else r.status.textContent = 'Open · hiring coming soon';
       r.prog.hidden = open || d.opens.lifetime == null;
       if (!open && d.opens.lifetime != null) {
@@ -397,7 +449,7 @@
     const tMax = Math.max(260, d.tempLimit + 80);
     gT.set(s.temp, 60, tMax, d.tempLimit, `${Math.round(s.temp)}°`);
 
-    $('stroke-sub').textContent = `+$${fmt(E.DATA.CONSTANTS.clickBase + m.clickPct * d.income)} · +${E.DATA.CONSTANTS.clickGal} gal`;
+    $('stroke-sub').textContent = `+$${fmt(E.DATA.CONSTANTS.clickBase + m.clickPct * d.income)} · +${fmt(E.strokeGal(d.accCap))} gal`;
     const surgeBtn = $('btn-surge');
     surgeBtn.disabled = !E.canSurge(s);
     surgeBtn.classList.toggle('active', d.surging);
@@ -473,6 +525,13 @@
     renderList(s, d, 'cooler', COOLERS, (c, n) =>
       `+${fmt(c.k)} HP/°F each` + (n ? ` · total ${fmt(n * c.k)} HP/°F` : ''));
     rows.cooler.fan.stats.textContent += ` · now rejecting ${fmt(d.heatHP)} HP (k=${fmt(d.k)})`;
+  }
+
+  /** Replace an element's content only when it changed (keeps buttons stable). */
+  function setPart(el, html, asText = false) {
+    if (el._html === html) return;
+    el._html = html;
+    if (asText) el.textContent = html; else el.innerHTML = html;
   }
 
   function setHtml(id, html) {
@@ -560,5 +619,12 @@
     r.el.classList.remove('flash'); void r.el.offsetWidth; r.el.classList.add('flash');
   }
 
-  root.PW.ui = { init, render, animate, toast, floater, setTab, focusItem, get qty() { return ui.qty; } };
+  function focusDept(id) {
+    const r = deptEls[id];
+    if (!r) return;
+    r.el.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    r.el.classList.remove('flash'); void r.el.offsetWidth; r.el.classList.add('flash');
+  }
+
+  root.PW.ui = { init, render, animate, toast, floater, setTab, focusItem, focusDept, look, get qty() { return ui.qty; } };
 })(window);

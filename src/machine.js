@@ -18,17 +18,20 @@
   'use strict';
 
   const E = root.PW.engine;
-  const { fmt } = root.PW.format;
+  const { fmt, look } = root.PW.format;
   const { PUMPS, ACTUATORS, TIERS, COOLERS } = E.DATA;
 
   // Logical canvas size; scaled to the element with devicePixelRatio.
-  const W = 1680, H = 560;
+  // The office runs along the top; production, warehouse and shipping share
+  // the floor below it (drawn in "floor" coordinates, offset by OFFICE_H).
+  const OFFICE_H = 236, FLOOR_H = 560;
+  const W = 2300, H = OFFICE_H + FLOOR_H;
   const FLOOR = 500, TRENCH = 532, HEADER = 120, BELT = 472;
   const TANK = { x: 44, y: 340, w: 276, h: 160 };
   const STATION_X0 = 560, STATION_W = 125;
   const RAIL = { x0: 530, x1: 1586, y0: 92, y1: 104 }; // lower rail, slopes down to the right
   const UPPER = { y0: 58, y1: 46 };                     // return rail, slopes down to the left
-  const LIFT_X = 1612, BIN_X = 1606;
+  const LIFT_X = 1612, BIN_X = 1716;   // the conveyor now ends at the warehouse inbound
   const CYCLE_S = 4.2;          // one full ball lap at full speed
   const RAIL_SHARE = 0.72;      // share of the lap the ball spends on the lower rail
 
@@ -61,6 +64,7 @@
     ctx = canvas.getContext('2d');
     handlers = h;
     colors = readColors();
+    canvas.style.aspectRatio = `${W} / ${H}`;
     resize();
     root.addEventListener('resize', resize);
     canvas.addEventListener('click', onClick);
@@ -82,7 +86,13 @@
 
   function hit(ev) {
     const r = canvas.getBoundingClientRect();
-    const x = ((ev.clientX - r.left) / r.width) * W, y = ((ev.clientY - r.top) / r.height) * H;
+    const x = ((ev.clientX - r.left) / r.width) * W, ya = ((ev.clientY - r.top) / r.height) * H;
+    if (ya < OFFICE_H) {
+      const room = ROOMS[Math.floor(x / ROOM_W)];
+      return room ? { tab: 'company', dept: room.id } : null;
+    }
+    const y = ya - OFFICE_H;
+    if (x > WH_X) return { tab: 'company', dept: 'warehouse' };
     if (x > TANK.x - 34 && x < TANK.x + 4 && y > TANK.y - 40 && y < TANK.y + 110) return { stroke: true };
     if (x >= STATION_X0 && x < STATION_X0 + STATION_W * 8 && y > 130 && y < FLOOR) {
       return { tab: 'actuators', id: ACTUATORS[Math.floor((x - STATION_X0) / STATION_W)].id };
@@ -94,7 +104,7 @@
   function onClick(ev) {
     const h = hit(ev);
     if (h && h.stroke && handlers.stroke) handlers.stroke(ev);
-    else if (h && handlers.open) handlers.open(h.tab, h.id);
+    else if (h && handlers.open) handlers.open(h.tab, h.id, h.dept);
   }
   function onMove(ev) { canvas.style.cursor = hit(ev) ? 'pointer' : 'default'; }
 
@@ -154,8 +164,10 @@
     const saved = ctx; ctx = b;
     ctx.setTransform(scale(), 0, 0, scale(), 0, 0);
 
-    // Wall with blueprint grid and a painted stripe.
     rect(0, 0, W, H, colors.bg);
+    drawOfficeBackdrop();
+    ctx.translate(0, OFFICE_H);
+    // Wall with blueprint grid and a painted stripe.
     ctx.globalAlpha = 0.5;
     for (let x = 0; x < W; x += 24) line([[x, 0], [x, FLOOR]], 'rgba(255,255,255,0.03)', 1);
     for (let y = 0; y < FLOOR; y += 24) line([[0, y], [W, y]], 'rgba(255,255,255,0.03)', 1);
@@ -163,7 +175,7 @@
     rect(0, 300, W, 10, 'rgba(242,169,0,0.06)');
 
     // Floor slab with hazard edge, and the cut-away trench below it.
-    rect(0, FLOOR, W, H - FLOOR, '#0c0f12');
+    rect(0, FLOOR, W, FLOOR_H - FLOOR, '#0c0f12');
     for (let x = 0; x < W; x += 28) {
       ctx.fillStyle = 'rgba(242,169,0,0.55)';
       ctx.beginPath(); ctx.moveTo(x, FLOOR); ctx.lineTo(x + 14, FLOOR); ctx.lineTo(x + 8, FLOOR + 6); ctx.lineTo(x - 6, FLOOR + 6); ctx.fill();
@@ -186,10 +198,7 @@
     rect(STATION_X0 - 20, BELT + 12, BIN_X - STATION_X0 + 20, 6, '#222a33', colors.edge, 1);
     for (let x = STATION_X0; x < BIN_X; x += 62) line([[x, BELT + 18], [x - 4, FLOOR], ], colors.edge, 2), line([[x, BELT + 18], [x + 4, FLOOR]], colors.edge, 2);
 
-    // Shipping bin.
-    rrect(BIN_X, 430, 64, 70, 3, '#3b2a14', '#6b4a1e', 2);
-    for (let y = 440; y < 500; y += 12) line([[BIN_X + 2, y], [BIN_X + 62, y]], '#5a3e19', 1);
-    text('SHIPPING', BIN_X + 32, 424, { size: 10, align: 'center', color: colors.oil, weight: '600' });
+    drawWarehouseBackdrop();
 
     ctx = saved;
     return c;
@@ -221,6 +230,9 @@
     ctx.drawImage(bg, 0, 0);
     ctx.setTransform(scale(), 0, 0, scale(), 0, 0);
 
+    drawOffice(s, d);
+    ctx.save();
+    ctx.translate(0, OFFICE_H);
     drawReturnLines(s, d);
     drawTank(s, d);
     drawPumps(s, d);
@@ -232,8 +244,11 @@
     drawStations(s, d, speed);
     drawConveyor(dt, speed);
     drawBall(running);
+    drawWarehouse(s, d, dt, speed);
+    drawShipping(dt);
     drawParticles(dt);
     drawOverlay(s, d);
+    ctx.restore();
   }
 
   // ---- Return side ------------------------------------------------------------
@@ -722,19 +737,11 @@
         if (p.y >= BELT) { p.y = BELT; p.onBelt = true; }
       } else if (p.onBelt) {
         p.x += v * dt;
-        if (p.x > BIN_X + 8) { p.onBelt = false; p.falling = true; p.vy = -40; }
-      } else {
-        p.vy += 900 * dt; p.y += p.vy * dt; p.x += 30 * dt;
-        if (p.y > 470) {
-          products.splice(i, 1);
-          t.shipped++;
-          if (Math.random() < 0.35) particles.push({ kind: 'coin', x: BIN_X + 32, y: 430, vx: (Math.random() - 0.5) * 20, vy: -40, life: 1.2 });
-          continue;
-        }
+        if (p.x > BIN_X - 4) { products.splice(i, 1); wh.inbound = Math.min(12, wh.inbound + 1); t.shipped++; continue; }
       }
       PRODUCT[p.id](p.x, p.y);
     }
-    text(`${fmt(t.shipped)} parts shipped`, BIN_X + 32, 514, { size: 9, align: 'center', color: colors.muted });
+
   }
 
   // ---- The ball run ---------------------------------------------------------------
@@ -808,6 +815,317 @@
     }
     if (d.surging) text('SURGE', 18, 76, { size: 13, color: colors.cool, font: colors.head, weight: '600' });
     if (d.demand === 0) text('Buy a Bottle Jack Bay to start the line →', 600, 300, { size: 13, color: colors.oil });
+  }
+
+  // ---- People sprites ------------------------------------------------------------
+
+  /** A person, seated (upper body only) or standing, in their own colors. */
+  function person(x, y, lk, { standing = false, bob = 0, reach = 0, label = null } = {}) {
+    const hy = y - (standing ? 52 : 26) + bob;            // head centre
+    if (standing) {
+      line([[x - 4, y - 18], [x - 5, y]], '#2b333c', 4);   // legs
+      line([[x + 4, y - 18], [x + 5, y]], '#2b333c', 4);
+      rrect(x - 9, hy + 8, 18, 26, 5, lk.shirt);
+      line([[x + 8, hy + 14], [x + 14 + reach * 6, hy + 22 - reach * 14]], lk.shirt, 4);
+    } else {
+      rrect(x - 10, hy + 8, 20, 22, 6, lk.shirt);
+    }
+    circle(x, hy, 7, lk.skin);
+    ctx.fillStyle = lk.hair;
+    ctx.beginPath();
+    if (lk.style === 0) { ctx.arc(x, hy - 1, 7.5, Math.PI, Math.PI * 2); ctx.fill(); }
+    else if (lk.style === 1) { ctx.arc(x, hy - 2, 7.5, Math.PI * 0.9, Math.PI * 2.1); ctx.fill(); }
+    else { ctx.arc(x, hy - 1, 7.5, Math.PI, Math.PI * 2); ctx.rect(x - 7.5, hy - 1, 3, 9); ctx.rect(x + 4.5, hy - 1, 3, 9); ctx.fill(); }
+    if (label) text(label, x, hy - 12, { size: 8, align: 'center', color: colors.oil, weight: '600' });
+  }
+  const OWNER = { skin: '#e0ac69', hair: '#5a3a1e', shirt: '#f2a900', style: 0 };
+
+  // ---- Office mezzanine -------------------------------------------------------------
+
+  const ROOMS = [
+    { id: 'outside_sales', label: 'OUTSIDE SALES', prop: 'map' },
+    { id: 'inside_sales',  label: 'INSIDE SALES',  prop: 'phones' },
+    { id: 'purchasing',    label: 'PURCHASING',    prop: 'files' },
+    { id: 'accounting',    label: 'ACCOUNTING',    prop: 'files' },
+    { id: 'quality',       label: 'QUALITY LAB',   prop: 'bench' },
+    { id: 'engineering',   label: 'ENGINEERING',   prop: 'cad' },
+    { id: 'it',            label: 'IT',            prop: 'servers' },
+    { id: 'safety',        label: 'SAFETY',        prop: 'board' },
+    { id: 'management',    label: 'MANAGEMENT',    prop: 'plant' },
+  ];
+  const ROOM_W = W / ROOMS.length;
+  const DESK_Y = 196;
+  const deskX = (i, rx) => rx + 34 + i * 62;
+
+  function drawOfficeBackdrop() {
+    rect(0, 0, W, OFFICE_H, '#151a20');
+    // a Cedar Rapids-ish night skyline in the windows, seeded so it never jumps
+    let seed = 7;
+    const rnd = () => ((seed = (seed * 9301 + 49297) % 233280) / 233280);
+    ROOMS.forEach((room, i) => {
+      const rx = i * ROOM_W;
+      rect(rx + 1, 8, ROOM_W - 2, OFFICE_H - 22, i % 2 ? '#1b2128' : '#192028');
+      const sky = ctx.createLinearGradient(0, 30, 0, 82);
+      sky.addColorStop(0, '#0b1e33'); sky.addColorStop(1, '#1d3a57');
+      rect(rx + 16, 30, ROOM_W - 32, 52, sky);
+      ctx.fillStyle = '#0a121b';
+      for (let x = rx + 16; x < rx + ROOM_W - 16; x += 10 + rnd() * 14) {
+        const h = 8 + rnd() * 30, w = 8 + rnd() * 12;
+        ctx.fillRect(x, 82 - h, Math.min(w, rx + ROOM_W - 16 - x), h);
+        for (let k = 0; k < 3; k++) if (rnd() < 0.5) { ctx.fillStyle = 'rgba(242,169,0,0.5)'; ctx.fillRect(x + 2 + rnd() * (w - 4), 82 - h + 3 + rnd() * (h - 6), 2, 2); ctx.fillStyle = '#0a121b'; }
+      }
+      rect(rx + 16, 30, ROOM_W - 32, 52, null, '#3a4652', 2);
+      line([[rx + ROOM_W / 2, 30], [rx + ROOM_W / 2, 82]], '#3a4652', 2);
+      line([[rx, 8], [rx, OFFICE_H - 14]], '#2e3843', 2);
+      // desks
+      for (let k = 0; k < 3; k++) {
+        const x = deskX(k, rx);
+        rect(x - 24, DESK_Y, 48, 5, '#6b5232');
+        rect(x - 22, DESK_Y + 5, 44, 18, '#4a3a24');
+      }
+    });
+    // mezzanine slab with hazard edge
+    rect(0, OFFICE_H - 14, W, 14, '#2b333c');
+    line([[0, OFFICE_H - 14], [W, OFFICE_H - 14]], colors.edge, 2);
+    for (let x = 0; x < W; x += 28) {
+      ctx.fillStyle = 'rgba(242,169,0,0.35)';
+      ctx.beginPath(); ctx.moveTo(x, OFFICE_H - 6); ctx.lineTo(x + 14, OFFICE_H - 6); ctx.lineTo(x + 8, OFFICE_H); ctx.lineTo(x - 6, OFFICE_H); ctx.fill();
+    }
+    text('OFFICE', 6, OFFICE_H - 3, { size: 8, color: colors.muted });
+  }
+
+  function drawProp(kind, x, y) {
+    if (kind === 'map') {                       // territory map with pins
+      rect(x - 18, y - 60, 36, 28, '#2a4a3a', colors.steel, 1);
+      [[-10, -50], [2, -44], [10, -54], [-4, -38]].forEach(([dx, dy], k) => circle(x + dx, y + dy, 2, ['#f2a900', '#3aa0ff', '#46c37b', '#e5484d'][k]));
+    } else if (kind === 'phones') {
+      rect(x - 14, y - 70, 28, 40, '#22303c', colors.steel, 1);
+      text('ORDERS', x, y - 58, { size: 7, align: 'center', color: colors.ok });
+      for (let k = 0; k < 3; k++) rect(x - 10, y - 52 + k * 7, 20 * (0.4 + 0.6 * frac(t.clock * 0.2 + k * 0.3)), 3, colors.ok);
+    } else if (kind === 'files') {
+      for (let k = 0; k < 3; k++) rect(x - 12, y - 22 - k * 16, 24, 15, '#59687a', '#2b333c', 1);
+    } else if (kind === 'bench') {
+      rect(x - 18, y - 16, 36, 16, '#3a4652', colors.steel, 1);
+      circle(x, y - 30, 9, '#0d1013', colors.steel, 1.5);
+      const a = -2.2 + 1.6 * (0.5 + 0.5 * Math.sin(t.clock * 2));
+      line([[x, y - 30], [x + Math.cos(a) * 7, y - 30 + Math.sin(a) * 7]], colors.pressure, 1.5);
+    } else if (kind === 'cad') {
+      rect(x - 18, y - 52, 36, 26, '#0d1a2a', colors.steel, 1);
+      ctx.strokeStyle = colors.cool; ctx.lineWidth = 1; ctx.strokeRect(x - 12, y - 46, 14, 10); circle(x + 8, y - 38, 4, null, colors.cool, 1);
+    } else if (kind === 'servers') {
+      rect(x - 13, y - 74, 26, 74, '#1b2229', colors.steel, 1);
+      for (let k = 0; k < 6; k++) circle(x - 6 + (k % 2) * 12, y - 66 + Math.floor(k / 2) * 0 + k * 10, 2, Math.sin(t.clock * 7 + k * 1.7) > 0 ? colors.ok : '#1b3324');
+    } else if (kind === 'board') {
+      rect(x - 18, y - 66, 36, 30, '#e8eef4', colors.steel, 1);
+      text('DAYS', x, y - 56, { size: 7, align: 'center', color: '#333' });
+      text('SAFE', x, y - 48, { size: 7, align: 'center', color: '#333' });
+      text(String(Math.floor(t.clock / 10) % 1000), x, y - 39, { size: 8, align: 'center', color: '#1f7a3f', weight: '700' });
+    } else if (kind === 'plant') {
+      rect(x - 7, y - 16, 14, 16, '#7a5230');
+      for (let k = 0; k < 5; k++) { ctx.beginPath(); ctx.ellipse(x + (k - 2) * 4, y - 24 - Math.abs(k - 2) * 3, 4, 9, (k - 2) * 0.4, 0, Math.PI * 2); ctx.fillStyle = '#2f7a46'; ctx.fill(); }
+    }
+  }
+
+  function drawOffice(s, d) {
+    const order = d.order;
+    ROOMS.forEach((room, i) => {
+      const rx = i * ROOM_W;
+      const dept = E.DATA.DEPARTMENTS.find((x) => x.id === room.id);
+      const open = E.departmentOpen(s, dept);
+      const st = s.depts[room.id];
+      const o = order.depts[room.id];
+      const neck = order.bottleneck === room.id && order.factor < 0.999;
+
+      // name plate
+      text(room.label, rx + 16, 104, { size: 10, color: open ? colors.text : colors.muted, weight: '600' });
+      // prop on the right
+      drawProp(room.prop, rx + ROOM_W - 30, DESK_Y + 22);
+
+      if (!open) {
+        ctx.globalAlpha = 0.72; rect(rx + 1, 8, ROOM_W - 2, OFFICE_H - 22, '#0b0e11'); ctx.globalAlpha = 1;
+        const op = dept.opens;
+        const when = op.lifetime ? `OPENS AT $${fmt(op.lifetime)}` : 'OPENS LATER';
+        rrect(rx + ROOM_W / 2 - 8, 132, 16, 12, 2, colors.muted);              // padlock
+        ctx.beginPath(); ctx.arc(rx + ROOM_W / 2, 132, 5, Math.PI, 0); ctx.strokeStyle = colors.muted; ctx.lineWidth = 2; ctx.stroke();
+        text(when, rx + ROOM_W / 2, 162, { size: 9, align: 'center', color: colors.muted });
+        text(room.label, rx + 16, 104, { size: 10, color: colors.muted, weight: '600' });
+        return;
+      }
+
+      if (!st) {
+        // support departments: open, no hiring yet
+        person(deskX(0, rx), DESK_Y, OWNER, { label: 'YOU', bob: Math.sin(t.clock * 3 + i) * 0.6 });
+        text('HIRING SOON', rx + 16, 118, { size: 8, color: colors.muted });
+        return;
+      }
+
+      // coverage chip
+      const pct = Math.round(o.coverage * 100);
+      text(`${pct}%`, rx + ROOM_W - 16, 104, { size: 10, align: 'right', color: neck ? colors.pressure : o.coverage < 1 ? colors.oil : colors.ok, weight: '600' });
+      const heads = E.headcount(st);
+      text(`${heads + 1} STAFF`, rx + 16, 118, { size: 8, color: colors.muted });
+
+      // the three best people take the desks; the owner covers an empty department
+      const team = st.team.slice().sort((a, b) => E.effectiveness(b, room.id) - E.effectiveness(a, room.id));
+      const seats = team.length ? team.slice(0, 3).map((p) => ({ lk: look(p.a), name: p.n.split(' ')[0] }))
+        : [{ lk: OWNER, name: 'YOU' }];
+      seats.forEach((p, k) => {
+        const x = deskX(k, rx);
+        const busy = d.demand > 0;
+        const bob = busy ? Math.sin(t.clock * (5 + k) + i * 1.3) * 0.8 : 0;
+        person(x, DESK_Y, p.lk, { bob });
+        // laptop with a screen that flickers while working
+        rect(x - 9, DESK_Y - 9, 18, 9, '#2b333c');
+        rect(x - 8, DESK_Y - 8, 16, 7, busy && Math.sin(t.clock * 9 + k * 2 + i) > -0.6 ? '#3aa0ff' : '#1d3a57');
+        if ((room.prop === 'phones' || room.id === 'outside_sales') && busy && Math.sin(t.clock * 0.9 + k * 2.1 + i) > 0.55) {
+          rect(x + 7, DESK_Y - 36 + bob, 4, 12, '#14181c');           // on the phone
+        }
+        text(p.name.toUpperCase(), x, DESK_Y + 34, { size: 7, align: 'center', color: colors.muted });
+      });
+      if (heads > 3) {
+        rrect(rx + ROOM_W - 64, 112, 34, 14, 7, '#2b333c', colors.edge, 1);
+        text(`+${heads - 3}`, rx + ROOM_W - 47, 122, { size: 9, align: 'center', color: colors.text });
+      }
+      if (neck) {
+        const on = Math.sin(t.beacon) > 0;
+        circle(rx + ROOM_W - 30, 18, 6, on ? colors.pressure : '#5a1f22');
+        if (on) { ctx.globalAlpha = 0.18; rect(rx + 1, 8, ROOM_W - 2, OFFICE_H - 22, colors.pressure); ctx.globalAlpha = 1; }
+        text('SHORT-STAFFED', rx + ROOM_W / 2, 140, { size: 10, align: 'center', color: colors.pressure, weight: '700' });
+      }
+    });
+  }
+
+  // ---- Warehouse ---------------------------------------------------------------------
+
+  const WH_X = 1700;                              // left edge of the warehouse floor
+  const RACKS = [{ x: 1770, w: 96 }, { x: 1900, w: 96 }];
+  const LEVELS = [452, 402, 352, 302];            // beam heights (floor coordinates)
+  const PACK_X = 2030, DOCK_X = 2120;
+  const wh = { inbound: 0, stock: 6, pack: 0, boxes: [], packT: 0, robots: [], trailer: { fill: 0, x: 0, mode: 'loading' }, trucks: 0 };
+
+  function drawWarehouseBackdrop() {
+    rect(WH_X, 120, W - WH_X, FLOOR - 120, 'rgba(0,0,0,0.18)');
+    line([[WH_X, 120], [WH_X, FLOOR]], colors.edge, 2);
+    text('WAREHOUSE', 1880, 140, { size: 13, align: 'center', color: colors.text, font: colors.head, weight: '600' });
+    text('SHIPPING', 2210, 140, { size: 13, align: 'center', color: colors.text, font: colors.head, weight: '600' });
+    // pallet racks: orange beams, blue uprights
+    for (const r of RACKS) {
+      for (const x of [r.x, r.x + r.w]) rect(x - 3, 280, 6, FLOOR - 280, '#2f5d8a');
+      for (const y of LEVELS) rect(r.x, y, r.w, 5, '#d9771c');
+    }
+    // inbound table, pack table, outbound rollers
+    rect(BIN_X - 2, BELT - 2, 34, 6, '#3a4652', colors.steel, 1);
+    rect(PACK_X - 30, 436, 64, 6, '#6b5232');
+    rect(PACK_X - 28, 442, 60, 58, '#4a3a24');
+    for (let x = PACK_X + 36; x < DOCK_X; x += 10) circle(x, 444, 3, '#3a4652', colors.steel, 1);
+    // dock wall and door
+    rect(DOCK_X - 4, 180, 10, FLOOR - 180, '#2b333c', colors.edge, 1);
+    rect(DOCK_X - 4, 330, 10, FLOOR - 330, '#0d1013');
+    for (let y = 186; y < 326; y += 10) line([[DOCK_X - 4, y], [DOCK_X + 6, y]], '#3a4652', 1);
+    text('DOCK 1', DOCK_X + 1, 176, { size: 8, align: 'center' });
+  }
+
+  function drawTote(x, y, color = '#3a7bd5') { rect(x - 11, y - 14, 22, 14, color, 'rgba(0,0,0,0.4)', 1); line([[x - 7, y - 10], [x + 7, y - 10]], 'rgba(255,255,255,0.25)', 1); }
+  function drawBox(x, y) { rect(x - 9, y - 12, 18, 12, '#b8864b', '#7a5230', 1); line([[x - 9, y - 6], [x + 9, y - 6]], '#d9b07a', 2); }
+
+  function drawWarehouse(s, d, dt, speed) {
+    const st = s.depts.warehouse;
+    const o = d.order.depts.warehouse;
+    const open = E.departmentOpen(s, E.DATA.DEPARTMENTS.find((x) => x.id === 'warehouse'));
+    const work = d.demand > 0 ? Math.max(0.25, speed) * (open ? o.coverage : 1) : 0;
+    const team = open ? st.team.slice().sort((a, b) => E.effectiveness(b, 'warehouse') - E.effectiveness(a, 'warehouse')) : [];
+
+    // inbound totes waiting at the end of the conveyor
+    for (let k = 0; k < Math.min(wh.inbound, 3); k++) drawTote(BIN_X + 14, BELT - 2 - k * 14, '#59687a');
+
+    // rack stock
+    let n = 0;
+    const slots = Math.min(wh.stock, RACKS.length * LEVELS.length * 3);
+    for (const r of RACKS) for (const y of LEVELS) for (let k = 0; k < 3; k++) {
+      if (n++ >= slots) break;
+      drawTote(r.x + 18 + k * 30, y, ['#3a7bd5', '#46c37b', '#c94a3a', '#8f7aa6'][(n * 7) % 4]);
+    }
+
+    // AMR robots shuttle totes: inbound → racks → pack station
+    const robots = clamp(1 + Math.floor(E.headcount(st) / 6), 1, 3);
+    while (wh.robots.length < robots) wh.robots.push({ x: 1740, dir: 1, load: false, wait: wh.robots.length * 0.7 });
+    wh.robots.length = robots;
+    wh.robots.forEach((r, i) => {
+      if (r.wait > 0) r.wait -= dt;
+      else if (work > 0) {
+        const target = r.dir > 0 ? PACK_X - 50 : 1740 + i * 4;
+        r.x += Math.sign(target - r.x) * Math.min(Math.abs(target - r.x), 120 * work * dt);
+        if (Math.abs(target - r.x) < 1) {
+          if (r.dir < 0) {            // at inbound/racks: pick up a tote
+            if (wh.inbound > 0) { wh.inbound--; wh.stock++; }
+            if (wh.stock > 0) { wh.stock--; r.load = true; }
+            r.dir = 1; r.wait = 0.4;
+          } else {                    // at pack station: drop it
+            if (r.load) wh.pack++;
+            r.load = false; r.dir = -1; r.wait = 0.4;
+          }
+        }
+      }
+      const y = FLOOR - 4;
+      rrect(r.x - 18, y - 14, 36, 12, 3, '#e8eef4', colors.steel, 1);
+      circle(r.x - 11, y - 1, 4, '#14181c'); circle(r.x + 11, y - 1, 4, '#14181c');
+      circle(r.x, y - 17, 3, Math.sin(t.clock * 8 + i) > 0 ? colors.cool : '#1d3a57');
+      if (r.load) drawTote(r.x, y - 15);
+    });
+
+    // pickers at the racks (the team's best, after the packer)
+    const pickers = team.slice(1, 3);
+    pickers.forEach((p, k) => {
+      const x = RACKS[k].x + RACKS[k].w / 2 + Math.sin(t.clock * 0.6 + k) * 30;
+      const reach = work > 0 ? 0.5 + 0.5 * Math.sin(t.clock * 3 + k) : 0;
+      person(x, FLOOR - 16, look(p.a), { standing: true, reach });
+      text(p.n.split(' ')[0].toUpperCase(), x, FLOOR - 76, { size: 7, align: 'center', color: colors.muted });
+    });
+
+    // packer at the pack station turns totes into boxes
+    const packer = team[0] ? { lk: look(team[0].a), name: team[0].n.split(' ')[0].toUpperCase() } : { lk: OWNER, name: 'YOU' };
+    person(PACK_X, 436, packer.lk, { standing: true, reach: wh.pack > 0 && work > 0 ? 0.5 + 0.5 * Math.sin(t.clock * 6) : 0 });
+    text(packer.name, PACK_X, 372, { size: 7, align: 'center', color: colors.muted });
+    if (wh.pack > 0) drawTote(PACK_X - 18, 436, '#59687a');
+    if (wh.pack > 0 && work > 0) {
+      wh.packT += dt * work;
+      if (wh.packT > 0.9) { wh.packT = 0; wh.pack--; wh.boxes.push({ x: PACK_X + 18 }); }
+    }
+    // boxes roll to the dock and into the trailer
+    for (let k = wh.boxes.length - 1; k >= 0; k--) {
+      const b = wh.boxes[k];
+      b.x += 60 * dt;
+      if (b.x > DOCK_X + 6) { wh.boxes.splice(k, 1); if (wh.trailer.mode === 'loading') wh.trailer.fill += 1 / 21; continue; }
+      drawBox(b.x, 441);
+    }
+    const label = open ? `${E.headcount(st) + 1} STAFF · ${Math.round(o.coverage * 100)}%` : 'RUN BY YOU';
+    text(label, 1880, 156, { size: 9, align: 'center', color: open && o.coverage < 1 ? colors.oil : colors.muted });
+  }
+
+  // ---- Shipping dock -------------------------------------------------------------
+
+  function drawShipping(dt) {
+    const tr = wh.trailer;
+    if (tr.mode === 'loading' && tr.fill >= 1) { tr.mode = 'leaving'; }
+    if (tr.mode === 'leaving') { tr.x += 160 * dt; if (tr.x > 240) { tr.mode = 'arriving'; tr.fill = 0; wh.trucks++; particles.push({ kind: 'coin', x: 2200, y: 300, vx: 0, vy: -30, life: 1.4 }); } }
+    if (tr.mode === 'arriving') { tr.x = Math.max(0, tr.x - 160 * dt); if (tr.x === 0) tr.mode = 'loading'; }
+    const x = DOCK_X + 10 + tr.x, y = 330, w = 164, h = 130;
+    ctx.save();
+    ctx.beginPath(); ctx.rect(DOCK_X + 6, 0, W - DOCK_X, FLOOR + 30); ctx.clip();
+    rect(x, y, w, h, '#e8eef4', colors.steel, 2);                   // trailer box (cut away)
+    rect(x + 4, y + 4, w - 8, h - 8, '#1b2229');
+    const boxes = Math.floor(tr.fill * 21);
+    for (let k = 0; k < boxes; k++) drawBox(x + 16 + (k % 7) * 20, y + h - 6 - Math.floor(k / 7) * 14);
+    rect(x, y - 18, w, 18, '#c94a3a');
+    text('IFP MSI', x + w / 2, y - 5, { size: 12, align: 'center', color: '#fff', font: colors.head, weight: '600' });
+    circle(x + 30, y + h + 14, 13, '#14181c', '#555', 3); circle(x + 60, y + h + 14, 13, '#14181c', '#555', 3);
+    circle(x + w - 30, y + h + 14, 13, '#14181c', '#555', 3);
+    ctx.restore();
+    text(`${fmt(wh.trucks)} TRUCKS SHIPPED`, 2210, 158, { size: 9, align: 'center', color: colors.muted });
+    if (tr.mode === 'loading') {
+      rect(2150, 168, 120, 6, '#0f1317', colors.edge, 1);
+      rect(2150, 168, 120 * Math.min(1, tr.fill), 6, colors.oil);
+    }
   }
 
   // ---- Events from the game -------------------------------------------------------------

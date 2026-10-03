@@ -208,7 +208,8 @@ department-specific twists come next.
   cover it yourself at first (staff 1). The game remembers how much the shop was
   producing at that moment.
 - **Growing pains:** every time production grows 10× beyond that, the
-  department needs **4 more people**. Its **coverage** is staff ÷ needed.
+  department needs **4 more staff-equivalents**. Its **coverage** is
+  (you + team strength) ÷ needed; see *Hiring people* below.
 - **The bottleneck:** the Order Line runs at the coverage of its weakest
   department. Income is `production × that factor`, and it never drops below 10%.
 - **Hiring:** the nth hire costs `10 s × opening production × 1.778^n`. Because
@@ -227,6 +228,50 @@ department-specific twists come next.
 
 **Pacing impact** (balance simulator): $1M at 21 min (was 18), $1B at 82 min
 (was 75), end-of-run income unchanged.
+
+## Hiring people (implemented, v0.2.1)
+
+Hires are people, not head counts.
+
+- **Applicants:** each open department has **3 applicants** waiting. Each is a
+  random person with a name, a look, seven stats (1–10) and, a third of the time,
+  a **quirk**.
+- **Stats:** Hustle, Rapport, Negotiation, Organization, Precision, Numbers and
+  Mechanical. Each department weighs two of them, with the first counting double:
+
+| Department | Primary | Secondary | Quirks that help here |
+|---|---|---|---|
+| Outside Sales | Hustle | Rapport | Single-digit golf handicap, Knows every OEM in Iowa, Grew up on a farm |
+| Inside Sales | Rapport | Mechanical | Cross-references from memory, Bilingual, Former diesel mechanic |
+| Purchasing | Negotiation | Numbers | Never pays list price, Spreadsheet wizard |
+| Warehouse | Organization | Hustle | Forklift certified, Packs a truck like Tetris, Night-shift legend |
+| Quality | Precision | Mechanical | Ex-Navy hydraulics tech, Six Sigma Green Belt |
+| Accounting | Numbers | Precision | CPA, Collects invoices relentlessly |
+| Any | | | Makes the good coffee, Natural mentor, 30 years in fluid power |
+
+- **Effectiveness:** `0.45 + 0.11 × (2 × primary + secondary) / 3 + quirk bonus`.
+  An average person counts as about **1.05 staff**, a star up to about **1.9**,
+  and a poor fit about 0.55. The same person can be a star in Purchasing and
+  average in the Warehouse.
+- **Team strength** (the sum of everyone's effectiveness) replaces head count
+  in coverage. Hire **cost** still depends on head count, so a strong hire is
+  pure upside.
+- **Ways to hire:**
+  - **Hire** a specific applicant; a new applicant takes their place.
+  - **Hire best ×N** always takes the strongest applicant available.
+  - **New applicants** rerolls all three for ~3 s of production.
+  - **Staff the line to 100%** hires the best available into every lagging
+    department, priced exactly up front.
+- **Determinism:** applicants come from a seeded random stream stored in the
+  save, so a quote is exactly what you pay and get.
+- **Older saves:** generic hires from before this change keep counting as 1.0 each.
+- **On screen:** your people appear in the office row of The Works (the three
+  strongest at the desks, "+N" for the rest) and on the warehouse floor (packer
+  and pickers).
+
+**Ideas next:** an HR or Management upgrade for 4–5 applicants or better stats; a
+morale or mentor effect; named "Employee of the Month" bonuses; retirements
+across Overhauls (a Hall of Fame).
 
 ## Still to build
 

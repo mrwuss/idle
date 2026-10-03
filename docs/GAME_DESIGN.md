@@ -144,7 +144,8 @@ bladder upgrades ×2.5 each). It has two jobs:
 
 ### 5.5 Hand pump (the clicker)
 
-Each stroke gives $1 plus 0.25 gal of accumulator charge, and after *Mechanical
+Each stroke gives $1 plus 2% of the accumulator's capacity in charge
+(at least 0.25 gal), so it stays useful as the bladder grows, and after *Mechanical
 Advantage* also 3% of income per second. It matters most in the first five
 minutes and stays useful for topping off the accumulator before a Surge.
 Space bar strokes; S fires Surge.
@@ -238,8 +239,19 @@ Ordered roughly by how much they add per unit of work. See [ROADMAP.md](ROADMAP.
 - **Visual language:** shop-floor industrial. Dark steel panels, hydraulic-oil
   amber for flow, pressure red, coolant blue. Equipment icons follow ISO 1219
   schematic symbols so the art doubles as a primer.
-- **The Works** is the main screen's hero: a full-width animated machine
-  built from what the player actually owns, run like a Rube Goldberg machine.
+- **The Works** is the main screen's hero: a full-width cross-section of the
+  whole facility, built from what the player actually owns.
+  - **Office mezzanine** across the top: a room per department. Your three
+    strongest hires sit at the desks (laptops flicker, sales staff take calls),
+    with "+N" for the rest. Locked rooms are dark with their opening price,
+    and a short-staffed room flashes red.
+  - **Warehouse** past the production line:
+    - parts arrive at inbound
+    - white AMR robots shuttle totes between the pallet racks and the pack station
+    - your warehouse people pick at the racks and pack boxes
+  - **Shipping dock:** boxes roll onto an IFP MSI trailer. When it's full it
+    pulls away and the next one backs in, which counts as a truck shipped.
+  - **Production floor** in the middle, run like a Rube Goldberg machine:
   - **Pump bank:** a motor-and-pump set appears on the tank for each pump type
     owned, with couplings spinning at a speed that follows flow.
   - **Header pieces:** the accumulator shows its oil and nitrogen split, and the
