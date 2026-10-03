@@ -15,8 +15,9 @@
   department a bottleneck on income, and `hire()`/`hirePerson()`/`staffLine()` fix it. Hires are people
   (`depts[id].team`, applicants in `.pool`) generated from the seeded `s.seed`, so
   quotes match results; `effectiveness()` weighs each department's two stats. Managers (`depts[id].mgr`,
-  promoted with `promote()`) boost strength and auto-hire in `managersTick()`; Engineering
-  is in `HIREABLE` (not the Order Line) and drives `engKhMult()` with `ENG_UPGRADES`.
+  promoted with `promote()`) boost strength and auto-hire in `managersTick()`; Engineering,
+  IT, Safety and Management are in `HIREABLE` (not the Order Line): `engKhMult()`, `itMult()`,
+  `safetyTick()`/`incidentRate()` (own seed in `s.safety`) and `mgmtMult()`.
   machine.js pauses off-screen and drops to a low-quality mode on slow devices. The simulator
   bot calls `keepLineStaffed()` before buying anything. Support departments, Paks and
   department twists are still a design scaffold shown on the Company tab. Location unlocks

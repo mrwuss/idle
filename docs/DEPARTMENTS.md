@@ -313,6 +313,28 @@ Hires are people, not head counts.
   R&D tree around 2h instead of 3.5h, and end-of-run income is unchanged.
 - **Overhaul** resets projects and staff, like everything else in a run.
 
+## Support departments and Purchasing (implemented, v0.2.3)
+
+Every department is now hireable. The support departments sit outside the Order
+Line, so they never become the bottleneck. Instead, each changes how the whole
+company runs:
+
+| Department | Opens | Stats (primary / secondary) | Effect |
+|---|---|---|---|
+| **IT** | $10M | Numbers / Organization | Every Order Line department's strength **+4% per IT staff-equivalent** (max +100%) |
+| **Safety** | 3,000 psi or $100K | Precision / Organization | Incidents ÷ (1 + 0.25 × strength); see below |
+| **Management** | $1B or first Overhaul | Leadership / Organization | Every team **+2% per staff-equivalent** (max +50%), plus **+1 applicant** in every department per 6 strength |
+| **Purchasing** (Order Line twist) | 3,000 psi or $100K | Negotiation / Numbers | Equipment prices ÷ (1 + 1% × strength), floored at ×0.7 |
+
+**Incidents (Safety):**
+- From 3,000 psi up, incidents happen at about 0.3 per minute ×
+  (psi ÷ 3,000) × heat, divided by Safety strength as above.
+- An incident (burst hose, blown seal, near miss) shuts **one actuator line for
+  30 s**. The station shows LINE DOWN, an alert names it, and a bong sounds.
+- Every 10 minutes without an incident is a **day safe**, worth **+1% income**
+  (max +25%). An incident resets the streak. The Safety office's board shows
+  the count.
+
 **Ideas next:** an HR or Management upgrade for 4–5 applicants or better stats; a
 morale or mentor effect; named "Employee of the Month" bonuses; retirements
 across Overhauls (a Hall of Fame).
@@ -323,12 +345,12 @@ across Overhauls (a Hall of Fame).
 |---|---|
 | Outside Sales | Markets: one-time purchases that raise order value |
 | Inside Sales | Conversion rate |
-| Purchasing | Supplier discounts on equipment (replaces Lean Manufacturing) |
+| Purchasing | ✓ Supplier discounts on equipment (v0.2.3) |
 | Warehouse | Inventory buffer and Rush Ship |
 | Quality | Yield, certifications, contamination |
 | Accounting | Collection delay (DSO) and interest |
 | Engineering | Design (Know-how) ✓, Controls (automation tech), Project (Pak lines) |
-| IT · Safety · Management | ERP, incident streak, span of control |
+| IT · Safety · Management | ✓ (v0.2.3) |
 
 ## Build plan (when we implement)
 

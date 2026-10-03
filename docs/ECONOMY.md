@@ -31,7 +31,11 @@ update the tables here.
 | Hand-pump charge | `max(0.25 gal, 2% of accumulator capacity)` per stroke |
 | Total income | `production × surge × Order Line factor` |
 | Know-how per second | `0.04 × √(total income)` |
-| Patents (total) | `floor(√(lifetime $ / 1,000,000))` |
+| Patents (total) | `floor(2 × ∛(lifetime $ / 1,000,000))` (was √; the cube root stops the late-run snowball) |
+| Achievements | +1% income each |
+| Safety streak | +1% income per 10 min without an incident, max +25% |
+| IT / Management | Order Line strength × (1 + 4% × IT strength, max ×2) × (1 + 2% × Management strength, max ×1.5) |
+| Purchasing | equipment cost × `max(0.7, 1 / (1 + 1% × Purchasing strength))` |
 
 ## Content tables
 
@@ -115,9 +119,9 @@ before buying anything else, and end-of-run income is unchanged (~29M/s).
 
 **Known balance notes:**
 
-- Patents snowball across many Overhauls (the simulator's prestige-every-time-patents-double
-  policy reaches thousands of patents in ~6 hours). Tame this with a diminishing
-  patent bonus or a steeper patent formula before balancing late runs.
+- Patents used to snowball (8,240 in ~6.5 h of prestige-whenever-they-double).
+  With the cube-root formula the bot reaches 512 patents in 6h40m over 9
+  Overhauls, and the gap between runs grows (~1 h, then ~2 h).
 
 - The bot never buys Ultra-High Pressure in run 1. At 10,000 psi every pump's
   losses jump by about 67%, and the cooling bill outweighs the gain. That's

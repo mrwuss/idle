@@ -196,8 +196,11 @@
 
   // Sounds for things that happen on their own: any Surge starting (manual or
   // PLC), and the oil crossing its temperature limit (re-armed 5°F below).
-  let wasSurging = state.surgeLeft > 0, hotArmed = true;
+  let wasSurging = state.surgeLeft > 0, hotArmed = true, lastIncident = null;
   function soundCues() {
+    const inc = state.safety && state.safety.incident;
+    if (inc && inc !== lastIncident) SFX.play('overheat');
+    lastIncident = inc;
     const surging = state.surgeLeft > 0;
     if (surging && !wasSurging) SFX.play('surge');
     wasSurging = surging;

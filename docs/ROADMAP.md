@@ -22,7 +22,9 @@
 Design: [DEPARTMENTS.md](DEPARTMENTS.md)
 
 - [x] Order Line engine: staffing, coverage and the bottleneck (6 staffed departments + Production)
-- [ ] Support departments: IT, Safety, Management (Engineering ✓)
+- [x] Support departments: IT (Order Line boost), Safety (incidents + streak), Management (team boost + applicants)
+- [x] Purchasing twist: supplier discounts
+- [x] Patent formula tamed (cube root)
 - [ ] Move R&D under Engineering → Design; move PLC/Servo/Proportional/LS/DD/Telematics to Controls
 - [ ] Department signature mechanics: markets, conversion, supplier discount, inventory + Rush Ship, yield + certifications, DSO + interest, incident streak, span of control
 - [ ] Project Engineering Pak lines: Valve-Pak → Base-Pak → Sys-Pak

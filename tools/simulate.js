@@ -34,6 +34,11 @@ function manageCompany(s) {
     const i = st.team.reduce((b, p, k, a) => (E.leadership(p) > E.leadership(a[b]) ? k : b), 0);
     E.promote(s, dept.id, i);
   }
+  // Support departments (and Purchasing's discount) pay off quietly; staff them when cheap.
+  for (const id of ['it', 'safety', 'management', 'purchasing']) {
+    const st = s.depts[id];
+    while (st.p0 && E.headcount(st) < 30 && E.hireQuote(s, id, 1).cost < s.cash * 0.02) E.hire(s, id, 1);
+  }
   for (const u of E.DATA.ENG_UPGRADES) {
     if (s.engUp[u.id]) continue;
     const st = s.depts.engineering;
@@ -151,7 +156,7 @@ while (s.time < end) {
   for (const t of TECH) if (E.research(s, t.id)) log(`TECH  ${t.name}`);
   if (E.canSurge(s)) E.surge(s);
   for (const x of [1e3, 1e6, 1e9, 1e12]) if (s.lifetime >= x) once(`life${x}`, `$$$   lifetime ${fmt(x)}`);
-  if (doOverhaul && E.overhaulGain(s) >= Math.max(1, s.patents)) {
+  if (doOverhaul && E.canOverhaul(s) && E.overhaulGain(s) >= Math.max(1, s.patents)) {
     const g = E.overhaulGain(s);
     E.overhaul(s);
     for (const k of [...seen]) if (!k.startsWith('life')) seen.delete(k);
