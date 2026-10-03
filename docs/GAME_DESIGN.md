@@ -238,9 +238,28 @@ Ordered roughly by how much they add per unit of work. See [ROADMAP.md](ROADMAP.
 - **Visual language:** shop-floor industrial. Dark steel panels, hydraulic-oil
   amber for flow, pressure red, coolant blue. Equipment icons follow ISO 1219
   schematic symbols so the art doubles as a primer.
-- **The live schematic** is the main screen's hero. Flow dashes speed up with
-  GPM, the cylinder strokes with work rate, the relief line lights red when it's
-  dumping, and the tank oil darkens as it heats.
+- **The Works** is the main screen's hero: a full-width animated machine
+  built from what the player actually owns, run like a Rube Goldberg machine.
+  - **Pump bank:** a motor-and-pump set appears on the tank for each pump type
+    owned, with couplings spinning at a speed that follows flow.
+  - **Header pieces:** the accumulator shows its oil and nitrogen split, and the
+    pressure gauge's needle wobbles with each stroke.
+  - **Return side:** the relief valve sprays red when dumping, and the cooler
+    gets one fan per cooler type, spinning faster as the oil heats up.
+  - **Stations:** one per actuator, each with its own animation:
+    - a jack lifting a truck, a splitter splitting logs, a press seating a bearing
+    - an excavator digging, a molder clamping, a forge squashing a glowing billet
+    - a ship lift raising a boat, the tectonic press squeezing a mountain
+    - locked stations show as ghosted outlines with what they need
+  - **The run:** a steel ball rolls along the sequence rail and trips each
+    station's valve in turn, as in a real sequence circuit.
+    - Each finished part drops onto a conveyor and rides to Shipping.
+    - A hydraulic elevator lifts the ball back to the start.
+  - **Machine state on screen:** speed tracks delivered flow; starvation lights
+    a LOW FLOW beacon; Surge makes the header glow; overheating shows a heat
+    shimmer and steam from the breather.
+  - **Clicks:** the hand pump strokes it; a station, the pump bank or the
+    header jumps to that part of the shop.
 - **Gauges, not just numbers:** analogue pressure and temperature dials with red zones.
 - **Audio (planned):** pump whine pitch tracks flow; relief-valve squeal when
   dumping; a deep *thunk* on each Surge; muted shop ambience.

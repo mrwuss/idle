@@ -33,13 +33,14 @@ python3 -m http.server 8000   # then visit http://localhost:8000
 ## Project layout
 
 ```
-index.html          page shell + live schematic SVG
+index.html          page shell
 style.css           all styling
 src/data.js         every tunable number (pumps, actuators, tiers, coolers, tech, constants)
 src/engine.js       pure game logic, no DOM; shared by the browser and the simulator
 src/format.js       number/time formatting
 src/audio.js        sound effects + mute (clips in assets/audio, see CREDITS.md)
-src/ui.js           rendering, gauges, animation
+src/machine.js      "The Works": the animated machine canvas, built from what you own
+src/ui.js           rendering, gauges, shop lists
 src/main.js         load/save, game loop, input
 tools/simulate.js   headless balance simulator (a greedy bot plays the real engine)
 docs/               design documents and sketches

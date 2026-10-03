@@ -36,6 +36,13 @@
   // ---- Wiring ---------------------------------------------------------------
 
   UI.init({
+    strokeFromMachine() { $('btn-stroke').click(); },
+    openFromMachine(tab, id) {
+      UI.setTab(tab);
+      SFX.play('tab', 0.6);
+      render();
+      if (id) UI.focusItem('actuator', id);
+    },
     buy(kind, id) {
       if (E.buy(state, kind, id, UI.qty)) { SFX.play('buy'); render(); } else SFX.play('cant');
     },
@@ -63,6 +70,7 @@
   $('btn-stroke').addEventListener('click', (ev) => {
     const gain = E.click(state);
     SFX.play('stroke', 0.8);
+    root.PW.machine.stroke();
     const rect = ev.currentTarget.getBoundingClientRect();
     const x = ev.clientX || rect.left + rect.width / 2, y = ev.clientY || rect.top;
     UI.floater(x - 10 + Math.random() * 20, y - 20, `+$${fmt(gain)}`);

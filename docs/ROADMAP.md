@@ -14,6 +14,7 @@
 - [x] Design docs and sketches
 - [x] Company tab placeholder: all eleven departments, their unlock conditions and the Pak chain (no mechanics yet)
 - [x] Territory map: 4 regions, 13 states + Gulf offshore
+- [x] **The Works:** full-width animated machine (pump bank, header, accumulator, relief, cooler, one station per actuator, sequence-rail ball run, conveyor to Shipping)
 - [x] Company named IFP MSI; locations unlock in order as you grow (Iowa → North → West → South), announced, kept through Overhaul
 
 ## v0.2 — Departments (the business layer)
