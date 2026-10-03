@@ -258,6 +258,7 @@
 
   function init(h) {
     handlers = h;
+    root.PW.machine.init($('machine'), { open: h.openFromMachine, stroke: h.strokeFromMachine });
     gP = makeGauge($('g-pressure'), 'PSI');
     gT = makeGauge($('g-temp'), '°F');
     buildList($('list-actuators'), 'actuator', ACTUATORS, h.buy);
@@ -478,40 +479,16 @@
 
   // ---- Per-frame animation ---------------------------------------------------
 
-  const anim = { supply: 0, ret: 0, relief: 0, piston: 0, phase: 0 };
+  // Gauges and the header needle; the big machine draws itself in machine.js.
+  let wob = 0;
   function animate(s, d, dt) {
     if (!d) return;
-    const speed = (q) => (q > 0 ? 8 + 10 * Math.log10(1 + q) : 0);
-    anim.supply = (anim.supply + speed(d.supply) * dt) % 1200;
-    anim.ret = (anim.ret + speed(Math.min(d.supply, d.demand)) * dt) % 1200;
-    anim.relief = (anim.relief + speed(d.overRelief) * dt) % 1200;
-    document.querySelectorAll('.oil-supply, .oil-work').forEach((el) => (el.style.strokeDashoffset = -anim.supply));
-    document.querySelectorAll('.oil-return').forEach((el) => (el.style.strokeDashoffset = -anim.ret));
-    const relief = $('relief-oil');
-    relief.style.strokeDashoffset = -anim.relief;
-    relief.style.opacity = d.overRelief > 0 ? 1 : 0;
-
-    // Cylinder cycles faster with more delivered flow; stalls when starved.
-    const rate = d.demand > 0 ? (0.25 + 0.15 * Math.log10(1 + d.demand)) * d.utilization * (d.surging ? 2 : 1) : 0;
-    anim.phase += rate * dt * Math.PI * 2;
-    const x = (1 - Math.cos(anim.phase)) * 10;
-    $('cyl-piston').setAttribute('transform', `translate(${x} 0)`);
-
-    // Accumulator and tank
-    const accFrac = Math.min(1, s.accCharge / d.accCap);
-    const accH = 2 + accFrac * 26;
-    const acc = $('acc-fill');
-    acc.setAttribute('y', 34 - accH); acc.setAttribute('height', accH);
-    const heat = Math.min(1, Math.max(0, (s.temp - 80) / (d.tempLimit + 40 - 80)));
-    $('tank-oil').style.fill = `hsl(${42 - 40 * heat} ${90}% ${48 - 12 * heat}%)`;
-    $('cooler-sym').style.opacity = 0.5 + 0.5 * Math.min(1, (s.coolers.fan + s.coolers.shell + s.coolers.plate + s.coolers.chiller) / 3);
-
-    // Pressure needle wobbles with each actuator stroke.
-    const wobble = d.demand > 0 ? 0.88 + 0.1 * Math.abs(Math.sin(anim.phase)) : 0.6;
+    root.PW.machine.frame(s, d, dt);
+    wob += dt * (d.demand > 0 ? 2.5 * d.utilization : 0.5);
+    const wobble = d.demand > 0 ? 0.88 + 0.1 * Math.abs(Math.sin(wob * Math.PI)) : 0.6;
     const shown = d.psi * (d.supply > 0 ? wobble * Math.min(1, 0.3 + d.utilization) : 0);
     gP.set(shown, 0, niceMax(d.psi * 1.25), d.psi, fmt(shown, 0));
     const frac = shown / niceMax(d.psi * 1.25);
-    $('mini-needle').setAttribute('transform', `rotate(${-180 + 270 * frac} 160 28)`);
     $('brand-needle').style.transform = `rotate(${-80 + 120 * frac}deg)`;
   }
   function niceMax(v) {
@@ -537,5 +514,13 @@
     setTimeout(() => f.remove(), 900);
   }
 
-  root.PW.ui = { init, render, animate, toast, floater, setTab, get qty() { return ui.qty; } };
+  /** Scroll a shop row into view and flash it (used when clicking the machine). */
+  function focusItem(kind, id) {
+    const r = rows[kind] && rows[kind][id];
+    if (!r || r.el.hidden) return;
+    r.el.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    r.el.classList.remove('flash'); void r.el.offsetWidth; r.el.classList.add('flash');
+  }
+
+  root.PW.ui = { init, render, animate, toast, floater, setTab, focusItem, get qty() { return ui.qty; } };
 })(window);
