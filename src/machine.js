@@ -67,12 +67,22 @@
     canvas.style.aspectRatio = `${W} / ${H}`;
     resize();
     root.addEventListener('resize', resize);
+    // Don't draw while the machine is scrolled out of view.
+    if ('IntersectionObserver' in root) {
+      new IntersectionObserver((entries) => { visible = entries[0].isIntersecting; }).observe(canvas);
+    }
     canvas.addEventListener('click', onClick);
     canvas.addEventListener('mousemove', onMove);
   }
 
+  // Quality: 1 = full, 0 = low (lower resolution, 30 fps). Drops automatically
+  // when frames run long, so phones stay smooth.
+  let quality = 1, slowFrames = 0, fastFrames = 0, skip = false, visible = true;
   function resize() {
-    dpr = Math.min(2, root.devicePixelRatio || 1);
+    const r0 = canvas.getBoundingClientRect();
+    // The canvas has ~2300 logical px; more backing pixels than ~1.5× its CSS size is wasted on phones.
+    const cap = quality ? (r0.width < 1300 ? 1.5 : 2) : 1;
+    dpr = Math.min(cap, root.devicePixelRatio || 1);
     const r = canvas.getBoundingClientRect();
     const cssW = Math.max(1, r.width);
     canvas.width = Math.round(cssW * dpr);
@@ -207,7 +217,22 @@
   // ---- The frame --------------------------------------------------------------
 
   function frame(s, d, dt) {
-    if (!ctx || !d) return;
+    if (!ctx || !d || !visible) return;
+    if (!quality) { skip = !skip; if (skip) { pending += dt; return; } dt += pending; pending = 0; }
+    const t0 = performance.now();
+    draw(s, d, dt);
+    adapt(performance.now() - t0, dt);
+  }
+  let pending = 0;
+  function adapt(cost, dt) {
+    // Long draws or a low frame rate for ~2 s in a row → low quality.
+    if (quality && (cost > 8 || dt > 0.025)) { if (++slowFrames > 90) { quality = 0; resize(); } }
+    else slowFrames = Math.max(0, slowFrames - 1);
+    if (!quality && cost < 3 && dt < 0.04) { if (++fastFrames > 600) { quality = 1; fastFrames = 0; resize(); } }
+    else fastFrames = 0;
+  }
+
+  function draw(s, d, dt) {
     if (!bg) bg = buildBackdrop();
     dt = Math.min(dt, 0.1) * (reduceMotion ? 0.25 : 1);
     t.clock += dt;
@@ -403,7 +428,7 @@
   function drawHeader(s, d) {
     const p = headerPath();
     if (d.surging) {
-      ctx.save(); ctx.shadowColor = colors.cool; ctx.shadowBlur = 18; pipe(p, 16); ctx.restore();
+      ctx.globalAlpha = 0.35; line(p, colors.cool, 26); ctx.globalAlpha = 1; pipe(p, 16);
     } else pipe(p, 16);
     if (d.supply > 0) oil(p, t.flow, d.surging ? '#cfe9ff' : colors.oil, 6, [10, 10]);
     text(`HEADER · ${fmt(d.psi)} PSI`, 348, HEADER + 24, { size: 9, color: colors.text });
@@ -657,7 +682,7 @@
       const bh = 34 - 16 * squash, bw = 30 + 20 * squash;
       const glow = ctx.createLinearGradient(0, base - 22 - bh, 0, base - 22);
       glow.addColorStop(0, '#ffd27a'); glow.addColorStop(1, '#e8641c');
-      ctx.save(); ctx.shadowColor = '#ff8a2a'; ctx.shadowBlur = 16;
+      ctx.save(); ctx.globalAlpha = 0.3; rrect(cx - bw / 2 - 6, base - 28 - bh, bw + 12, bh + 10, 8, '#ff8a2a'); ctx.globalAlpha = 1;
       rrect(cx - bw / 2, base - 22 - bh, bw, bh, 4, glow); ctx.restore();
       if (e > 0.85 && Math.random() < 0.7) spark(cx + (Math.random() - 0.5) * bw, base - 24, '#ffb04a', 3);
     },
@@ -767,19 +792,18 @@
     rect(LIFT_X - 10, cupY, 20, 4, colors.steel);
     text('LIFT', LIFT_X, RAIL.y1 + 52, { size: 8, align: 'center' });
     // ball with a highlight
-    const grad = ctx.createRadialGradient(x - 2, y - 2, 1, x, y, 6);
-    grad.addColorStop(0, '#ffffff'); grad.addColorStop(1, running ? '#8a96a3' : '#4a5866');
-    circle(x, y, 6, grad);
+    circle(x, y, 6, running ? '#8a96a3' : '#4a5866');
+    circle(x - 2, y - 2, 2.5, '#ffffff');
   }
 
   // ---- Particles ------------------------------------------------------------------
 
   function puff(x, y, kind) {
-    if (particles.length > 260) return;
+    if (particles.length > (quality ? 260 : 60)) return;
     particles.push({ kind, x, y, vx: (Math.random() - 0.3) * 30, vy: -20 - Math.random() * 30, life: 1 });
   }
   function spark(x, y, color, n = 1) {
-    for (let i = 0; i < n && particles.length < 260; i++) {
+    for (let i = 0; i < n && particles.length < (quality ? 260 : 60); i++) {
       particles.push({ kind: 'spark', color, x, y, vx: (Math.random() - 0.5) * 120, vy: -40 - Math.random() * 80, life: 0.6 });
     }
   }
@@ -837,6 +861,15 @@
     else if (lk.style === 1) { ctx.arc(x, hy - 2, 7.5, Math.PI * 0.9, Math.PI * 2.1); ctx.fill(); }
     else { ctx.arc(x, hy - 1, 7.5, Math.PI, Math.PI * 2); ctx.rect(x - 7.5, hy - 1, 3, 9); ctx.rect(x + 4.5, hy - 1, 3, 9); ctx.fill(); }
     if (label) text(label, x, hy - 12, { size: 8, align: 'center', color: colors.oil, weight: '600' });
+  }
+  const sortCache = {};
+  /** A department's team, strongest first; cached until the team changes. */
+  function sortedTeam(st, id) {
+    const c = sortCache[id];
+    if (c && c.src === st.team && c.n === st.team.length) return c.list;
+    const list = st.team.slice().sort((a, b) => E.effectiveness(b, id) - E.effectiveness(a, id));
+    sortCache[id] = { src: st.team, n: st.team.length, list };
+    return list;
   }
   const OWNER = { skin: '#e0ac69', hair: '#5a3a1e', shirt: '#f2a900', style: 0 };
 
@@ -959,21 +992,27 @@
         return;
       }
 
-      // coverage chip
-      const pct = Math.round(o.coverage * 100);
-      text(`${pct}%`, rx + ROOM_W - 16, 104, { size: 10, align: 'right', color: neck ? colors.pressure : o.coverage < 1 ? colors.oil : colors.ok, weight: '600' });
-      const heads = E.headcount(st);
-      text(`${heads + 1} STAFF`, rx + 16, 118, { size: 8, color: colors.muted });
+      // coverage chip (Engineering shows its Know-how multiplier instead)
+      if (o) {
+        const pct = Math.round(o.coverage * 100);
+        text(`${pct}%`, rx + ROOM_W - 16, 104, { size: 10, align: 'right', color: neck ? colors.pressure : o.coverage < 1 ? colors.oil : colors.ok, weight: '600' });
+      } else {
+        text(`KH ×${E.engKhMult(s).toFixed(1)}`, rx + ROOM_W - 16, 104, { size: 10, align: 'right', color: colors.cool, weight: '600' });
+      }
+      const heads = E.headcount(st) + (st.mgr ? 1 : 0);
+      text(`${heads + 1} STAFF${st.mgr && st.auto && o ? ' · AUTO' : ''}`, rx + 16, 118, { size: 8, color: colors.muted });
 
       // the three best people take the desks; the owner covers an empty department
-      const team = st.team.slice().sort((a, b) => E.effectiveness(b, room.id) - E.effectiveness(a, room.id));
-      const seats = team.length ? team.slice(0, 3).map((p) => ({ lk: look(p.a), name: p.n.split(' ')[0] }))
+      const team = sortedTeam(st, room.id);
+      // the manager takes the first desk
+      const people = (st.mgr ? [st.mgr] : []).concat(team).slice(0, 3);
+      const seats = people.length ? people.map((p) => ({ lk: look(p.a), name: p.n.split(' ')[0], mgr: p === st.mgr }))
         : [{ lk: OWNER, name: 'YOU' }];
       seats.forEach((p, k) => {
         const x = deskX(k, rx);
         const busy = d.demand > 0;
         const bob = busy ? Math.sin(t.clock * (5 + k) + i * 1.3) * 0.8 : 0;
-        person(x, DESK_Y, p.lk, { bob });
+        person(x, DESK_Y, p.lk, { bob, label: p.mgr ? 'MGR' : null });
         // laptop with a screen that flickers while working
         rect(x - 9, DESK_Y - 9, 18, 9, '#2b333c');
         rect(x - 8, DESK_Y - 8, 16, 7, busy && Math.sin(t.clock * 9 + k * 2 + i) > -0.6 ? '#3aa0ff' : '#1d3a57');
@@ -1033,7 +1072,7 @@
     const o = d.order.depts.warehouse;
     const open = E.departmentOpen(s, E.DATA.DEPARTMENTS.find((x) => x.id === 'warehouse'));
     const work = d.demand > 0 ? Math.max(0.25, speed) * (open ? o.coverage : 1) : 0;
-    const team = open ? st.team.slice().sort((a, b) => E.effectiveness(b, 'warehouse') - E.effectiveness(a, 'warehouse')) : [];
+    const team = open ? sortedTeam(st, 'warehouse') : [];
 
     // inbound totes waiting at the end of the conveyor
     for (let k = 0; k < Math.min(wh.inbound, 3); k++) drawTote(BIN_X + 14, BELT - 2 - k * 14, '#59687a');

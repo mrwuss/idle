@@ -16,11 +16,14 @@
   const zeroCounts = (list) => Object.fromEntries(list.map((x) => [x.id, 0]));
   // Order Line departments you staff (Production is the shop floor itself).
   const STAFFED = DATA.DEPARTMENTS.filter((d) => d.group === 'order' && d.id !== 'production');
+  // Departments you hire people into: the Order Line plus Engineering.
+  const HIREABLE = [...STAFFED, DATA.DEPARTMENTS.find((d) => d.id === 'engineering')];
   const DEPT = byId(DATA.DEPARTMENTS);
   // staff: legacy generic hires (saves from before named people); team: hired people;
   // pool: applicants waiting; p0: production when the department opened.
-  const freshDept = () => ({ staff: 0, p0: 0, team: [], pool: [] });
-  const freshDepts = () => Object.fromEntries(STAFFED.map((d) => [d.id, freshDept()]));
+  // mgr: the promoted manager (or null); auto: whether they keep the department staffed.
+  const freshDept = () => ({ staff: 0, p0: 0, team: [], pool: [], mgr: null, auto: true });
+  const freshDepts = () => Object.fromEntries(HIREABLE.map((d) => [d.id, freshDept()]));
 
   function newState() {
     return {
@@ -43,6 +46,8 @@
       locations: { hq: true }, // unlocked branches; kept through Overhaul
       depts: freshDepts(),     // people hired, applicants, and production when each opened (p0)
       seed: (Math.random() * 2 ** 32) >>> 0, // drives applicant generation (deterministic quotes)
+      engUp: {},               // Engineering projects bought this run
+      mgrClock: 0,
       time: 0,
       strokes: 0,
       lastSeen: Date.now(),
@@ -151,7 +156,7 @@
     const production = rawIncome * utilization * tMult * m.patentMult;
     const order = orderLine(s, production);
     const income = production * sMult * order.factor;
-    const khRate = C.khPerSqrtIncome * Math.sqrt(income);
+    const khRate = C.khPerSqrtIncome * Math.sqrt(income) * engKhMult(s);
 
     return {
       m, psi: P, supply, demand, utilization, toAcc, overRelief, accCap: cap, production, order,
@@ -166,6 +171,8 @@
   function tick(s, dt) {
     const d = derive(s);
     snapshotDepts(s, d.production);
+    s.mgrClock += dt;
+    if (s.mgrClock >= C.mgrEvery) { s.mgrClock = 0; managersTick(s, d); }
     const earned = d.income * dt;
     s.cash += earned;
     s.runEarnings += earned;
@@ -377,12 +384,75 @@
     return Math.round((C.effBase + C.effPerPoint * score + bonus) * 100) / 100;
   }
 
+  const LEAD = STAT_INDEX.leadership;
+  /** Leadership (people hired before the stat existed get one from their look). */
+  const leadership = (p) => p.s[LEAD] ?? 1 + (p.a % 10);
+  const mgrBonus = (st) => (st.mgr ? 1 + C.mgrTeamPerPoint * leadership(st.mgr) : 1);
+  const poolSize = (st) => C.poolSize + (st.mgr ? Math.floor(leadership(st.mgr) / C.mgrPoolPer) : 0);
+
   const headcount = (st) => st.staff + st.team.length;
-  const strength = (st, id) => st.staff + st.team.reduce((a, p) => a + effectiveness(p, id), 0);
+  /** Team strength: everyone's effectiveness, lifted by the manager. */
+  const strength = (st, id) => (st.staff + st.team.reduce((a, p) => a + effectiveness(p, id), 0)) * mgrBonus(st);
 
   function fillPool(s, id) {
     const st = s.depts[id];
-    while (st.pool.length < C.poolSize) st.pool.push(newPerson(s));
+    while (st.pool.length < poolSize(st)) st.pool.push(newPerson(s));
+  }
+
+  // ---- Managers ---------------------------------------------------------------
+
+  /** Promote a team member to manager; the previous manager goes back on the team. */
+  function promote(s, id, index) {
+    const st = s.depts[id];
+    if (!st || !st.team[index]) return false;
+    const person = st.team.splice(index, 1)[0];
+    if (st.mgr) st.team.push(st.mgr);
+    st.mgr = person;
+    st.auto = true;
+    fillPool(s, id);
+    return true;
+  }
+  function setAuto(s, id, on) { if (s.depts[id]) s.depts[id].auto = !!on; }
+
+  /** Managers hire the best applicant whenever their department falls short. */
+  function managersTick(s, d) {
+    const hires = [];
+    for (const dept of STAFFED) {
+      const st = s.depts[dept.id];
+      if (!st.mgr || !st.auto) continue;
+      const o = d.order.depts[dept.id];
+      if (!o.open || o.coverage >= 1) continue;
+      // better managers can fill more seats per check
+      const n = 1 + Math.floor(leadership(st.mgr) / 4);
+      for (let k = 0; k < n; k++) {
+        const before = st.team.length;
+        if (!hire(s, dept.id, 1)) break;
+        hires.push({ dept: dept.id, who: st.team[before].n });
+        if (orderLine(s, d.production).depts[dept.id].coverage >= 1) break;
+      }
+    }
+    return hires;
+  }
+
+  // ---- Engineering --------------------------------------------------------------
+
+  function engKhMult(s) {
+    const st = s.depts.engineering;
+    let m = 1 + C.engKhPerStrength * (st ? strength(st, 'engineering') : 0);
+    for (const u of DATA.ENG_UPGRADES) if (s.engUp[u.id]) m *= u.kh;
+    return m;
+  }
+  const ENG = byId(DATA.ENG_UPGRADES);
+  function canBuyEng(s, id) {
+    const u = ENG[id], st = s.depts.engineering;
+    return !!u && !s.engUp[id] && departmentOpen(s, DEPT.engineering) && headcount(st) >= u.engineers
+      && s.cash >= u.cost * mods(s).costMult;
+  }
+  function buyEng(s, id) {
+    if (!canBuyEng(s, id)) return false;
+    s.cash -= ENG[id].cost * mods(s).costMult;
+    s.engUp[id] = true;
+    return true;
   }
 
   // ---- Departments: the Order Line -------------------------------------------
@@ -415,10 +485,10 @@
   /** Remember production at the moment each department opens, and post its first applicants. */
   function snapshotDepts(s, production) {
     const opened = [];
-    for (const dept of STAFFED) {
+    for (const dept of HIREABLE) {
       const st = s.depts[dept.id];
       if (!st.p0 && departmentOpen(s, dept)) { st.p0 = Math.max(1, production); opened.push(dept); }
-      if (st.p0 && st.pool.length < C.poolSize) fillPool(s, dept.id);
+      if (st.p0 && st.pool.length < poolSize(st)) fillPool(s, dept.id);
     }
     return opened;
   }
@@ -516,8 +586,8 @@
       else s[key] = raw[key];
     }
     s.tier = Math.min(s.tier, TIERS.length - 1);
-    // Older saves: departments were { staff, p0 } only.
-    for (const dept of STAFFED) s.depts[dept.id] = { ...freshDept(), ...(s.depts[dept.id] || {}) };
+    // Older saves: departments were { staff, p0 } only, and had no Engineering roster.
+    for (const dept of HIREABLE) s.depts[dept.id] = { ...freshDept(), ...(s.depts[dept.id] || {}) };
     if (!Number.isFinite(s.seed)) s.seed = (Math.random() * 2 ** 32) >>> 0;
     return s;
   }
@@ -529,7 +599,8 @@
     techAvailable, research, click, canSurge, surge,
     patentsTotal, overhaulGain, canOverhaul, overhaul, opensMet, departmentOpen, regionOpen, checkLocations, customerBase, currentEra,
     orderLine, snapshotDepts, hireQuote, hire, hirePerson, rerollPool, rerollCost, staffLineQuote, staffLine,
-    effectiveness, headcount, strength, strokeGal, STAFFED,
+    effectiveness, headcount, strength, strokeGal, STAFFED, HIREABLE,
+    leadership, mgrBonus, poolSize, promote, setAuto, managersTick, engKhMult, canBuyEng, buyEng,
     serialize, deserialize,
   };
   root.PW = root.PW || {};

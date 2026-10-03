@@ -248,6 +248,7 @@
     { id: 'precision',    name: 'Precision',    short: 'PRE' },
     { id: 'numbers',      name: 'Numbers',      short: 'NUM' },
     { id: 'mechanical',   name: 'Mechanical',   short: 'MEC' },
+    { id: 'leadership',   name: 'Leadership',   short: 'LEA' },   // what makes a good manager
   ];
   // Primary stat counts double, secondary once.
   const DEPT_STATS = {
@@ -257,6 +258,7 @@
     warehouse:     ['organization', 'hustle'],
     quality:       ['precision', 'mechanical'],
     accounting:    ['numbers', 'precision'],
+    engineering:   ['mechanical', 'numbers'],
   };
   // Quirks: a bonus to effectiveness in one department ('any' = everywhere).
   const TRAITS = [
@@ -275,11 +277,28 @@
     { id: 'sigma',     name: 'Six Sigma Green Belt',         dept: 'quality',       bonus: 0.25 },
     { id: 'cpa',       name: 'CPA',                          dept: 'accounting',    bonus: 0.30 },
     { id: 'collector', name: 'Collects invoices relentlessly', dept: 'accounting',  bonus: 0.20 },
+    { id: 'pe',        name: 'Licensed P.E.',                dept: 'engineering',   bonus: 0.30 },
+    { id: 'tinkerer',  name: 'Builds test rigs in the garage', dept: 'engineering', bonus: 0.20 },
     { id: 'coffee',    name: 'Makes the good coffee',        dept: 'any',           bonus: 0.08 },
     { id: 'mentor',    name: 'Natural mentor',               dept: 'any',           bonus: 0.12 },
     { id: 'veteran',   name: '30 years in fluid power',      dept: 'any',           bonus: 0.18 },
   ];
   const TRAIT_CHANCE = 0.35;
+
+  // Engineering projects: bought with cash once you have enough engineers;
+  // each multiplies Know-how generation. Reset by Overhaul.
+  const ENG_UPGRADES = [
+    { id: 'cad',     name: 'CAD Workstations',        engineers: 1,  cost: 2e6,  kh: 1.25,
+      desc: '3D models instead of napkin sketches.' },
+    { id: 'lab',     name: 'Hydraulic Test Lab',      engineers: 3,  cost: 3e7,  kh: 1.5,
+      desc: 'A test stand that runs pumps to failure so customers don\'t.' },
+    { id: 'fea',     name: 'Simulation (FEA / CFD)',  engineers: 6,  cost: 5e8,  kh: 1.5,
+      desc: 'Find the weak weld and the hot spot before cutting steel.' },
+    { id: 'appeng',  name: 'Application Engineers',   engineers: 10, cost: 8e9,  kh: 1.75,
+      desc: 'Engineers in the field who come back with problems worth solving.' },
+    { id: 'rnd',     name: 'R&D Center',              engineers: 16, cost: 1.5e11, kh: 2,
+      desc: 'A whole building for asking "what if?"' },
+  ];
   // Fictional names, mixed and combined at random.
   const FIRST_NAMES = ['Ava', 'Ben', 'Carmen', 'Dale', 'Esther', 'Frank', 'Gloria', 'Hank', 'Imani', 'Jorge',
     'Kayla', 'Luis', 'Marisol', 'Ned', 'Olga', 'Priya', 'Quinn', 'Rosa', 'Sven', 'Tamika', 'Ulrich', 'Vera',
@@ -325,7 +344,11 @@
     rerollS: 3,             // a fresh batch of applicants costs this many seconds of production
     effBase: 0.45,          // effectiveness = effBase + effPerPoint × (2×primary + secondary)/3 + trait
     effPerPoint: 0.11,      // …so an average applicant counts as ~1.05 staff, a star ~1.6
-    strokeShare: 0.02,      // a hand-pump stroke adds this share of accumulator capacity
+    strokeShare: 0.02,
+    engKhPerStrength: 0.05, // each staff-equivalent in Engineering adds 5% Know-how
+    mgrTeamPerPoint: 0.03,  // a manager adds 3% team strength per Leadership point
+    mgrPoolPer: 3,          // …and reviews 1 more applicant per 3 Leadership points
+    mgrEvery: 2,            // seconds between a manager's staffing checks      // a hand-pump stroke adds this share of accumulator capacity
     overhaulMin: 1e6,       // lifetime $ before the first Overhaul is offered
     patentDivisor: 1e6,     // patents = floor(√(lifetime $ / 1e6))
     patentBonus: 0.10,      // +10% income per patent (additive)
@@ -333,7 +356,7 @@
   };
 
   const DATA = { PUMPS, ACTUATORS, TIERS, COOLERS, TECH, ERAS, DEPARTMENTS, PAKS, REGIONS, STATES,
-    STATS, DEPT_STATS, TRAITS, TRAIT_CHANCE, FIRST_NAMES, LAST_NAMES, CONSTANTS };
+    STATS, DEPT_STATS, TRAITS, TRAIT_CHANCE, FIRST_NAMES, LAST_NAMES, ENG_UPGRADES, CONSTANTS };
   root.PW = root.PW || {};
   root.PW.DATA = DATA;
   if (typeof module !== 'undefined') module.exports = DATA;

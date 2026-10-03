@@ -61,8 +61,23 @@
 
   // Hiring buttons inside re-rendered department cards.
   document.addEventListener('click', (ev) => {
-    const b = ev.target.closest('[data-hire], [data-hire-best], [data-reroll]');
+    const b = ev.target.closest('[data-hire], [data-hire-best], [data-reroll], [data-promote], [data-auto], [data-eng]');
     if (!b || b.disabled) return;
+    if (b.dataset.promote) {
+      const p = state.depts[b.dataset.promote].team[Number(b.dataset.idx)];
+      if (E.promote(state, b.dataset.promote, Number(b.dataset.idx))) {
+        SFX.play('upgrade');
+        UI.toast(`<b>${p.n}</b> is now the ${E.DATA.DEPARTMENTS.find((x) => x.id === b.dataset.promote).name} manager.`, 3500);
+      }
+      return render();
+    }
+    if (b.dataset.auto) { E.setAuto(state, b.dataset.auto, !state.depts[b.dataset.auto].auto); SFX.play('tab', 0.6); return render(); }
+    if (b.dataset.eng) {
+      const ok = E.buyEng(state, b.dataset.eng);
+      SFX.play(ok ? 'research' : 'cant');
+      if (ok) UI.toast(`Built <b>${E.DATA.ENG_UPGRADES.find((u) => u.id === b.dataset.eng).name}</b>.`);
+      return render();
+    }
     let ok = false, who = null;
     if (b.dataset.hire) {
       const st = state.depts[b.dataset.hire], p = st.pool[Number(b.dataset.idx)];

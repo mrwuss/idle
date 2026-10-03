@@ -234,7 +234,7 @@ textarea { width: 100%; background: #0f1317; color: var(--text); border: 1px sol
   width: 18px; height: 18px; display: inline-grid; place-items: center; margin-right: -2px;
 }
 .dept-head .dept-step + .dept-name { margin-right: auto; }
-.dept-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 8px; }
+.dept-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 8px; }
 .dept, .pak {
   background: var(--panel-2); border: 1px solid var(--edge); border-radius: var(--radius);
   padding: 8px 10px; display: grid; gap: 4px; align-content: start; position: relative;
@@ -340,3 +340,13 @@ textarea { width: 100%; background: #0f1317; color: var(--text); border: 1px sol
 .team li .person { grid-template-columns: 24px 1fr auto; }
 
 .order-line .dept, .dept-grid .dept { align-self: start; }
+
+/* ---- managers & engineering ---- */
+.mgr { display: grid; grid-template-columns: 24px 1fr auto; gap: 6px; align-items: center; padding: 6px; border: 1px solid var(--oil-dim); border-radius: 4px; background: rgba(242,169,0,0.06); }
+.mgr.none { display: block; font-size: 11px; color: var(--muted); border-style: dashed; border-color: var(--edge); background: none; }
+.mgr b { color: var(--text); }
+.p-lea { font: 10px var(--font-mono); color: var(--cool); white-space: nowrap; }
+.team li .person { grid-template-columns: 24px 1fr auto auto auto; }
+.eng-ups { display: grid; gap: 4px; }
+.eng-up { display: grid; grid-template-columns: 1fr auto; gap: 6px; align-items: center; }
+.eng-up.owned .p-name { color: var(--ok); }

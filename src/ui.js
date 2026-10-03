@@ -138,7 +138,7 @@
   // department will do and when it opens; nothing here affects income yet.
   const deptEls = {}, pakEls = {};
   const ROMAN = ['I', 'II', 'III', 'IV', 'V', 'VI'];
-  const staffed = (id) => E.STAFFED.some((d) => d.id === id);
+  const staffed = (id) => E.HIREABLE.some((d) => d.id === id);
 
   // ---- People ----------------------------------------------------------------
   const look = root.PW.format.look;
@@ -177,6 +177,8 @@
         ${staffed(d.id) ? `<div class="dept-staff" hidden>
           <div class="staff-text"></div>
           <div class="cov" title="Coverage: team strength ÷ staff needed"><div></div></div>
+          <div class="mgr-box"></div>
+          ${d.id === 'engineering' ? '<div class="eng-ups"></div>' : ''}
           <div class="applicants"></div>
           <details class="team"><summary></summary><ul></ul></details>
         </div>` : ''}
@@ -186,7 +188,7 @@
       deptEls[d.id] = { el, status: q('.dept-status'), prog: q('.dept-progress'), bar: q('.dept-progress div'),
         staff: q('.dept-staff'), staffText: q('.staff-text'), cov: q('.cov div'),
         applicants: q('.applicants'), team: q('.team'), teamSum: q('.team summary'), teamList: q('.team ul'),
-        twist: q('.dept-twist') };
+        twist: q('.dept-twist'), mgr: q('.mgr-box'), eng: q('.eng-ups') };
       return el;
     };
     const line = $('order-line'), support = $('support-depts');
@@ -265,6 +267,89 @@
     return 'Opens: ' + parts.join(' or ');
   }
 
+  /** A department you hire into: coverage, manager, applicants, team (and Engineering projects). */
+  function renderStaffed(s, dd, d, r) {
+    const o = dd.order, st = s.depts[d.id], isEng = d.id === 'engineering';
+    const c = o.depts[d.id];
+    const strength = E.strength(st, d.id), heads = E.headcount(st);
+    r.staff.hidden = false;
+    r.twist.hidden = true;
+    if (isEng) {
+      const kh = E.engKhMult(s);
+      r.status.textContent = `Know-how ×${kh.toFixed(2)}`;
+      r.staffText.textContent = `You + ${heads} engineers · strength ${(1 + strength).toFixed(1)} · +${Math.round(strength * E.DATA.CONSTANTS.engKhPerStrength * 100)}% Know-how from the team`;
+      r.cov.parentElement.hidden = true;
+    } else {
+      const neck = o.bottleneck === d.id && o.factor < 0.999;
+      r.el.classList.toggle('neck', neck);
+      r.status.textContent = neck ? `Bottleneck · ${Math.round(c.coverage * 100)}%` : `Covered · ${Math.round(c.coverage * 100)}%`;
+      const reach = c.reach !== 1 ? ` · reach ×${c.reach.toFixed(2)}` : '';
+      r.staffText.textContent = `You + ${heads} hired · strength ${(1 + strength).toFixed(1)}${reach} · needs ${c.required.toFixed(1)}`;
+      r.cov.style.width = `${Math.min(100, c.coverage * 100)}%`;
+      r.cov.parentElement.classList.toggle('short', c.coverage < 0.999);
+    }
+
+    // Manager
+    if (st.mgr) {
+      const lea = E.leadership(st.mgr);
+      setPart(r.mgr, `<div class="mgr">${avatar(st.mgr.a)}
+        <div class="p-main"><span class="p-name"><b>${st.mgr.n}</b> · Manager</span>
+          <span class="p-stats">LEA ${lea} · team +${Math.round((E.mgrBonus(st) - 1) * 100)}% · reviews ${E.poolSize(st)} applicants${isEng ? '' : ` · fills ${1 + Math.floor(lea / 4)}/check`}</span></div>
+        ${isEng ? '' : `<button class="btn mini ${st.auto ? '' : 'ghost'}" data-auto="${d.id}" title="When on, the manager hires the best applicant whenever the department falls short">${st.auto ? 'Auto-hire on' : 'Auto-hire off'}</button>`}
+      </div>`);
+    } else {
+      setPart(r.mgr, `<div class="mgr none">No manager yet. Promote someone with high <b>Leadership</b> (LEA) from the team: they'll boost everyone${isEng ? '' : ', review more applicants and keep the department staffed'}.</div>`);
+    }
+
+    // Engineering projects
+    if (isEng) {
+      const key = E.DATA.ENG_UPGRADES.map((u) => (s.engUp[u.id] ? 1 : 0)).join('') + heads;
+      if (r.eng._key !== key) {
+        r.eng._key = key;
+        r.eng.innerHTML = `<div class="app-head">Engineering projects</div>` + E.DATA.ENG_UPGRADES.map((u) => {
+          const owned = s.engUp[u.id], ready = heads >= u.engineers;
+          return `<div class="eng-up${owned ? ' owned' : ''}"><div class="p-main"><span class="p-name">${u.name} <b>×${u.kh} KH</b></span>
+            <span class="p-stats">${owned ? 'Built' : ready ? u.desc : `Needs ${u.engineers} engineer${u.engineers > 1 ? 's' : ''} (have ${heads})`}</span></div>
+            ${owned ? '<span class="p-eff good">✓</span>' : `<button class="btn mini" data-eng="${u.id}">$${fmt(u.cost * dd.m.costMult)}<small>build</small></button>`}</div>`;
+        }).join('');
+      }
+      r.eng.querySelectorAll('[data-eng]').forEach((b) => (b.disabled = !E.canBuyEng(s, b.dataset.eng)));
+    }
+
+    // Applicants: rebuild rows only when they change; prices update in place so clicks aren't lost.
+    const one = E.hireQuote(s, d.id, 1), many = E.hireQuote(s, d.id, ui.qty), rr = E.rerollCost(s);
+    const key = st.pool.map((p) => p.n + p.a).join('|');
+    if (r.applicants._key !== key) {
+      r.applicants._key = key;
+      r.applicants.innerHTML = `<div class="app-head">Applicants${st.mgr ? ` · screened by ${st.mgr.n.split(' ')[0]}` : ''}</div>${st.pool.map((p, i) =>
+        personRow(p, d.id, `<button class="btn mini" data-hire="${d.id}" data-idx="${i}"></button>`)).join('')}
+        <div class="app-actions">
+          <button class="btn mini" data-hire-best="${d.id}"></button>
+          <button class="btn mini ghost" data-reroll="${d.id}"></button>
+        </div>`;
+    }
+    const setBtn = (b, cost, label) => {
+      const html = `$${fmt(cost)}<small>${label}</small>`;
+      if (b._html !== html) { b._html = html; b.innerHTML = html; }
+      b.disabled = cost > s.cash;
+    };
+    r.applicants.querySelectorAll('[data-hire]').forEach((b) => setBtn(b, one.cost, 'hire'));
+    setBtn(r.applicants.querySelector('[data-hire-best]'), many.cost, `hire best ${many.qty}`);
+    setBtn(r.applicants.querySelector('[data-reroll]'), rr, 'new applicants');
+
+    // Team roster, strongest first, with Leadership and a Promote button
+    const tkey = st.team.length + '|' + (st.mgr ? st.mgr.n : '') + '|' + st.staff;
+    if (r.teamList._key !== tkey) {
+      r.teamList._key = tkey;
+      const team = st.team.map((p, i) => [p, i]).sort((x, y) => E.effectiveness(y[0], d.id) - E.effectiveness(x[0], d.id));
+      r.teamSum.textContent = `Team (${heads})${team.length ? ` · best: ${team[0][0].n} ×${E.effectiveness(team[0][0], d.id).toFixed(2)}` : ''}`;
+      r.teamList.innerHTML = (st.staff ? `<li class="muted">${st.staff} hired before named staff (×1.00 each)</li>` : '') +
+        team.map(([p, i]) => `<li>${personRow(p, d.id, `<span class="p-lea" title="Leadership">LEA ${E.leadership(p)}</span>
+          <button class="btn mini ghost" data-promote="${d.id}" data-idx="${i}">${st.mgr ? 'Make manager' : 'Promote'}</button>`)}</li>`).join('');
+    }
+    r.team.hidden = !heads;
+  }
+
   function renderCompany(s, dd) {
     renderTerritory(s);
     const era = E.currentEra(s);
@@ -285,44 +370,8 @@
       r.el.classList.remove('neck');
       if (d.id === 'production') r.status.textContent = `Active · $${fmt(dd.production)}/s of work`;
       else if (!open) r.status.textContent = opensText(s, d);
-      else if (staffed(d.id)) {
-        const c = o.depts[d.id], st = s.depts[d.id];
-        const neck = o.bottleneck === d.id && o.factor < 0.999;
-        r.el.classList.toggle('neck', neck);
-        r.status.textContent = neck ? `Bottleneck · ${Math.round(c.coverage * 100)}%` : `Covered · ${Math.round(c.coverage * 100)}%`;
-        r.staff.hidden = false;
-        r.twist.hidden = true;
-        const strength = E.strength(st, d.id), heads = E.headcount(st);
-        const reach = c.reach !== 1 ? ` · reach ×${c.reach.toFixed(2)}` : '';
-        r.staffText.textContent = `You + ${heads} hired · strength ${(1 + strength).toFixed(1)}${reach} · needs ${c.required.toFixed(1)}`;
-        r.cov.style.width = `${Math.min(100, c.coverage * 100)}%`;
-        r.cov.parentElement.classList.toggle('short', c.coverage < 0.999);
-        const one = E.hireQuote(s, d.id, 1), many = E.hireQuote(s, d.id, ui.qty), rr = E.rerollCost(s);
-        // Rebuild rows only when the applicants change; prices update in place so clicks aren't lost.
-        const key = st.pool.map((p) => p.n + p.a).join('|');
-        if (r.applicants._key !== key) {
-          r.applicants._key = key;
-          r.applicants.innerHTML = `<div class="app-head">Applicants</div>${st.pool.map((p, i) =>
-            personRow(p, d.id, `<button class="btn mini" data-hire="${d.id}" data-idx="${i}"></button>`)).join('')}
-            <div class="app-actions">
-              <button class="btn mini" data-hire-best="${d.id}"></button>
-              <button class="btn mini ghost" data-reroll="${d.id}"></button>
-            </div>`;
-        }
-        const setBtn = (b, cost, label) => {
-          const html = `$${fmt(cost)}<small>${label}</small>`;
-          if (b._html !== html) { b._html = html; b.innerHTML = html; }
-          b.disabled = cost > s.cash;
-        };
-        r.applicants.querySelectorAll('[data-hire]').forEach((b) => setBtn(b, one.cost, 'hire'));
-        setBtn(r.applicants.querySelector('[data-hire-best]'), many.cost, `hire best ${many.qty}`);
-        setBtn(r.applicants.querySelector('[data-reroll]'), rr, 'new applicants');
-        const team = st.team.slice().sort((x, y) => E.effectiveness(y, d.id) - E.effectiveness(x, d.id));
-        setPart(r.teamSum, `Team (${heads})${team.length ? ` · best: ${team[0].n} ×${E.effectiveness(team[0], d.id).toFixed(2)}` : ''}`, true);
-        setPart(r.teamList, (st.staff ? `<li class="muted">${st.staff} hired before named staff (×1.00 each)</li>` : '') +
-          team.map((p) => `<li>${personRow(p, d.id)}</li>`).join(''));
-        r.team.hidden = !heads;
-      } else r.status.textContent = 'Open · hiring coming soon';
+      else if (staffed(d.id)) renderStaffed(s, dd, d, r);
+      else r.status.textContent = 'Open · hiring coming soon';
       r.prog.hidden = open || d.opens.lifetime == null;
       if (!open && d.opens.lifetime != null) {
         // log scale so early progress is visible
