@@ -7,6 +7,11 @@ the style.
 
 ## In use
 
+**Brand:** IFP's colors, font and the official iFP logo (`assets/brand/`, drawn by `src/brand.js`); see
+[CREDITS.md](../CREDITS.md). Themes are CSS variables at the top of `style.css`
+(light by default, `data-theme="dark"` on `<html>` for the shop floor); the machine
+canvas always reads the dark set from its wrapper.
+
 **Sound effects:** 12 clips from Kenney (CC0), listed in
 [CREDITS.md](../CREDITS.md). They're wired up in `src/audio.js`. A mute toggle
 sits in the header (keyboard `M`) and is remembered per browser.

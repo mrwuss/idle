@@ -26,9 +26,22 @@ Each clip was converted from OGG to mono MP3 and volume-matched to about
 
 ## Fonts
 
-[Oswald](https://fonts.google.com/specimen/Oswald) and
+[Nunito Sans](https://fonts.google.com/specimen/Nunito+Sans) (IFP's website font) and
 [JetBrains Mono](https://fonts.google.com/specimen/JetBrains+Mono) via Google Fonts
 (SIL Open Font License).
+
+## IFP brand
+
+The iFP mark and colors belong to IFP Motion Solutions, Inc. and are used here
+for IFP's own game with the company's permission (an exception to the CC0-only
+rule). Files in `assets/brand/`, taken from [ifpusa.com](https://www.ifpusa.com/):
+
+| File | Source | Used for |
+|---|---|---|
+| `ifp-logo.png` | `wp-content/uploads/2021/09/IFP-logo.png` (150 × 79) | header, ID badges, power unit, trailers |
+| `ifp-favicon.png` | `wp-content/uploads/2022/02/cropped-IFP-favicon-270x270.png` | browser tab icon |
+
+Brand colors: orange-red `#f04b25`, charcoal `#333333`.
 
 ## Everything else
 

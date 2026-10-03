@@ -236,9 +236,15 @@ Ordered roughly by how much they add per unit of work. See [ROADMAP.md](ROADMAP.
 
 ## 8. Presentation
 
-- **Visual language:** shop-floor industrial. Dark steel panels, hydraulic-oil
-  amber for flow, pressure red, coolant blue. Equipment icons follow ISO 1219
-  schematic symbols so the art doubles as a primer.
+- **Visual language:** IFP's own brand, from ifpusa.com. The default **Light**
+  theme matches the website: white panels, charcoal `#333` text, IFP orange-red
+  `#f04b25` for accents, Nunito Sans type, and the official **iFP** logo in the
+  header, on ID badges, on the power unit and on the trailers.
+  A **Dark** "shop floor" theme (Logbook → Display) keeps the original steel
+  look with the same orange accent. The machine itself is always drawn dark, like
+  a control-room screen, with hydraulic-oil amber for flow, pressure red and
+  coolant blue. Equipment icons follow ISO 1219 schematic symbols so the art
+  doubles as a primer.
 - **The Works** is the main screen's hero: a full-width cross-section of the
   whole facility, built from what the player actually owns.
   - **Office mezzanine** across the top: a room per department. Your three
