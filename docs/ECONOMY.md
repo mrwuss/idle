@@ -35,6 +35,8 @@ update the tables here.
 | Hand-pump charge | `max(0.25 gal, 2% of accumulator capacity)` per stroke |
 | Total income | `production × surge × Order Line factor × surplus bonus` |
 | Patents (total) | `floor(2 × ∛(lifetime $ / 1,000,000))` (was √; the cube root stops the late-run snowball) |
+| Executives | skill `(2 × LEA + key stat) ÷ 3`; division strength × `(1 + 0.03 × skill)`; President income × `(1 + 0.02 × skill)` |
+| Board seats | 3 / 8 / 20 / 50 / 120 Patents (spent, not refunded); perks multiply |
 | Achievements | +1% income each (23 in all, kept through Overhaul) |
 | Safety streak | +1% income per 10 min without an incident, max +25% |
 | IT / Management | Order Line strength × (1 + 4% × IT strength, max ×2) × (1 + 2% × Management strength, max ×1.5) |
@@ -105,17 +107,17 @@ The simulator plays a greedy bot that always buys whatever gives the best
 on cooldown. A human will be slower early (reading, learning) and faster in
 places the bot is naïve about, so treat these as relative pacing.
 
-| Milestone | Target | Bot (first run: departments, achievements, surplus staff, Pak lines) |
+| Milestone | Target | Bot (first run: departments, achievements, surplus, Paks, executives) |
 |---|---|---|
 | First splitter | < 3 min | 2m 45s |
-| 2-Wire Braid (3,000 psi) | ~10 min | 9m 20s |
-| First excavator | ~10 min | 13m 10s |
-| $1M lifetime (Overhaul unlocks) | 20–40 min | 18m 30s |
-| First forging press | ~45 min | 40m |
-| $1B lifetime | 1–2 h | 1h 02m |
-| First ship lift | 1–2 h | 1h 03m |
-| All 17 techs | 3–5 h | ~1h 41m |
-| Run 1 plateau | 2–4 h | ~66M/s around 3–6 h (heat wall at 200°F) |
+| 2-Wire Braid (3,000 psi) | ~10 min | 9m 30s |
+| First excavator | ~10 min | 13m |
+| $1M lifetime (Overhaul unlocks) | 20–40 min | 19m |
+| First forging press | ~45 min | 39m |
+| $1B lifetime | 1–2 h | 1h 06m (executives arrive) |
+| First ship lift | 1–2 h | 1h 07m |
+| All 17 techs | 3–5 h | ~1h 33m |
+| Run 1 plateau | 2–4 h | ~160M/s by 6 h (heat wall at 200°F) |
 
 The bot hires into the bottleneck before buying anything else, promotes
 managers and keeps IT, Safety, Management and Purchasing staffed. Achievements
@@ -123,7 +125,12 @@ managers and keeps IT, Safety, Management and Purchasing staffed. Achievements
 every department to ~150–170% coverage) add ~40% by the end of run 1. The bot
 also staffs Engineering and runs the Pak line toward Sys-Paks: Paks earn ~11%
 of run-1 lifetime ($128B of $1.12T). At 15 s per Pak value the extra cash tipped
-the bot past the heat wall (4× end income), so the price is kept at 10 s. Runs vary
+the bot past the heat wall (4× end income), so the price is kept at 10 s.
+Executives open with Management at ~$1B; the bot seats all four (skill 9–10 by
+the end) and a President, which lifts end-of-run income from ~66M/s to ~160M/s
+(surplus +57%, President +14%) and lifetime from $1.1T to $2.1T. With
+`--overhaul` the bot fills all five Board seats and does 11 Overhauls in 6h44m
+(999 patents earned, 271 spent on the Board). Runs vary
 by a minute or two because applicants come from a random seed.
 
 **Research is too fast:** the bot finishes the tree at ~1h40m against a 3–5 h

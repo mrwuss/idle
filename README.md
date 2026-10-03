@@ -35,6 +35,7 @@ tap the machine for full screen, and turn the phone sideways to see it large.
 - **Overhaul** (prestige) trades everything for **Patents**, each one +10% income forever.
 - **Departments** open as you grow. Each needs more staff as production climbs, and the Order Line runs at its least-covered department. Hire on the **Company** tab from a pool of applicants: random people whose stats and quirks suit some jobs better than others. Promote your best leaders to **manager** and they'll keep the department staffed.
 - **Engineering** opens mid-game with three teams: Design multiplies Know-how, Controls makes automation research cheaper, and Project builds **Valve-Paks → Base-Paks → Sys-Paks** to sell.
+- Later, an **executive team** (CRO, COO, CFO, CTO) runs whole divisions for you: managers, hiring, replacing weak staff. Name a **President**, and spend Patents on a **Board of Directors** whose perks last forever.
 - Tap a department for its focus view, and tap anyone's face for their **ID badge**: every stat explained, how well they fit the job, and Hire / Promote buttons.
 - **Support departments** (IT, Safety, Management, Purchasing) boost the Order Line, prevent incidents and cut equipment costs.
 - **Achievements** in the Logbook each add +1% income, and first-time tips explain each mechanic when it first matters.

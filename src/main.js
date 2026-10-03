@@ -61,8 +61,28 @@
 
   // Hiring buttons inside re-rendered department cards.
   document.addEventListener('click', (ev) => {
-    const b = ev.target.closest('[data-hire], [data-hire-best], [data-reroll], [data-promote], [data-auto], [data-eng], [data-engteam], [data-pak-target]');
+    const b = ev.target.closest('[data-hire], [data-hire-best], [data-reroll], [data-promote], [data-auto], [data-eng], [data-engteam], [data-pak-target], [data-exec-appoint], [data-exec-hire], [data-exec-dismiss], [data-exec-pres], [data-board-elect]');
     if (!b || b.disabled) return;
+    const X = E.DATA.EXECS.find((x) => x.id === (b.dataset.execAppoint || b.dataset.execHire || b.dataset.execDismiss || b.dataset.execPres));
+    if (b.dataset.execAppoint || b.dataset.execHire) {
+      const src = b.dataset.execHire ? { pool: Number(b.dataset.idx) } : { dept: b.dataset.dept, kind: b.dataset.kind, idx: Number(b.dataset.idx) };
+      const ok = E.appointExec(state, X.id, src);
+      SFX.play(ok ? 'upgrade' : 'cant');
+      if (ok) UI.toast(`<b>${state.execs[X.id].n}</b> is your new ${X.short}. They'll start running ${X.depts.length} departments right away.`, 4500);
+      return render();
+    }
+    if (b.dataset.execDismiss) { E.dismissExec(state, X.id); SFX.play('tab', 0.6); return render(); }
+    if (b.dataset.execPres) {
+      if (E.appointPresident(state, X.id)) { SFX.play('location'); UI.toast(`<b>${state.president.n}</b> is the President of IFP MSI.`, 4500); UI.openDept('exec:pres'); }
+      return render();
+    }
+    if (b.dataset.boardElect != null) {
+      const c = state.boardPool[Number(b.dataset.boardElect)];
+      const ok = E.electDirector(state, Number(b.dataset.boardElect));
+      SFX.play(ok ? 'research' : 'cant');
+      if (ok) UI.toast(`<b>${c.n}</b> joins the Board.`, 3500);
+      return render();
+    }
     if (b.dataset.engteam) {
       const who = b.dataset.who === 'mgr' ? 'mgr' : Number(b.dataset.who);
       if (E.setEngTeam(state, who, b.dataset.engteam)) SFX.play('tab', 0.6);
@@ -263,6 +283,8 @@
       msg: '<b>Pressure upgrade affordable.</b> Higher psi unlocks new actuators and makes every line pay more. See the System tab.' },
     { id: 'engineering', when: (s) => E.pakOpen(s),
       msg: '<b>Engineering is open.</b> Engineers join a team: Design (Know-how), Controls (cheaper Controls research) or Project (builds Paks you sell). Tap a face on the Company tab to see their ID and move them.' },
+    { id: 'execs', when: (s) => E.execOpen(s),
+      msg: '<b>Executives are available.</b> A CFO, COO, CRO or CTO runs a whole division on their own: managers, hiring, replacing weak staff. See Leadership on the Company tab.' },
     { id: 'promote', when: (s) => E.HIREABLE.some((x) => !s.depts[x.id].mgr && E.headcount(s.depts[x.id]) >= 4),
       msg: '<b>Time for a manager.</b> Promote someone with high Leadership on the Company tab; managers boost their team and keep it staffed.' },
   ];

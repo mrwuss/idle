@@ -47,6 +47,10 @@
       depts: freshDepts(),     // people hired, applicants, and production when each opened (p0)
       seed: (Math.random() * 2 ** 32) >>> 0, // drives applicant generation (deterministic quotes)
       engUp: {},               // Engineering projects bought this run
+      execs: { cro: null, coo: null, cfo: null, cto: null }, // executives (people), by seat
+      execPool: { cro: [], coo: [], cfo: [], cto: [] },       // outside candidates per seat
+      president: null, execClock: 0, execLog: [],
+      board: [], boardPool: [], patentsSpent: 0,               // directors survive Overhaul
       pak: { target: 'valve', building: 'valve', work: 0, stock: { valve: 0, base: 0 }, built: { valve: 0, base: 0, sys: 0 }, earned: 0 },
       mgrClock: 0,
       safety: { streak: 0, incident: null, seed: (Math.random() * 2 ** 32) >>> 0 },
@@ -82,7 +86,7 @@
       if (e.offlineCapH) m.offlineCapH = Math.max(m.offlineCapH, e.offlineCapH);
     }
     m.patentMult = 1 + C.patentBonus * s.patents;
-    m.costMult *= purchasingDiscount(s);
+    m.costMult *= purchasingDiscount(s) * boardEff(s, 'costMult');
     return m;
   }
 
@@ -159,10 +163,11 @@
     const sMult = surging ? m.surgeMult : 1;
 
     // What the shop floor can do, then what the Order Line lets through.
-    const production = rawIncome * utilization * tMult * m.patentMult * safetyStreakMult(s) * achievementMult(s);
+    const production = rawIncome * utilization * tMult * m.patentMult * safetyStreakMult(s) * achievementMult(s)
+      * presidentMult(s) * boardEff(s, 'incomeMult');
     const order = orderLine(s, production);
     const income = production * sMult * order.factor * order.bonus;
-    const khRate = C.khPerSqrtIncome * Math.sqrt(income) * engKhMult(s);
+    const khRate = C.khPerSqrtIncome * Math.sqrt(income) * engKhMult(s) * boardEff(s, 'khMult');
 
     return {
       m, psi: P, supply, demand, utilization, toAcc, overRelief, accCap: cap, production, order,
@@ -181,6 +186,8 @@
     s.mgrClock += dt;
     if (s.mgrClock >= C.mgrEvery) { s.mgrClock = 0; managersTick(s, d); }
     pakTick(s, d, dt);
+    s.execClock += dt;
+    if (s.execClock >= C.execEvery) { s.execClock = 0; execTick(s, d); }
     const earned = d.income * dt;
     s.cash += earned;
     s.runEarnings += earned;
@@ -320,7 +327,7 @@
   // ---- Prestige: Overhaul --------------------------------------------------
 
   const patentsTotal = (lifetime) => Math.floor(C.patentScale * Math.cbrt(lifetime / C.patentDivisor));
-  const overhaulGain = (s) => Math.max(0, patentsTotal(s.lifetime) - s.patents);
+  const overhaulGain = (s) => Math.max(0, patentsTotal(s.lifetime) - s.patents - (s.patentsSpent || 0));
   const canOverhaul = (s) => s.lifetime >= C.overhaulMin && overhaulGain(s) > 0;
 
   function overhaul(s) {
@@ -328,7 +335,7 @@
     const keep = {
       patents: s.patents + overhaulGain(s), lifetime: s.lifetime,
       overhauls: s.overhauls + 1, strokes: s.strokes, time: s.time, locations: s.locations, seed: s.seed,
-      ach: s.ach, tips: s.tips,
+      ach: s.ach, tips: s.tips, board: s.board, boardPool: s.boardPool, patentsSpent: s.patentsSpent,
     };
     Object.assign(s, newState(), keep);
     return true;
@@ -375,7 +382,7 @@
 
   const openStrength = (s, id) => {
     const st = s.depts && s.depts[id];
-    return st && st.p0 && departmentOpen(s, DEPT[id]) ? strength(st, id) : 0;
+    return st && st.p0 && departmentOpen(s, DEPT[id]) ? strength(st, id) * execMult(s, id) : 0;
   };
   /** IT: every Order Line department works harder (ERP, networks, the help desk). */
   const itMult = (s) => 1 + Math.min(C.itMax, C.itPerStrength * openStrength(s, 'it'));
@@ -389,7 +396,7 @@
   function incidentRate(s, d) {
     if (d.psi < C.incidentMinPsi || d.demand === 0) return 0;
     const heat = Math.max(0.5, s.temp / d.tempLimit);
-    return (C.incidentPerMin / 60) * (d.psi / 3000) * heat / (1 + C.safetyPer * openStrength(s, 'safety'));
+    return (C.incidentPerMin / 60) * (d.psi / 3000) * heat * boardEff(s, 'incidentMult') / (1 + C.safetyPer * openStrength(s, 'safety'));
   }
   function safetyRand(s) {
     let t = (s.safety.seed = (s.safety.seed + 0x6d2b79f5) >>> 0);
@@ -457,7 +464,7 @@
   /** Leadership (people hired before the stat existed get one from their look). */
   const leadership = (p) => p.s[LEAD] ?? 1 + (p.a % 10);
   const mgrBonus = (st) => (st.mgr ? 1 + C.mgrTeamPerPoint * leadership(st.mgr) : 1);
-  const poolSize = (st, s) => C.poolSize + (st.mgr ? Math.floor(leadership(st.mgr) / C.mgrPoolPer) : 0) + (s ? mgmtPool(s) : 0);
+  const poolSize = (st, s) => C.poolSize + (st.mgr ? Math.floor(leadership(st.mgr) / C.mgrPoolPer) : 0) + (s ? mgmtPool(s) + boardEff(s, 'poolPlus', true) : 0);
 
   const headcount = (st) => st.staff + st.team.length;
   /** Team strength: everyone's effectiveness (the manager still works too), lifted by the manager. */
@@ -519,7 +526,7 @@
     let sum = team === 'design' ? st.staff : 0;
     for (const p of st.team) if (engTeamOf(p) === team) sum += effectiveness(p, 'engineering');
     if (st.mgr && engTeamOf(st.mgr) === team) sum += effectiveness(st.mgr, 'engineering');
-    return sum * mgrBonus(st) * mgmtMult(s);
+    return sum * mgrBonus(st) * mgmtMult(s) * execMult(s, 'engineering');
   }
   /** New engineers join the smallest team (ties: Design, Project, Controls). */
   function leastEngTeam(st) {
@@ -564,16 +571,16 @@
    */
   function orderLine(s, production) {
     const out = { depts: {}, factor: 1, bottleneck: null, bonus: 1 };
-    const reach = Math.sqrt(customerBase(s) / Math.max(1, customerBase(null, 'hq')));
+    const reach = Math.sqrt(customerBase(s) / Math.max(1, customerBase(null, 'hq'))) * boardEff(s, 'reachMult');
     const it = itMult(s), mg = mgmtMult(s);
     for (const dept of STAFFED) {
       const st = s.depts[dept.id];
       const open = departmentOpen(s, dept);
       if (!open || !st.p0) { out.depts[dept.id] = { open, required: 1, effective: 1, coverage: 1, load: 1, bonus: 0, reach: 1 }; continue; }
       const growth = Math.max(0, Math.log10(Math.max(production, 1) / st.p0));
-      const required = 1 + C.deptPerDecade * growth;
+      const required = (1 + C.deptPerDecade * growth) * boardEff(s, 'needMult');
       const r = dept.id === 'outside_sales' ? reach : 1;
-      const effective = (1 + strength(st, dept.id) * it * mg) * r;
+      const effective = (1 + strength(st, dept.id) * it * mg * execMult(s, dept.id)) * r;
       const load = effective / required, coverage = Math.min(1, load);
       // Staffing past 100% isn't wasted: surplus pays an efficiency bonus that keeps
       // growing with diminishing returns (+5% at 150%, +7.5% at 200%, toward +15%).
@@ -694,6 +701,9 @@
       case 'safeDays': return safeDays(s);
       case 'locations': return Object.keys(s.locations).length;
       case 'overhauls': return s.overhauls;
+      case 'execs': return execCount(s);
+      case 'president': return s.president ? 1 : 0;
+      case 'board': return (s.board || []).length;
       default: return 0;
     }
   }
@@ -733,7 +743,7 @@
     PUMPS.forEach((p, i) => { if (s.pumps[p.id] > 0) best = i; });
     return 1 + C.pakGradePer * best;
   }
-  const pakPrice = (s, d, id) => PAK[id].value * pakGrade(s, id) * C.pakSeconds * d.production * d.order.factor;
+  const pakPrice = (s, d, id) => PAK[id].value * pakGrade(s, id) * C.pakSeconds * d.production * d.order.factor * boardEff(s, 'pakMult');
   /** Hours to build one target from scratch (inputs included). */
   const pakChainHours = (id) => PAK[id].hours + Object.entries(PAK[id].needs).reduce((a, [k, n]) => a + n * pakChainHours(k), 0);
   /** Average Pak income per second at the current target and staffing. */
@@ -771,6 +781,193 @@
     return sold;
   }
 
+
+  // ---- Executive track: executives, President, Board -------------------------------
+
+  const EXEC = byId(DATA.EXECS);
+  const STAT_OF = (p, id) => (id === 'leadership' ? leadership(p) : p.s[STAT_INDEX[id]]);
+  const execOpen = (s) => departmentOpen(s, DEPT.management);
+  const execOf = (deptId) => DATA.EXECS.find((x) => x.depts.includes(deptId));
+  const presidentSkill = (s) => (s.president ? Math.round((2 * leadership(s.president) + STAT_OF(s.president, DATA.PRESIDENT.stat)) / 3) : 0);
+  /** Skill 1–10ish: (2 × Leadership + the seat's key stat) / 3, plus the President's and a coach's lift. */
+  function execSkill(s, id, p = s.execs[id]) {
+    if (!p) return 0;
+    const base = Math.round((2 * leadership(p) + STAT_OF(p, EXEC[id].stat)) / 3);
+    return base + Math.floor(presidentSkill(s) / C.presidentSkillDiv) + boardEff(s, 'execPlus', true);
+  }
+  /** Strength multiplier an executive (or the President, for Management) gives a department. */
+  function execMult(s, deptId) {
+    if (!s.execs) return 1;
+    if (DATA.PRESIDENT.depts.includes(deptId)) return 1 + C.execBonusPer * presidentSkill(s);
+    const x = execOf(deptId);
+    return x && s.execs[x.id] ? 1 + C.execBonusPer * execSkill(s, x.id) : 1;
+  }
+  const presidentMult = (s) => 1 + C.presidentIncomePer * presidentSkill(s);
+  const execCount = (s) => (s.execs ? DATA.EXECS.filter((x) => s.execs[x.id]).length : 0);
+
+  /** Board perks multiply (or, with `add`, sum) across directors. */
+  function boardEff(s, key, add = false) {
+    let v = add ? 0 : 1;
+    for (const m of s.board || []) {
+      const e = PERK[m.perk] && PERK[m.perk].eff[key];
+      if (e != null) v = add ? v + e : v * e;
+    }
+    return v;
+  }
+  const PERK = byId(DATA.BOARD_PERKS);
+
+  function logExec(s, who, msg) {
+    s.execLog.unshift({ t: Math.round(s.time), x: who, m: msg });
+    if (s.execLog.length > 40) s.execLog.length = 40;
+  }
+
+  /** People inside a seat's division who could step up, best projected skill first. */
+  function execCandidates(s, id) {
+    const out = [];
+    for (const deptId of EXEC[id].depts) {
+      const st = s.depts[deptId];
+      if (!st || !st.p0) continue;
+      if (st.mgr) out.push({ dept: deptId, kind: 'mgr', idx: 0, p: st.mgr });
+      st.team.forEach((p, idx) => out.push({ dept: deptId, kind: 'team', idx, p }));
+    }
+    for (const c of out) c.skill = execSkill(s, id, c.p);
+    return out.sort((a, b) => b.skill - a.skill).slice(0, 6);
+  }
+  function fillExecPool(s, id) {
+    const pool = s.execPool[id];
+    while (pool.length < 3) {
+      const p = newPerson(s);
+      for (const k of ['leadership', EXEC[id].stat]) p.s[STAT_INDEX[k]] = Math.min(10, p.s[STAT_INDEX[k]] + C.execPoolBoost);
+      pool.push(p);
+    }
+  }
+  const execHireCost = (s, d = derive(s)) => C.execHireS * Math.max(1, d.production) * mods(s).costMult;
+
+  /** Seat an executive: from inside ({dept, kind, idx}) for free, or an outside candidate ({pool}) for cash. */
+  function appointExec(s, id, src) {
+    if (!execOpen(s) || !EXEC[id]) return false;
+    let p;
+    if (src.pool != null) {
+      fillExecPool(s, id);
+      const cost = execHireCost(s);
+      if (!s.execPool[id][src.pool] || cost > s.cash) return false;
+      s.cash -= cost;
+      p = s.execPool[id].splice(src.pool, 1)[0];
+      fillExecPool(s, id);
+    } else {
+      const st = s.depts[src.dept];
+      if (!st || !EXEC[id].depts.includes(src.dept)) return false;
+      if (src.kind === 'mgr') { p = st.mgr; st.mgr = null; } else { p = st.team.splice(src.idx, 1)[0]; }
+      if (!p) return false;
+    }
+    s.execs[id] = p;
+    logExec(s, id, `${p.n} takes the ${EXEC[id].short} seat`);
+    return true;
+  }
+  function dismissExec(s, id) {
+    if (!s.execs[id]) return false;
+    logExec(s, id, `${s.execs[id].n} steps down`);
+    s.execs[id] = null;
+    return true;
+  }
+  const canAppointPresident = (s) => execOpen(s) && execCount(s) >= 3;
+  /** Promote a seated executive to President (their seat opens up). */
+  function appointPresident(s, id) {
+    if (!canAppointPresident(s) || !s.execs[id]) return false;
+    s.president = s.execs[id];
+    s.execs[id] = null;
+    logExec(s, 'pres', `${s.president.n} is named President`);
+    return true;
+  }
+
+  /** One round for every seated executive. */
+  function execTick(s, d) {
+    const done = [];
+    for (const x of DATA.EXECS) {
+      const ex = s.execs[x.id];
+      if (!ex) continue;
+      const skill = execSkill(s, x.id);
+      let actions = 1 + Math.floor(skill / 3);
+      const budget = () => s.cash * (C.execBudgetBase + C.execBudgetPer * skill);
+      const depts = x.depts.filter((id) => s.depts[id] && s.depts[id].p0 && departmentOpen(s, DEPT[id]));
+      const act = (id, msg) => { actions--; logExec(s, x.id, msg); done.push({ x: x.id, dept: id, msg }); };
+      const bestLea = (st) => st.team.reduce((b, p, i, a) => (leadership(p) > leadership(a[b]) ? i : b), 0);
+      // 1. Every team has the best leader available as manager.
+      for (const id of depts) {
+        if (actions <= 0) break;
+        const st = s.depts[id];
+        if (!st.team.length) continue;
+        const i = bestLea(st), cand = st.team[i];
+        if (!st.mgr || leadership(cand) >= leadership(st.mgr) + 2) {
+          const was = st.mgr;
+          promote(s, id, i);
+          act(id, was ? `${DEPT[id].name}: ${cand.n} replaces ${was.n} as manager` : `${DEPT[id].name}: promoted ${cand.n} to manager`);
+        }
+      }
+      // 2. Staff Order Line teams to a cushion above 100%; top up support teams while cheap.
+      const byLoad = depts.slice().sort((a, b) => ((d.order.depts[a] || {}).load || 9) - ((d.order.depts[b] || {}).load || 9));
+      for (const id of byLoad) {
+        if (actions <= 0) break;
+        const o = d.order.depts[id], cost = hireQuote(s, id, 1).cost;
+        const want = o ? o.load < 1 + C.execTargetPer * skill : true;
+        if (want && cost <= (o ? budget() : budget() * 0.5) && hire(s, id, 1)) act(id, `${DEPT[id].name}: hired ${s.depts[id].team[s.depts[id].team.length - 1].n}`);
+      }
+      // 3. Replace the weakest person when a clearly better applicant is waiting.
+      const gap = Math.max(0.1, C.execReplaceGap - C.execReplaceGapPer * skill);
+      for (const id of depts) {
+        if (actions <= 0) break;
+        const st = s.depts[id];
+        if (!st.team.length || !st.pool.length) continue;
+        const wi = st.team.reduce((b, p, i, a) => (effectiveness(p, id) < effectiveness(a[b], id) ? i : b), 0);
+        const bi = st.pool.reduce((b, p, i, a) => (effectiveness(p, id) > effectiveness(a[b], id) ? i : b), 0);
+        const weak = st.team[wi], best = st.pool[bi];
+        if (effectiveness(best, id) < effectiveness(weak, id) + gap) continue;
+        const cost = 0.5 * hireQuote(s, id, 1).cost;
+        if (cost > budget()) continue;
+        s.cash -= cost;
+        if (weak.g) best.g = weak.g;
+        st.team[wi] = best;
+        st.pool[bi] = newPerson(s);
+        act(id, `${DEPT[id].name}: replaced ${weak.n} (×${effectiveness(weak, id).toFixed(2)}) with ${best.n} (×${effectiveness(best, id).toFixed(2)})`);
+      }
+      // 4. Refresh an applicant pool that has nobody worth hiring.
+      for (const id of depts) {
+        if (actions <= 0) break;
+        const st = s.depts[id];
+        if (!st.team.length || !st.pool.length) continue;
+        const avg = st.team.reduce((a, p) => a + effectiveness(p, id), 0) / st.team.length;
+        const top = Math.max(...st.pool.map((p) => effectiveness(p, id)));
+        if (top < avg && rerollCost(s) <= budget() * 0.5 && rerollPool(s, id)) act(id, `${DEPT[id].name}: new applicants`);
+      }
+    }
+    return done;
+  }
+
+  // Board of Directors: seats bought with Patents; directors stay through Overhaul.
+  const boardOpen = (s) => s.overhauls >= 2 || s.lifetime >= 1e12;
+  const boardSeatCost = (s) => DATA.BOARD_COSTS[s.board.length];
+  function fillBoardPool(s) {
+    if (s.boardPool.length || s.board.length >= DATA.BOARD_COSTS.length) return;
+    const taken = new Set(s.board.map((m) => m.perk));
+    const perks = DATA.BOARD_PERKS.filter((k) => !taken.has(k.id));
+    while (s.boardPool.length < Math.min(3, perks.length)) {
+      const k = perks.splice(Math.floor(rand(s) * perks.length), 1)[0];
+      const p = newPerson(s);
+      s.boardPool.push({ n: p.n, a: p.a, perk: k.id });
+    }
+  }
+  function electDirector(s, i) {
+    fillBoardPool(s);
+    const cost = boardSeatCost(s), c = s.boardPool[i];
+    if (!boardOpen(s) || cost == null || !c || s.patents < cost) return false;
+    s.patents -= cost;
+    s.patentsSpent = (s.patentsSpent || 0) + cost;
+    s.board.push(c);
+    s.boardPool = [];
+    fillBoardPool(s);
+    return true;
+  }
+
   // ---- Save / load ---------------------------------------------------------
 
   function serialize(s) {
@@ -790,7 +987,10 @@
     for (const dept of HIREABLE) s.depts[dept.id] = { ...freshDept(), ...(s.depts[dept.id] || {}) };
     if (!Number.isFinite(s.seed)) s.seed = (Math.random() * 2 ** 32) >>> 0;
     s.safety = { ...newState().safety, ...(raw.safety || {}) };
-    const fresh = newState().pak, rp = raw.pak || {};
+    const ns = newState();
+    s.execs = { ...ns.execs, ...(raw.execs || {}) };
+    s.execPool = { ...ns.execPool, ...(raw.execPool || {}) };
+    const fresh = ns.pak, rp = raw.pak || {};
     s.pak = { ...fresh, ...rp, stock: { ...fresh.stock, ...(rp.stock || {}) }, built: { ...fresh.built, ...(rp.built || {}) } };
     return s;
   }
@@ -807,6 +1007,9 @@
     itMult, mgmtMult, mgmtPool, purchasingDiscount, incidentRate, safeDays, safetyStreakMult, achievementMult,
     achStat, checkAchievements,
     ENG_TEAMS, engTeamOf, teamStrength, setEngTeam, techCost,
+    EXEC, execOpen, execOf, execSkill, presidentSkill, execMult, presidentMult, execCount, boardEff, execCandidates, fillExecPool,
+    execHireCost, appointExec, dismissExec, canAppointPresident, appointPresident, execTick,
+    boardOpen, boardSeatCost, fillBoardPool, electDirector,
     pakOpen, sysReady, pakTarget, pakNext, pakHoursRate, pakGrade, pakPrice, pakChainHours, pakIncome, setPakTarget, pakTick,
     serialize, deserialize,
   };

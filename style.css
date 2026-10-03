@@ -623,3 +623,35 @@ ul.plain b { color: var(--text); }
   .big-btn { height: 100%; min-height: 0; overflow: hidden; }
   .big-btn-sub { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
 }
+
+/* ---- executive track ---- */
+.org { display: grid; gap: 8px; }
+.org.closed { display: none; }
+.org-top { display: flex; justify-content: center; }
+.org-top .seat { min-width: min(320px, 100%); }
+.org-row { display: grid; grid-template-columns: repeat(auto-fill, minmax(165px, 1fr)); gap: 8px; position: relative; }
+.seat {
+  display: flex; gap: 8px; align-items: center; padding: 8px; cursor: pointer;
+  background: var(--panel-2); border: 1px solid var(--oil); border-radius: var(--radius);
+}
+.seat.vacant { border-style: dashed; border-color: var(--edge); }
+.seat:hover { border-color: var(--oil); }
+.seat-info { display: grid; gap: 1px; min-width: 0; font-size: 12px; }
+.seat-info b { font-size: 13px; }
+.seat-info .muted { font-size: 11px; }
+.seat-skill { font: 11px var(--font-mono); color: var(--ok); }
+.exec-face .face-tag { font-size: 7.5px; }
+.face.empty { width: 58px; font-size: 11px; }
+.board { display: grid; gap: 6px; }
+.director { display: flex; gap: 8px; align-items: center; background: var(--panel-2); border: 1px solid var(--edge); border-radius: var(--radius); padding: 6px 8px; }
+.director .face-img .avatar { width: 34px; height: 34px; }
+.director > div { display: grid; flex: 1; min-width: 0; font-size: 12px; }
+.director span { color: var(--oil); font-size: 11px; }
+.director em { font-style: normal; color: var(--muted); font-size: 11px; }
+.director.cand { border-style: dashed; }
+.board-cands { display: grid; gap: 6px; margin-top: 4px; }
+.cand-row { display: flex; gap: 8px; align-items: center; padding: 4px 0; border-bottom: 1px solid var(--edge); }
+.cand-row .p-main { flex: 1; min-width: 0; }
+.cand-row .p-stats b { color: var(--ok); }
+.exec-log { list-style: none; margin: 0; padding: 0; display: grid; gap: 3px; font-size: 12px; }
+.exec-log .muted { font: 10px var(--font-mono); margin-right: 4px; }

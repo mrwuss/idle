@@ -357,6 +357,48 @@ Hires are people, not head counts.
 - **UI:** the Company tab shows each Pak's price, hours, stock and build
   progress, a "Build these" button, and the line's hours/s and average $/s.
 
+## Executive track (implemented, v0.2.6)
+
+Above the managers sits a C-suite that runs whole divisions, then a President,
+then a Board of Directors. They open with Management ($1B earned or your first
+Overhaul) and appear as an org chart under **Leadership** on the Company tab.
+
+| Seat | Division | Key stat |
+|---|---|---|
+| **CRO** Chief Revenue Officer | Outside Sales, Inside Sales | Rapport |
+| **COO** Chief Operating Officer | Warehouse, Quality, Safety | Organization |
+| **CFO** Chief Financial Officer | Accounting, Purchasing | Numbers |
+| **CTO** Chief Technology Officer | Engineering, IT | Mechanical |
+| **President** | Management, plus every executive | Organization |
+
+- **Skill** = `(2 × Leadership + key stat) ÷ 3` (about 1–10), plus +1 per 3
+  President skill and +1 from an Executive coach on the Board.
+- **Appointing:** promote anyone from the division for free (a manager leaves a
+  gap the executive fills on their next round), or hire one of three outside
+  candidates (Leadership and key stat +2) for 10 minutes of production.
+- **Division boost:** every team in the division works **+3% per skill point**.
+- **Every 5 seconds** an executive takes `1 + skill ÷ 3` actions, each spending at
+  most `0.2% + 0.1% × skill` of your cash:
+  1. make the best leader each team's manager (or replace a manager when someone
+     has 2+ more Leadership);
+  2. hire Order Line teams up to `100% + 2% × skill` coverage, and top up support
+     teams while hires are cheap;
+  3. replace the weakest person with a clearly better applicant (the gap needed
+     is `0.45 − 0.03 × skill` staff; the swap costs half a hire);
+  4. refresh an applicant pool with nobody better than the team's average.
+  Their recent decisions are listed in their sheet.
+- **President:** named from your executives once three are seated (their seat
+  opens up). All income **+2% per skill point**, every executive +1 skill per 3
+  President skill, and Management +3% per skill point.
+- **Board of Directors:** opens after 2 Overhauls or $1T earned. Five seats cost
+  **3, 8, 20, 50 and 120 Patents** (gone for good, and not refunded by the next
+  Overhaul). Each seat offers three candidates with one perk each: income +10%,
+  Pak prices +25%, Outside Sales reach ×1.25, equipment −8%, Know-how +25%,
+  incidents −35%, Order Line need −10%, +1 applicant everywhere, or every
+  executive +1 skill. **Directors stay through Overhaul.**
+- **Overhaul** resets executives and the President (they are part of the run),
+  but not the Board.
+
 ## Support departments and Purchasing (implemented, v0.2.3)
 
 Every department is now hireable. The support departments sit outside the Order

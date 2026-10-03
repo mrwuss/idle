@@ -27,5 +27,8 @@
   persist through Overhaul. Engineering people have a team (`p.g`: design/controls/project; `teamStrength()`), Controls
   discounts `techCost()`, and Project runs the Pak line (`s.pak`, `pakTick()`, target via `setPakTarget()`).
   The Company tab cards open a focus sheet (`openDept()`) and faces open an ID badge (`data-person`).
+  Executives (`s.execs`, `execTick()` every `execEvery` s, `execMult()` per division), the President
+  (`s.president`, `presidentMult()`) and the Board (`s.board`, `boardEff(key)`, bought with Patents tracked in
+  `s.patentsSpent`, kept through Overhaul) are in engine.js; the org chart and exec sheet (`exec:<id>`) are in ui.js.
   The remaining department twists are still a design scaffold. Location unlocks
   (`state.locations`, `checkLocations()`) are real and persist through Overhaul. The plans are in `docs/DEPARTMENTS.md` and `docs/TERRITORY.md`.

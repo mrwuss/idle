@@ -202,6 +202,38 @@
       recipe: '4 Base-Paks + control panel (needs PLC Automation and a Controls engineer)' },
   ];
 
+
+  // ---- Executives, President and the Board -------------------------------------
+  // See docs/DEPARTMENTS.md (Executive track). Executives open with Management.
+  // Each runs a division: every few seconds they promote managers, hire toward a
+  // coverage target, replace weak staff with better applicants and refresh weak
+  // applicant pools, spending a small share of cash. Skill = (2×Leadership + key)/3.
+  const EXECS = [
+    { id: 'cro', short: 'CRO', name: 'Chief Revenue Officer',   stat: 'rapport',      depts: ['outside_sales', 'inside_sales'],
+      desc: 'Runs Sales: keeps both sales teams staffed, led and sharp.' },
+    { id: 'coo', short: 'COO', name: 'Chief Operating Officer', stat: 'organization', depts: ['warehouse', 'quality', 'safety'],
+      desc: 'Runs Operations: the warehouse, the quality lab and safety.' },
+    { id: 'cfo', short: 'CFO', name: 'Chief Financial Officer', stat: 'numbers',      depts: ['accounting', 'purchasing'],
+      desc: 'Runs Finance: accounting and purchasing.' },
+    { id: 'cto', short: 'CTO', name: 'Chief Technology Officer', stat: 'mechanical',  depts: ['engineering', 'it'],
+      desc: 'Runs Technology: engineering and IT.' },
+  ];
+  // The President is appointed from the executives (3+ seated) and also runs Management.
+  const PRESIDENT = { stat: 'organization', depts: ['management'] };
+  // Board seats cost Patents and survive Overhaul. Each director brings one perk.
+  const BOARD_COSTS = [3, 8, 20, 50, 120];
+  const BOARD_PERKS = [
+    { id: 'founder',  name: 'Founding family member',   desc: 'All income +10%',                eff: { incomeMult: 1.10 } },
+    { id: 'banker',   name: 'Retired banker',           desc: 'Pak prices +25%',                eff: { pakMult: 1.25 } },
+    { id: 'oem',      name: 'Former OEM executive',     desc: 'Outside Sales reach ×1.25',      eff: { reachMult: 1.25 } },
+    { id: 'supply',   name: 'Supply-chain veteran',     desc: 'Equipment costs −8%',            eff: { costMult: 0.92 } },
+    { id: 'prof',     name: 'Fluid-power professor',    desc: 'Know-how +25%',                  eff: { khMult: 1.25 } },
+    { id: 'insurer',  name: 'Insurance underwriter',    desc: 'Incidents −35%',                 eff: { incidentMult: 0.65 } },
+    { id: 'lean',     name: 'Lean consultant',          desc: 'Order Line needs 10% fewer staff', eff: { needMult: 0.90 } },
+    { id: 'recruit',  name: 'Executive recruiter',      desc: '+1 applicant in every department', eff: { poolPlus: 1 } },
+    { id: 'coach',    name: 'Executive coach',          desc: 'Every executive +1 skill',       eff: { execPlus: 1 } },
+  ];
+
   // ---- Territory ------------------------------------------------------------
   // See docs/TERRITORY.md. Every location is an extension of HQ: same
   // departments, same processes. What a new location adds is customer base.
@@ -347,6 +379,10 @@
     { id: 'safe10',    name: 'Ten Days Safe',         stat: 'safeDays',  goal: 10,    desc: 'Go 10 shop days without an incident.' },
     { id: 'north',     name: 'Heading North',         stat: 'locations', goal: 2,     desc: 'Open your second location.' },
     { id: 'allLoc',    name: 'Iowa to the Gulf',      stat: 'locations', goal: 4,     desc: 'Open all four locations.' },
+    { id: 'exec1',     name: 'C-Suite',               stat: 'execs',     goal: 1,     desc: 'Appoint your first executive.' },
+    { id: 'execAll',   name: 'Full Leadership Team',  stat: 'execs',     goal: 4,     desc: 'Seat all four executives.' },
+    { id: 'president', name: 'Mr. or Madam President', stat: 'president', goal: 1,    desc: 'Appoint a President.' },
+    { id: 'board',     name: 'Boardroom',             stat: 'board',     goal: 1,     desc: 'Seat your first director.' },
     { id: 'overhaul1', name: 'Tear It Down',          stat: 'overhauls', goal: 1,     desc: 'Overhaul the shop once.' },
     { id: 'overhaul5', name: 'Serial Rebuilder',      stat: 'overhauls', goal: 5,     desc: 'Overhaul the shop five times.' },
   ];
@@ -393,6 +429,18 @@
     pakGradePer: 0.1,       // Base-/Sys-Pak price +10% per pump type above gear you own
     controlsTechPer: 0.05,  // Controls research −5% Know-how per Controls staff-equivalent…
     controlsTechFloor: 0.5, // …down to half price
+    // Executive track
+    execEvery: 5,           // seconds between an executive's rounds
+    execBonusPer: 0.03,     // division teams +3% strength per executive skill point
+    execTargetPer: 0.02,    // executives staff Order Line teams to 100% + 2% per skill point
+    execBudgetBase: 0.002,  // each action may spend 0.2% of cash…
+    execBudgetPer: 0.001,   // …+0.1% per skill point
+    execReplaceGap: 0.45,   // replace someone when an applicant is this much better…
+    execReplaceGapPer: 0.03,// …minus 0.03 per skill point (better executives are pickier)
+    execHireS: 600,         // an outside executive hire costs 10 min of production
+    execPoolBoost: 2,       // outside candidates: Leadership and key stat +2
+    presidentIncomePer: 0.02, // President: all income +2% per skill point
+    presidentSkillDiv: 3,   // …and every executive +1 skill per 3 President skill
     mgrPoolPer: 3,          // …and reviews 1 more applicant per 3 Leadership points
     mgrEvery: 2,            // seconds between a manager's staffing checks
     // Support departments
@@ -419,7 +467,8 @@
   };
 
   const DATA = { PUMPS, ACTUATORS, TIERS, COOLERS, TECH, ERAS, DEPARTMENTS, PAKS, REGIONS, STATES,
-    STATS, DEPT_STATS, TRAITS, TRAIT_CHANCE, FIRST_NAMES, LAST_NAMES, ENG_UPGRADES, ACHIEVEMENTS, CONSTANTS };
+    STATS, DEPT_STATS, TRAITS, TRAIT_CHANCE, FIRST_NAMES, LAST_NAMES, ENG_UPGRADES, ACHIEVEMENTS,
+    EXECS, PRESIDENT, BOARD_COSTS, BOARD_PERKS, CONSTANTS };
   root.PW = root.PW || {};
   root.PW.DATA = DATA;
   if (typeof module !== 'undefined') module.exports = DATA;

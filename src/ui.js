@@ -387,6 +387,7 @@
   }
 
   function renderSheet(s, dd) {
+    if (ui.sheet.startsWith('exec:')) return renderExecSheet(s, dd);
     const d = DEPT_BY_ID[ui.sheet], st = s.depts[d.id], body = $('sheet-body'), foot = $('sheet-foot');
     if (!E.departmentOpen(s, d)) return closeSheet();
     const isEng = d.id === 'engineering';
@@ -514,6 +515,118 @@
     setBtn(foot.querySelector('[data-hire]'), E.hireQuote(s, sp.dept, 1).cost, 'hire', s.cash);
   }
 
+
+  // ---- Executive track: org chart, executive sheet, Board ----------------------
+
+  const EXEC_INFO = Object.fromEntries(E.DATA.EXECS.map((x) => [x.id, x]));
+  const deptNames = (ids) => ids.map((id) => DEPT_BY_ID[id].name).join(', ');
+  function execFace(p, label, sheet) {
+    return `<button class="face mgr exec-face" data-open-dept="${sheet}" title="${p.n}"><span class="face-img">${avatar(p.a)}<i class="face-tag">${label}</i></span>
+      <span class="face-name">${first(p.n)}</span></button>`;
+  }
+  function renderOrg(s) {
+    const open = E.execOpen(s), org = $('org');
+    setPart($('exec-hint'), open
+      ? 'Executives run whole divisions on their own: every few seconds they fix managers, hire toward a cushion, replace weak staff with better applicants and refresh poor applicant pools, spending a little cash. Promote from inside for free, or hire from outside.'
+      : 'Opens with Management ($1B earned or your first Overhaul). Executives run whole divisions for you.', true);
+    const last = s.execLog[0];
+    setPart($('exec-summary'), open ? `· ${E.execCount(s)}/4 seated${s.president ? ' · President' : ''}${last ? ` · latest: ${last.m}` : ''}` : '', true);
+    org.classList.toggle('closed', !open);
+    const key = [open, s.president && s.president.n, ...E.DATA.EXECS.map((x) => s.execs[x.id] && s.execs[x.id].n), E.canAppointPresident(s)].join('|');
+    if (org._key !== key) {
+      org._key = key;
+      const seat = (id, title, p, sub) => `<div class="seat${p ? '' : ' vacant'}" data-open-dept="exec:${id}">
+        ${p ? execFace(p, title, `exec:${id}`) : `<span class="face empty">${title}</span>`}
+        <div class="seat-info"><b>${p ? p.n : 'Vacant'}</b><span class="muted">${sub}</span><span class="seat-skill" data-k="sk-${id}"></span></div></div>`;
+      org.innerHTML = `<div class="org-top">${seat('pres', 'PRES', s.president, s.president ? 'President · runs Management' : E.canAppointPresident(s) ? 'Name one of your executives' : 'Needs 3 executives')}</div>
+        <div class="org-row">${E.DATA.EXECS.map((x) => seat(x.id, x.short, s.execs[x.id], deptNames(x.depts))).join('')}</div>`;
+    }
+    for (const x of [...E.DATA.EXECS.map((e) => e.id), 'pres']) {
+      const el = org.querySelector(`[data-k="sk-${x}"]`);
+      if (!el) continue;
+      const sk = x === 'pres' ? E.presidentSkill(s) : E.execSkill(s, x);
+      setPart(el, sk ? (x === 'pres' ? `skill ${sk} · income +${Math.round((E.presidentMult(s) - 1) * 100)}%` : `skill ${sk} · teams +${Math.round(sk * E.DATA.CONSTANTS.execBonusPer * 100)}%`) : (open ? 'Tap to appoint' : ''), true);
+    }
+    // Board
+    const bopen = E.boardOpen(s), board = $('board');
+    $('board-wrap').hidden = !open && !bopen && !s.board.length;
+    if (bopen) E.fillBoardPool(s);
+    const cost = E.boardSeatCost(s);
+    setPart($('board-summary'), bopen ? `· ${s.board.length}/${E.DATA.BOARD_COSTS.length} seats · directors stay through Overhaul` : '· opens after 2 Overhauls or $1T earned', true);
+    const bkey = [bopen, s.board.map((m) => m.perk).join(), s.boardPool.map((m) => m.perk).join()].join('|');
+    if (board._key !== bkey) {
+      board._key = bkey;
+      const perk = (id) => E.DATA.BOARD_PERKS.find((k) => k.id === id);
+      board.innerHTML = s.board.map((m) => `<div class="director"><span class="face-img">${avatar(m.a)}</span><div><b>${m.n}</b><span>${perk(m.perk).name}</span><em>${perk(m.perk).desc}</em></div></div>`).join('')
+        + (bopen && cost != null ? `<div class="board-cands"><div class="app-head">Candidates for seat ${s.board.length + 1} · ${cost} patents</div>${s.boardPool.map((m, i) =>
+          `<div class="director cand"><span class="face-img">${avatar(m.a)}</span><div><b>${m.n}</b><span>${perk(m.perk).name}</span><em>${perk(m.perk).desc}</em></div>
+            <button class="btn mini" data-board-elect="${i}">${cost} patents<small>elect</small></button></div>`).join('')}
+          <p class="muted small">Patents spent on the Board are gone for good (each was worth +10% income), so pick perks that beat that.</p></div>` : '')
+        + (!bopen ? '' : !s.board.length && cost == null ? '' : '');
+    }
+    board.querySelectorAll('[data-board-elect]').forEach((b) => (b.disabled = cost == null || s.patents < cost));
+  }
+
+  function renderExecSheet(s, dd) {
+    const id = ui.sheet.slice(5), isPres = id === 'pres', body = $('sheet-body'), foot = $('sheet-foot');
+    if (!E.execOpen(s)) return closeSheet();
+    const C = E.DATA.CONSTANTS, x = EXEC_INFO[id];
+    const p = isPres ? s.president : s.execs[id];
+    const skill = isPres ? E.presidentSkill(s) : E.execSkill(s, id);
+    const cands = isPres ? E.DATA.EXECS.filter((e) => s.execs[e.id]).map((e) => ({ seat: e.id, p: s.execs[e.id] })) : E.execCandidates(s, id);
+    if (!isPres) E.fillExecPool(s, id);
+    const key = [id, p && p.n, cands.map((c) => c.p.n + c.dept + c.idx).join(','), !isPres && s.execPool[id].map((q) => q.n).join(','), E.canAppointPresident(s), s.president && s.president.n].join('#');
+    if (body._key !== key) {
+      body._key = key;
+      const title = isPres ? 'President' : `${x.name} (${x.short})`;
+      const statName = STAT[isPres ? E.DATA.PRESIDENT.stat : x.stat].name;
+      const what = isPres
+        ? `<ul class="plain"><li>All income <b>+${Math.round(C.presidentIncomePer * 100)}%</b> per skill point</li>
+            <li>Every executive <b>+1 skill</b> per ${C.presidentSkillDiv} President skill</li>
+            <li>Runs Management: its team <b>+${Math.round(C.execBonusPer * 100)}%</b> per skill point</li></ul>`
+        : `<ul class="plain"><li>Division teams work <b>+${Math.round(C.execBonusPer * 100)}%</b> harder per skill point</li>
+            <li>Every ${C.execEvery} s, takes <b>1 + skill÷3</b> actions, each spending at most <b>${(C.execBudgetBase * 100).toFixed(1)}% + ${(C.execBudgetPer * 100).toFixed(1)}% per skill</b> of your cash:</li>
+            <li>• makes the best leader each team's manager</li>
+            <li>• hires Order Line teams up to <b>100% + ${Math.round(C.execTargetPer * 100)}% per skill</b> coverage, and tops up support teams while cheap</li>
+            <li>• replaces the weakest person when an applicant is clearly better (pickier with more skill)</li>
+            <li>• refreshes an applicant pool with nobody worth hiring</li></ul>`;
+      const card = p ? `<div class="mgr-card">${execFace(p, isPres ? 'PRES' : x.short, ui.sheet)}<div class="mgr-info"><b>${p.n}</b>
+          <span>Skill <b data-k="skill"></b></span>
+          <span class="muted small">(2 × Leadership ${E.leadership(p)} + ${statName} ${isPres ? p.s[STAT[E.DATA.PRESIDENT.stat].i] : (x.stat === 'leadership' ? E.leadership(p) : p.s[STAT[x.stat].i])}) ÷ 3${!isPres && s.president ? ', plus the President’s lift' : ''}</span>
+          ${!isPres && E.canAppointPresident(s) ? `<button class="btn mini" data-exec-pres="${id}">${s.president ? `Make President<small>${first(s.president.n)} retires</small>` : 'Make President'}</button>` : ''}
+          ${isPres ? '' : `<button class="btn mini ghost" data-exec-dismiss="${id}">Let go</button>`}</div></div>`
+        : `<p class="mgr none">Vacant. ${isPres ? (E.canAppointPresident(s) ? 'Name one of your executives below.' : 'Seat at least 3 executives first.') : 'Promote someone from the division for free, or hire an outside candidate.'}</p>`;
+      const candRow = (c) => isPres
+        ? `<div class="cand-row">${execFace(c.p, EXEC_INFO[c.seat].short, `exec:${c.seat}`)}<div class="p-main"><span class="p-name">${c.p.n}</span>
+            <span class="p-stats">${EXEC_INFO[c.seat].short} · President skill ${Math.round((2 * E.leadership(c.p) + c.p.s[STAT[E.DATA.PRESIDENT.stat].i]) / 3)}</span></div>
+            <button class="btn mini" data-exec-pres="${c.seat}">Name President</button></div>`
+        : `<div class="cand-row">${face(c.p, c.dept, c.kind, c.idx)}<div class="p-main"><span class="p-name">${c.p.n}</span>
+            <span class="p-stats">${DEPT_BY_ID[c.dept].name}${c.kind === 'mgr' ? ' manager' : ''} · LEA ${E.leadership(c.p)} · would be skill <b>${c.skill}</b></span></div>
+            <button class="btn mini" data-exec-appoint="${id}" data-dept="${c.dept}" data-kind="${c.kind}" data-idx="${c.idx}">${p ? 'Replace' : 'Appoint'}<small>free</small></button></div>`;
+      const outside = isPres ? '' : `<section><h4>Outside candidates</h4>${s.execPool[id].map((q, i) =>
+        `<div class="cand-row"><span class="face"><span class="face-img">${avatar(q.a)}</span><span class="face-name">${first(q.n)}</span></span><div class="p-main"><span class="p-name">${q.n}</span>
+          <span class="p-stats">LEA ${E.leadership(q)} · ${statName} ${x.stat === 'leadership' ? E.leadership(q) : q.s[STAT[x.stat].i]} · would be skill <b>${E.execSkill(s, id, q)}</b></span></div>
+          <button class="btn mini" data-exec-hire="${id}" data-idx="${i}"></button></div>`).join('')}</section>`;
+      body.innerHTML = `<header class="sh-head"><h3 id="sheet-title">${title}</h3><button class="sh-x" data-close="sheet" aria-label="Close">✕</button></header>
+        <p class="sh-role">${isPres ? 'Leads the executives and the company.' : `${x.desc} Division: ${deptNames(x.depts)}.`}</p>
+        <section><h4>${isPres ? 'President' : 'Executive'}</h4>${card}</section>
+        <section><h4>What they do</h4>${what}</section>
+        ${isPres ? '' : `<section><h4>Recent decisions</h4><ul class="exec-log" data-k="log"></ul></section>`}
+        <section><h4>${isPres ? 'Your executives' : 'Promote from inside'} <span class="muted">· key stats: Leadership ×2 and ${statName}</span></h4>
+          ${cands.length ? cands.map(candRow).join('') : `<p class="muted">${isPres ? 'No executives seated yet.' : 'Nobody in this division yet.'}</p>`}</section>
+        ${outside}`;
+      foot.innerHTML = `<button class="btn ghost" data-close="sheet">Close</button>`;
+    }
+    const k = (n) => body.querySelector(`[data-k="${n}"]`);
+    if (k('skill')) setPart(k('skill'), String(skill), true);
+    if (k('log')) {
+      const lines = s.execLog.filter((l) => l.x === id).slice(0, 8);
+      setPart(k('log'), lines.length ? lines.map((l) => `<li><span class="muted">${fmtTime(Math.max(0, s.time - l.t))} ago</span> ${l.m}</li>`).join('') : '<li class="muted">Nothing yet. Decisions show up here every few seconds.</li>');
+    }
+    const cost = E.execHireCost(s, dd);
+    body.querySelectorAll('[data-exec-hire]').forEach((b) => setBtn(b, cost, 'hire', s.cash));
+  }
+
   function renderPaks(s, dd) {
     const open = E.pakOpen(s), rate = E.pakHoursRate(s), target = E.pakTarget(s), next = E.pakNext(s);
     setPart($('pak-summary'), open ? `· ${fmt(rate)} engineering hrs/s · ≈ +$${fmt(E.pakIncome(s, dd))}/s` : '', true);
@@ -570,6 +683,7 @@
       }
     }
     renderPaks(s, dd);
+    renderOrg(s);
   }
 
   // ---- Init ---------------------------------------------------------------
