@@ -10,6 +10,9 @@
 - Adding content to `data.js` is save-compatible: `deserialize()` merges saved
   counts over fresh defaults.
 - Design intent lives in `docs/`; keep it in sync when mechanics change.
+- Look: IFP brand (orange-red `#f04b25`, charcoal, Nunito Sans, the iFP mark drawn by `src/brand.js`).
+  Colors are CSS variables only: light by default, `[data-theme="dark"]` for the shop floor; the
+  machine canvas always uses the dark set. Use `var(--accent)` for UI highlights; `--oil` is hydraulic fluid.
 - Third-party assets: CC0 only, commit just the files used, and record each one in
   `CREDITS.md` (see `docs/ASSETS.md`). Sounds live in `assets/audio/`, mapped in `src/audio.js`.
 - Order Line staffing is live: `orderLine()` in engine.js makes the least-covered

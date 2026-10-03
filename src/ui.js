@@ -494,7 +494,7 @@
       }).join('');
       const tmp = { mgr: p, team: [] };
       body.innerHTML = `<div class="idc ${g}">
-        <div class="idc-top"><span>IFP MSI · Cedar Rapids</span><span>${sp.kind === 'pool' ? 'APPLICANT' : 'EMPLOYEE ID'}</span></div>
+        <div class="idc-top"><span class="idc-brand">${root.PW.brand.logoSVG({ h: 22, color: '#fff' })}<span>MSI · Cedar Rapids</span></span><span>${sp.kind === 'pool' ? 'APPLICANT' : 'EMPLOYEE ID'}</span></div>
         <div class="idc-main"><div class="idc-photo">${avatar(p.a)}</div>
           <div><h3>${p.n}</h3><div class="idc-title">${title}</div><div class="idc-no">No. ${empNo}</div></div>
           <button class="sh-x" data-close="idcard" aria-label="Close">✕</button></div>
@@ -700,6 +700,19 @@
     $('btn-works-full').addEventListener('click', () => setFull(true));
     $('btn-works-close').addEventListener('click', () => setFull(false));
     $('m-status').addEventListener('click', () => setTab('works'));
+    // Brand: the iFP mark in the header and the tab icon; Light (IFP) / Dark theme switch.
+    const B = root.PW.brand;
+    $('brand-logo').innerHTML = B.logoSVG({ h: 40 });
+    $('favicon').href = B.faviconURL();
+    const themeBtns = document.querySelectorAll('[data-theme-set]');
+    const showTheme = () => themeBtns.forEach((b) => b.classList.toggle('on', (document.documentElement.dataset.theme || 'light') === b.dataset.themeSet));
+    themeBtns.forEach((b) => b.addEventListener('click', () => {
+      const dark = b.dataset.themeSet === 'dark';
+      if (dark) document.documentElement.dataset.theme = 'dark'; else delete document.documentElement.dataset.theme;
+      try { localStorage.setItem('pw-theme', dark ? 'dark' : 'light'); } catch (e) { /* storage blocked */ }
+      showTheme();
+    }));
+    showTheme();
     // Department focus sheet and ID badges
     document.addEventListener('click', (ev) => {
       const od = ev.target.closest('[data-open-dept]');
@@ -1004,7 +1017,6 @@
     const shown = d.psi * (d.supply > 0 ? wobble * Math.min(1, 0.3 + d.utilization) : 0);
     gP.set(shown, 0, niceMax(d.psi * 1.25), d.psi, fmt(shown, 0));
     const frac = shown / niceMax(d.psi * 1.25);
-    $('brand-needle').style.transform = `rotate(${-80 + 120 * frac}deg)`;
   }
   function niceMax(v) {
     const p = 10 ** Math.floor(Math.log10(v)), n = v / p;

@@ -26,9 +26,16 @@ Each clip was converted from OGG to mono MP3 and volume-matched to about
 
 ## Fonts
 
-[Oswald](https://fonts.google.com/specimen/Oswald) and
+[Nunito Sans](https://fonts.google.com/specimen/Nunito+Sans) (IFP's website font) and
 [JetBrains Mono](https://fonts.google.com/specimen/JetBrains+Mono) via Google Fonts
 (SIL Open Font License).
+
+## IFP brand
+
+The iFP mark and colors belong to IFP Motion Solutions, Inc. and are used here
+for IFP's own game. The mark is redrawn in code (`src/brand.js`) from the logo on
+[ifpusa.com](https://www.ifpusa.com/); no logo file is committed. Brand colors:
+orange-red `#f04b25`, charcoal `#333333`.
 
 ## Everything else
 

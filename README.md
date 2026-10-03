@@ -17,6 +17,8 @@ There's no build step. Open `index.html` in a browser, or serve the folder:
 python3 -m http.server 8000   # then visit http://localhost:8000
 ```
 
+The game wears IFP's colors and logo; Logbook → Display switches between the light IFP theme and a dark shop-floor theme.
+
 **Controls:** `Space` strokes the hand pump · `S` fires Surge · `M` mutes sound · progress autosaves every 10 s.
 The buy-quantity bar has ×1, ×10, ×100, **Next** (up to the next ×2 milestone) and Max.
 
@@ -49,6 +51,7 @@ style.css           all styling
 src/data.js         every tunable number (pumps, actuators, tiers, coolers, tech, constants)
 src/engine.js       pure game logic, no DOM; shared by the browser and the simulator
 src/format.js       number/time formatting
+src/brand.js        the iFP mark (SVG + canvas) and brand colors
 src/audio.js        sound effects + mute (clips in assets/audio, see CREDITS.md)
 src/machine.js      "The Works": the animated facility (office, production line, warehouse, shipping)
 src/ui.js           rendering, gauges, shop lists
