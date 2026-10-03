@@ -256,6 +256,14 @@
     milestones: [25, 50, 100, 200, 300, 400, 500],
     offlineRate: 0.5,
     offlineCapH: 8,
+    // Departments (Order Line staffing). Each department needs 1 more person
+    // per `deptPerDecade`-th of a decade production has grown since it opened;
+    // the nth hire costs `hireBaseS` seconds of opening-time production × growth^n,
+    // which works out to roughly that many seconds of *current* production.
+    deptPerDecade: 4,
+    hireGrowth: 1.778,
+    hireBaseS: 10,
+    deptFloor: 0.1,         // a neglected department never stops the line entirely
     overhaulMin: 1e6,       // lifetime $ before the first Overhaul is offered
     patentDivisor: 1e6,     // patents = floor(√(lifetime $ / 1e6))
     patentBonus: 0.10,      // +10% income per patent (additive)

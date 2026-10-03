@@ -22,7 +22,18 @@ const quiet = args.includes('--quiet');
 
 const BIG = 1e300;
 const clone = (s) => JSON.parse(JSON.stringify(s));
-const steadyIncome = (s) => E.derive(s, { steady: true }).income;
+// Score purchases by what the shop floor produces; staffing is handled
+// separately (keepLineStaffed), the way a player would buy, then hire.
+const steadyIncome = (s) => { const d = E.derive(s, { steady: true }); return d.production * d.surgeMult; };
+
+/** Hire into the bottleneck until the Order Line is fully covered (or cash runs out). */
+function keepLineStaffed(s) {
+  for (let i = 0; i < 200; i++) {
+    const o = E.derive(s).order;
+    if (!o.bottleneck || o.factor >= 0.999) return;
+    if (!E.hire(s, o.bottleneck, 1)) return;
+  }
+}
 
 // Each action returns what it spent, or false if it couldn't be done.
 function buyC(t, kind, id, qty = 1) {
@@ -107,8 +118,10 @@ const once = (key, msg) => { if (!seen.has(key)) { seen.add(key); log(msg); } };
 
 const end = hours * 3600;
 let nextReport = 0;
+const reportEvery = Number((args.find((a) => a.startsWith('--every=')) || '').slice(8)) || 1800;
 while (s.time < end) {
   for (let i = 0; i < 50 && s.time % 5 === 0; i++) {
+    keepLineStaffed(s);
     const mv = bestMove(s);
     if (!mv || mv.cost > s.cash) break;
     mv.apply(s);
@@ -130,14 +143,16 @@ while (s.time < end) {
   if (!quiet && s.time >= nextReport) {
     const d = E.derive(s);
     log(`      $${fmt(s.cash)}  ${fmt(d.income)}/s  KH ${fmt(s.kh)}  flow ${fmt(d.supply)}/${fmt(d.demand)} GPM  ` +
-        `${Math.round(s.temp)}°F (eq ${Math.round(d.tempEq)})  ×${d.thermalMult.toFixed(2)}`);
-    nextReport += 1800;
+        `${Math.round(s.temp)}°F (eq ${Math.round(d.tempEq)})  ×${d.thermalMult.toFixed(2)}  line ×${d.order.factor.toFixed(2)}` +
+        (d.order.bottleneck ? ` (${d.order.bottleneck})` : ''));
+    nextReport += reportEvery;
   }
   E.tick(s, 1);
 }
 
 const d = E.derive(s);
 console.log('\nFinal:', {
+  orderLine: d.order.factor.toFixed(2), staff: Object.fromEntries(Object.entries(s.depts).map(([k, v]) => [k, v.staff])),
   income: fmt(d.income) + '/s', lifetime: fmt(s.lifetime), patentsAvailable: E.overhaulGain(s),
   tier: TIERS[s.tier].name, tech: Object.keys(s.tech).length + '/' + TECH.length,
   pumps: s.pumps, actuators: s.actuators, coolers: s.coolers,

@@ -43,6 +43,9 @@
       render();
       if (id) UI.focusItem('actuator', id);
     },
+    hire(id) {
+      if (E.hire(state, id, UI.qty)) { SFX.play('buy'); render(); } else SFX.play('cant');
+    },
     buy(kind, id) {
       if (E.buy(state, kind, id, UI.qty)) { SFX.play('buy'); render(); } else SFX.play('cant');
     },
@@ -65,6 +68,10 @@
     }
     if (b.dataset.act === 'acc' && E.upgradeAccumulator(state)) SFX.play('upgrade');
     render();
+  });
+
+  $('btn-staff-line').addEventListener('click', () => {
+    if (E.staffLine(state)) { SFX.play('upgrade'); UI.toast('Order Line fully staffed.'); render(); } else SFX.play('cant');
   });
 
   $('btn-stroke').addEventListener('click', (ev) => {
@@ -174,6 +181,17 @@
       UI.toast(`<b>New location!</b> IFP MSI ${r.name} opens in <b>${r.branch}</b>, covering ${states.join(', ')}.`, 8000);
     }
   }
+  // Departments open on their own as the company grows; announce each once.
+  const announcedDepts = new Set(E.STAFFED.filter((d) => state.depts[d.id].p0).map((d) => d.id));
+  function announceDepts() {
+    for (const d of E.STAFFED) {
+      if (!state.depts[d.id].p0 || announcedDepts.has(d.id)) continue;
+      announcedDepts.add(d.id);
+      SFX.play('research');
+      UI.toast(`<b>${d.name}</b> is open. You're covering it yourself for now; hire on the Company tab as production grows.`, 6000);
+    }
+  }
+  setInterval(announceDepts, 1000);
   E.checkLocations(state); // catch up silently after load or offline progress
   setInterval(announceLocations, 1000);
   setInterval(render, 200);

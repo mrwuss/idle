@@ -14,6 +14,10 @@
   const byId = (list) => Object.fromEntries(list.map((x) => [x.id, x]));
   const PUMP = byId(PUMPS), ACT = byId(ACTUATORS), COOL = byId(COOLERS), TECHS = byId(TECH);
   const zeroCounts = (list) => Object.fromEntries(list.map((x) => [x.id, 0]));
+  // Order Line departments you staff (Production is the shop floor itself).
+  const STAFFED = DATA.DEPARTMENTS.filter((d) => d.group === 'order' && d.id !== 'production');
+  const DEPT = byId(DATA.DEPARTMENTS);
+  const freshDepts = () => Object.fromEntries(STAFFED.map((d) => [d.id, { staff: 0, p0: 0 }]));
 
   function newState() {
     return {
@@ -34,6 +38,7 @@
       temp: C.ambientF,
       surgeLeft: 0,
       locations: { hq: true }, // unlocked branches; kept through Overhaul
+      depts: freshDepts(),     // staff hired and production when each opened (p0)
       time: 0,
       strokes: 0,
       lastSeen: Date.now(),
@@ -138,11 +143,14 @@
     const surging = s.surgeLeft > 0;
     const sMult = surging ? m.surgeMult : 1;
 
-    const income = rawIncome * utilization * tMult * sMult * m.patentMult;
+    // What the shop floor can do, then what the Order Line lets through.
+    const production = rawIncome * utilization * tMult * m.patentMult;
+    const order = orderLine(s, production);
+    const income = production * sMult * order.factor;
     const khRate = C.khPerSqrtIncome * Math.sqrt(income);
 
     return {
-      m, psi: P, supply, demand, utilization, toAcc, overRelief, accCap: cap,
+      m, psi: P, supply, demand, utilization, toAcc, overRelief, accCap: cap, production, order,
       pumpLossHP, reliefHP, heatHP, k, tempEq, tempLimit: m.tempLimit, thermalMult: tMult,
       surging, surgeMult: sMult, rawIncome, income, khRate, perActuator,
       hydraulicHP: P * Math.min(supply, demand) / C.hpConst,
@@ -153,6 +161,7 @@
 
   function tick(s, dt) {
     const d = derive(s);
+    snapshotDepts(s, d.production);
     const earned = d.income * dt;
     s.cash += earned;
     s.runEarnings += earned;
@@ -326,6 +335,83 @@
     return Math.max(0, ...DATA.DEPARTMENTS.filter((d) => departmentOpen(s, d)).map((d) => d.era));
   }
 
+  // ---- Departments: the Order Line -------------------------------------------
+
+  /**
+   * Each open department needs more people as production grows: 1 to start,
+   * plus `deptPerDecade` per 10× growth since it opened. Its coverage is
+   * staff ÷ required (Outside Sales reach grows with customer base). The line
+   * runs at its weakest department's coverage: the bottleneck.
+   */
+  function orderLine(s, production) {
+    const out = { depts: {}, factor: 1, bottleneck: null };
+    const reach = Math.sqrt(customerBase(s) / Math.max(1, customerBase(null, 'hq')));
+    for (const dept of STAFFED) {
+      const st = s.depts[dept.id];
+      const open = departmentOpen(s, dept);
+      if (!open || !st.p0) { out.depts[dept.id] = { open, required: 1, effective: 1, coverage: 1 }; continue; }
+      const growth = Math.max(0, Math.log10(Math.max(production, 1) / st.p0));
+      const required = 1 + C.deptPerDecade * growth;
+      const effective = (1 + st.staff) * (dept.id === 'outside_sales' ? reach : 1);
+      const coverage = Math.min(1, effective / required);
+      out.depts[dept.id] = { open, required, effective, coverage };
+      if (coverage < out.factor) { out.factor = coverage; out.bottleneck = dept.id; }
+    }
+    out.factor = Math.max(C.deptFloor, out.factor);
+    return out;
+  }
+
+  /** Remember production at the moment each department opens (its baseline). */
+  function snapshotDepts(s, production) {
+    const opened = [];
+    for (const dept of STAFFED) {
+      const st = s.depts[dept.id];
+      if (!st.p0 && departmentOpen(s, dept)) { st.p0 = Math.max(1, production); opened.push(dept); }
+    }
+    return opened;
+  }
+
+  function hireQuote(s, id, qty) {
+    const st = s.depts[id], g = C.hireGrowth;
+    const base = C.hireBaseS * Math.max(1, st.p0 || derive(s).production) * mods(s).costMult;
+    const first = base * g ** st.staff;
+    const n = qty === 'max'
+      ? Math.max(1, Math.floor(Math.log(s.cash * (g - 1) / first + 1) / Math.log(g)))
+      : qty;
+    return { qty: n, cost: first * (g ** n - 1) / (g - 1) };
+  }
+  function hire(s, id, qty = 1) {
+    if (!s.depts[id] || !departmentOpen(s, DEPT[id])) return false;
+    const q = hireQuote(s, id, qty);
+    if (q.cost > s.cash) return false;
+    s.cash -= q.cost;
+    s.depts[id].staff += q.qty;
+    return true;
+  }
+
+  /** Hires (per department) and total cost to bring the whole line to 100%. */
+  function staffLineQuote(s) {
+    const d = derive(s), plan = {};
+    let cost = 0, hires = 0;
+    for (const dept of STAFFED) {
+      const o = d.order.depts[dept.id];
+      if (!o.open || o.coverage >= 1) continue;
+      const perHead = o.effective / (1 + s.depts[dept.id].staff);
+      const need = Math.max(0, Math.ceil(o.required / perHead - 1e-9) - 1 - s.depts[dept.id].staff);
+      if (!need) continue;
+      plan[dept.id] = need;
+      cost += hireQuote(s, dept.id, need).cost;
+      hires += need;
+    }
+    return { plan, cost, hires };
+  }
+  function staffLine(s) {
+    const q = staffLineQuote(s);
+    if (!q.hires || q.cost > s.cash) return false;
+    for (const [id, n] of Object.entries(q.plan)) hire(s, id, n);
+    return true;
+  }
+
   // ---- Save / load ---------------------------------------------------------
 
   function serialize(s) {
@@ -350,6 +436,7 @@
     nextTier, canUpgradeTier, upgradeTier, accCapacity, accUpgradeCost, upgradeAccumulator,
     techAvailable, research, click, canSurge, surge,
     patentsTotal, overhaulGain, canOverhaul, overhaul, opensMet, departmentOpen, regionOpen, checkLocations, customerBase, currentEra,
+    orderLine, snapshotDepts, hireQuote, hire, staffLineQuote, staffLine, STAFFED,
     serialize, deserialize,
   };
   root.PW = root.PW || {};

@@ -138,6 +138,8 @@
   // department will do and when it opens; nothing here affects income yet.
   const deptEls = {}, pakEls = {};
   const ROMAN = ['I', 'II', 'III', 'IV', 'V', 'VI'];
+  const staffed = (id) => E.STAFFED.some((d) => d.id === id);
+
   function buildCompany() {
     const card = (d) => {
       const el = document.createElement('div');
@@ -147,10 +149,16 @@
         <div class="dept-twist">${d.twist}</div>
         ${d.teams ? `<div class="dept-teams">${d.teams.map((t) => `<span title="${t.role}">${t.name}</span>`).join('')}</div>` : ''}
         <div class="dept-progress"><div></div></div>
+        ${staffed(d.id) ? `<div class="dept-staff" hidden>
+          <div class="staff-row"><span class="staff-text"></span><button class="btn hire"></button></div>
+          <div class="cov" title="Coverage: staff ÷ staff needed"><div></div></div>
+        </div>` : ''}
         <div class="dept-era">Era ${ROMAN[d.era]} · ${ERAS[d.era]}</div>`;
       if (d.id === 'production') el.addEventListener('click', () => setTab('actuators'));
-      deptEls[d.id] = { el, status: el.querySelector('.dept-status'), prog: el.querySelector('.dept-progress'),
-        bar: el.querySelector('.dept-progress div') };
+      const q = (sel) => el.querySelector(sel);
+      if (staffed(d.id)) q('.hire').addEventListener('click', (ev) => { ev.stopPropagation(); handlers.hire(d.id); });
+      deptEls[d.id] = { el, status: q('.dept-status'), prog: q('.dept-progress'), bar: q('.dept-progress div'),
+        staff: q('.dept-staff'), staffText: q('.staff-text'), hire: q('.hire'), cov: q('.cov div') };
       return el;
     };
     const line = $('order-line'), support = $('support-depts');
@@ -229,15 +237,40 @@
     return 'Opens: ' + parts.join(' or ');
   }
 
-  function renderCompany(s) {
+  function renderCompany(s, dd) {
     renderTerritory(s);
     const era = E.currentEra(s);
     $('era-num').textContent = ROMAN[era];
     $('era-name').textContent = ERAS[era];
+    const o = dd.order;
+    $('order-summary').textContent = o.factor < 0.999
+      ? `· running at ${Math.round(o.factor * 100)}%, ${DEPARTMENTS.find((x) => x.id === o.bottleneck).name} is the bottleneck`
+      : '· running at 100%';
+    $('order-summary').classList.toggle('bad', o.factor < 0.999);
+    const sq = E.staffLineQuote(s), sb = $('btn-staff-line');
+    sb.hidden = !sq.hires;
+    sb.disabled = sq.cost > s.cash;
+    sb.innerHTML = `Staff the line to 100%<small>${sq.hires} hire${sq.hires === 1 ? '' : 's'} · $${fmt(sq.cost)}</small>`;
     for (const d of DEPARTMENTS) {
       const r = deptEls[d.id], open = E.departmentOpen(s, d);
       r.el.classList.toggle('closed', !open);
-      r.status.textContent = d.id === 'production' ? 'Active' : open ? 'Open · owner-run' : opensText(s, d);
+      r.el.classList.remove('neck');
+      if (d.id === 'production') r.status.textContent = `Active · $${fmt(dd.production)}/s of work`;
+      else if (!open) r.status.textContent = opensText(s, d);
+      else if (staffed(d.id)) {
+        const c = o.depts[d.id], st = s.depts[d.id];
+        const neck = o.bottleneck === d.id && o.factor < 0.999;
+        r.el.classList.toggle('neck', neck);
+        r.status.textContent = neck ? `Bottleneck · ${Math.round(c.coverage * 100)}%` : `Covered · ${Math.round(c.coverage * 100)}%`;
+        r.staff.hidden = false;
+        const reach = d.id === 'outside_sales' && c.effective !== 1 + st.staff ? ` · reach ×${(c.effective / (1 + st.staff)).toFixed(2)}` : '';
+        r.staffText.textContent = `Staff ${1 + st.staff} (you + ${st.staff}) · needs ${c.required.toFixed(1)}${reach}`;
+        r.cov.style.width = `${Math.min(100, c.coverage * 100)}%`;
+        r.cov.parentElement.classList.toggle('short', c.coverage < 0.999);
+        const q = E.hireQuote(s, d.id, ui.qty);
+        r.hire.disabled = q.cost > s.cash;
+        r.hire.innerHTML = `$${fmt(q.cost)}<small>hire ${q.qty}</small>`;
+      } else r.status.textContent = 'Open · hiring coming soon';
       r.prog.hidden = open || d.opens.lifetime == null;
       if (!open && d.opens.lifetime != null) {
         // log scale so early progress is visible
@@ -282,7 +315,7 @@
     ui.tab = tab;
     document.querySelectorAll('.tabs [data-tab]').forEach((b) => b.setAttribute('aria-selected', b.dataset.tab === tab));
     document.querySelectorAll('.tab-body').forEach((b) => (b.hidden = b.dataset.body !== tab));
-    $('buyqty').hidden = !['actuators', 'pumps', 'system'].includes(tab);
+    $('buyqty').hidden = !['actuators', 'pumps', 'system', 'company'].includes(tab);
   }
 
   // ---- Render (≈5×/s) ---------------------------------------------------------
@@ -390,7 +423,8 @@
     }
     if (ui.tab === 'system') renderSystem(s, d);
     if (ui.tab === 'tech') renderTech(s);
-    if (ui.tab === 'company') renderCompany(s);
+    if (ui.tab === 'company') renderCompany(s, d);
+    $('company-badge').hidden = d.order.factor >= 0.95;
     if (ui.tab === 'overhaul') renderOverhaul(s);
     if (ui.tab === 'settings') renderStats(s, d);
 
@@ -409,6 +443,10 @@
     if (d.overRelief > 0) out.push(['warn', `Relief valve dumping ${fmt(d.overRelief)} GPM over the relief valve: ${fmt(d.reliefHP)} HP of heat.`]);
     if (s.temp > d.tempLimit) out.push(['bad', `Oil at ${Math.round(s.temp)}°F and thinning: income ×${d.thermalMult.toFixed(2)}. Add cooling.`]);
     else if (d.tempEq > d.tempLimit) out.push(['warn', `Oil heading for ${Math.round(Math.min(d.tempEq, 999))}°F, above the ${d.tempLimit}°F limit.`]);
+    if (d.order.factor < 0.999) {
+      const neck = DEPARTMENTS.find((x) => x.id === d.order.bottleneck).name;
+      out.push([d.order.factor < 0.8 ? 'bad' : 'warn', `Order Line at ${Math.round(d.order.factor * 100)}%: ${neck} is short-staffed. Hire on the Company tab.`]);
+    }
     if (d.surging) out.push(['good', `SURGE: accumulator dumping, income ×${d.m.surgeMult}.`]);
     const html = out.map(([c, t]) => `<li class="${c}">${t}</li>`).join('');
     const box = $('alerts');

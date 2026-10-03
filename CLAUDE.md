@@ -11,6 +11,8 @@
 - Design intent lives in `docs/`; keep it in sync when mechanics change.
 - Third-party assets: CC0 only, commit just the files used, and record each one in
   `CREDITS.md` (see `docs/ASSETS.md`). Sounds live in `assets/audio/`, mapped in `src/audio.js`.
-- Departments and territory (`DEPARTMENTS`, `PAKS`, `REGIONS`, `STATES` in data.js) are a design scaffold: the Company
-  tab displays them, but they don't affect income yet. Location unlocks
+- Order Line staffing is live: `orderLine()` in engine.js makes the least-covered
+  department a bottleneck on income, and `hire()`/`staffLine()` fix it. The simulator
+  bot calls `keepLineStaffed()` before buying anything. Support departments, Paks and
+  department twists are still a design scaffold shown on the Company tab. Location unlocks
   (`state.locations`, `checkLocations()`) are real and persist through Overhaul. The plans are in `docs/DEPARTMENTS.md` and `docs/TERRITORY.md`.
