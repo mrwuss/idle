@@ -363,5 +363,24 @@
   render();
   requestAnimationFrame(frame);
 
+  // Phones: the dock grows with the system font size, so measure it and let the
+  // page (and the bars stacked above the tab bar) make room for what's really there.
+  const phone = root.matchMedia ? root.matchMedia('(max-width: 760px)') : null;
+  function syncDock() {
+    const css = document.documentElement.style;
+    if (!phone || !phone.matches) { ['--tabs-h', '--act-full', '--qty-full'].forEach((v) => css.removeProperty(v)); return; }
+    const h = (id) => { const el = document.querySelector(id); return el && !el.hidden && getComputedStyle(el).display !== 'none' ? el.offsetHeight : 0; }; // fixed elements have no offsetParent
+    css.setProperty('--tabs-h', `${h('.tabs')}px`);
+    css.setProperty('--act-full', `${h('.actions')}px`);
+    css.setProperty('--qty-full', `${h('#buyqty')}px`);
+  }
+  if (root.ResizeObserver) {
+    const ro = new ResizeObserver(syncDock);
+    ['.tabs', '.actions', '#buyqty'].forEach((q) => { const el = document.querySelector(q); if (el) ro.observe(el); });
+  }
+  root.addEventListener('resize', syncDock);
+  if (phone && phone.addEventListener) phone.addEventListener('change', syncDock);
+  syncDock();
+
   root.PW.debug = { get state() { return state; }, save };
 })(window);
