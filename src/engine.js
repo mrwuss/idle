@@ -1286,79 +1286,195 @@
   function startShake(s) {
     if (!canShake(s)) return false;
     s.cash -= shakeCost(s);
-    Object.assign(s.shake, { phase: 'board', left: C.shakePhaseS.board, moves: [], before: companyStrength(s), report: null });
+    Object.assign(s.shake, { phase: 'board', left: C.shakePhaseS.board, moves: [], before: shakeScore(s).inc, report: null });
     return true;
   }
   const move = (s, msg) => { s.shake.moves.push(msg); logExec(s, 'shake', msg); };
 
+  // ---- Goal seek: every seat in the company, valued by what it does for output ----
+  // A "slot" is a place a person can sit: a Board seat, an executive seat, the
+  // President's chair, a department's manager seat or a team position. The search
+  // swaps people between slots (or fills an empty seat) and keeps a move only if the
+  // company is no worse on any measure and better on at least one, ranked by income.
+
+  /** What a reorganization is judged on. Income (steady, no surge) plus Pak sales is primary. */
+  function shakeScore(s) {
+    const surge = s.surgeLeft; s.surgeLeft = 0;
+    const d = derive(s, { steady: true });
+    const v = { inc: d.income + pakIncome(s, d), kh: d.khRate, risk: incidentRate(s, d),
+      ctl: teamStrength(s, 'controls'), cost: mods(s).costMult };
+    s.surgeLeft = surge;
+    return v;
+  }
+  const rel = (a, b) => (b ? (a - b) / Math.abs(b) : a > 0 ? 1 : 0);
+  /** Weighted gain of `v` over `base`, or -Infinity if anything got worse. */
+  function shakeGain(v, base) {
+    const g = { inc: rel(v.inc, base.inc), kh: rel(v.kh, base.kh), ctl: rel(v.ctl, base.ctl),
+      risk: -rel(v.risk, base.risk), cost: -rel(v.cost, base.cost) };
+    if (Object.values(g).some((x) => x < -1e-9)) return -Infinity;
+    const w = g.inc + 0.5 * g.kh + 0.25 * g.ctl + 0.5 * g.risk + 0.5 * g.cost;
+    return w > 1e-9 ? w : -Infinity;
+  }
+  /** True if `v` is no worse than `base` on every measure. */
+  const noWorse = (v, base) => v.inc >= base.inc * (1 - 1e-9) && v.kh >= base.kh * (1 - 1e-9) && v.ctl >= base.ctl - 1e-9
+    && v.risk <= base.risk * (1 + 1e-9) + 1e-12 && v.cost <= base.cost * (1 + 1e-9);
+
+  const slotKey = (sl) => `${sl.k}:${sl.d ?? sl.id ?? ''}:${sl.i ?? ''}`;
+  function allSlots(s) {
+    const out = [];
+    (s.board || []).forEach((m, i) => out.push({ k: 'board', i }));
+    if (execOpen(s)) {
+      for (const x of DATA.EXECS) out.push({ k: 'exec', id: x.id });
+      out.push({ k: 'pres' });
+    }
+    for (const dept of HIREABLE) {
+      const st = s.depts[dept.id];
+      if (!st || !st.p0) continue;
+      out.push({ k: 'mgr', d: dept.id });
+      st.team.forEach((p, i) => out.push({ k: 'team', d: dept.id, i }));
+    }
+    return out;
+  }
+  function slotGet(s, sl) {
+    if (sl.k === 'board') return s.board[sl.i];
+    if (sl.k === 'exec') return s.execs[sl.id];
+    if (sl.k === 'pres') return s.president;
+    if (sl.k === 'mgr') return s.depts[sl.d].mgr;
+    return s.depts[sl.d].team[sl.i];
+  }
+  function slotSet(s, sl, p) {
+    if (sl.k === 'board') s.board[sl.i] = p;
+    else if (sl.k === 'exec') s.execs[sl.id] = p;
+    else if (sl.k === 'pres') s.president = p;
+    else if (sl.k === 'mgr') s.depts[sl.d].mgr = p;
+    else s.depts[sl.d].team[sl.i] = p;
+  }
+  /** `p` as they would sit in `sl`: a Board seat keeps its perk; Engineering keeps its sub-team. */
+  function seatAs(p, sl, prev) {
+    const { perk, ...q } = p;
+    if (sl.k === 'board') q.perk = prev.perk;
+    if (sl.d === 'engineering') q.g = prev && ENG_TEAMS.includes(prev.g) ? prev.g : (ENG_TEAMS.includes(q.g) ? q.g : 'design');
+    return q;
+  }
+  /** Try moving b's person into a (and a's, if any, into b). Returns an undo, or null if not allowed. */
+  function trySwap(s, a, b) {
+    const pa = slotGet(s, a), pb = slotGet(s, b);
+    if (!pb || pa === pb) return null;
+    // People saved before stats existed (early directors) can't hold a working job.
+    if (!Array.isArray(pb.s) && a.k !== 'board') return null;
+    if (pa && !Array.isArray(pa.s) && b.k !== 'board') return null;
+    if (a.k === 'pres' && !pa && !canAppointPresident(s)) return null;
+    if (b.k === 'board' && !pa) return null;          // a Board seat can't be left empty
+    if (b.k === 'team' && !pa) {                        // filling an empty seat from a team
+      const st = s.depts[b.d];
+      slotSet(s, a, seatAs(pb, a, null));
+      st.team.splice(b.i, 1);
+      return () => { st.team.splice(b.i, 0, pb); slotSet(s, a, null); };
+    }
+    slotSet(s, a, seatAs(pb, a, pa));
+    slotSet(s, b, pa ? seatAs(pa, b, pb) : null);
+    return () => { slotSet(s, a, pa); slotSet(s, b, pb); };
+  }
+  const who = (s, sl) => {
+    if (sl.k === 'board') return `Board (${PERK[slotGet(s, sl).perk].name})`;
+    if (sl.k === 'exec') return EXEC[sl.id].short;
+    if (sl.k === 'pres') return 'President';
+    if (sl.k === 'mgr') return `${DEPT[sl.d].name} manager`;
+    return DEPT[sl.d].name;
+  };
+  /**
+   * Hill-climb: for each target slot of this phase, try the most promising people from
+   * anywhere in the company (ranked by `rank`), keep the best improving move, repeat
+   * until nothing helps. Returns the moves made, described.
+   */
+  function goalSeek(s, targets, rank, { k = 10, rounds = 6 } = {}) {
+    const made = [];
+    for (let r = 0; r < rounds; r++) {
+      let improved = false;
+      for (const tgtKey of targets(s).map(slotKey)) {
+        const slots = allSlots(s), a = slots.find((sl) => slotKey(sl) === tgtKey);
+        if (!a) continue;
+        const base = shakeScore(s), cur = slotGet(s, a);
+        const cands = slots.filter((b) => slotKey(b) !== tgtKey && slotGet(s, b) && Array.isArray(slotGet(s, b).s) && (b.k !== 'board' || cur))
+          .map((b) => ({ b, r: rank(s, a, slotGet(s, b)) })).sort((x, y) => y.r - x.r).slice(0, k);
+        let best = null;
+        for (const { b } of cands) {
+          const undo = trySwap(s, a, b);
+          if (!undo) continue;
+          const g = shakeGain(shakeScore(s), base);
+          undo();
+          if (g > (best ? best.g : 0)) best = { b, g };
+        }
+        if (!best) continue;
+        const pb = slotGet(s, best.b), from = who(s, best.b), to = who(s, a);
+        trySwap(s, a, best.b);
+        improved = true;
+        made.push(`${pb.n}: ${from} → ${to}${cur ? `; ${cur.n} → ${best.b.k === 'team' || best.b.k === 'mgr' ? from : from}` : ''} (+${(best.g * 100).toFixed(1)}%)`);
+      }
+      if (!improved) break;
+    }
+    return made;
+  }
+  // How promising a person looks for a slot (cheap; the real test is shakeScore).
+  const pskill = (p) => Math.round((2 * leadership(p) + STAT_OF(p, DATA.PRESIDENT.stat)) / 3);
+  const RANK = {
+    board: (s, a, p) => leadership(p),
+    exec: (s, a, p) => (a.k === 'pres' ? pskill(p) : execSkill(s, a.id, p)),
+    mgr: (s, a, p) => 2 * leadership(p) + effectiveness(p, a.d),
+  };
+
   const SHAKE_STEP = {
-    // Board: the company's strongest leaders replace weaker directors (the seat keeps its perk).
+    // Board: anyone in the company may take a seat (the seat keeps its perk).
     board(s) {
-      const pool = insiders(s).sort((a, b) => leadership(b.p) - leadership(a.p));
-      const seats = s.board.map((m, i) => i).sort((a, b) => leadership(s.board[a]) - leadership(s.board[b]));
-      for (const i of seats) {
-        const c = pool[0], m = s.board[i];
-        if (!c || leadership(c.p) <= leadership(m)) break;
-        pool.shift();
-        takeOut(s, c);
-        s.board[i] = { ...c.p, perk: m.perk };
-        move(s, `Board: ${c.p.n} (LEA ${leadership(c.p)}) replaces ${m.n} (LEA ${leadership(m)})`);
-      }
+      goalSeek(s, (x) => allSlots(x).filter((sl) => sl.k === 'board'), RANK.board).forEach((m) => move(s, `Board: ${m}`));
     },
-    // Executives: the best person anywhere takes each seat; then the best President.
+    // Executives and the President: the person anywhere who does the most for output.
     cxo(s) {
-      for (const x of DATA.EXECS) {
-        const cur = s.execs[x.id];
-        const best = insiders(s).map((c) => ({ ...c, skill: execSkill(s, x.id, c.p) })).sort((a, b) => b.skill - a.skill)[0];
-        if (!best || best.skill < (cur ? execSkill(s, x.id) + 1 : 4)) continue;
-        takeOut(s, best);
-        s.execs[x.id] = best.p;
-        if (cur) s.depts[x.depts[0]].team.push(cur);
-        move(s, `${x.short}: ${best.p.n} (skill ${best.skill})${cur ? ` replaces ${cur.n}, who returns to ${DEPT[x.depts[0]].name}` : ' takes the empty seat'}`);
-      }
-      const pskill = (p) => Math.round((2 * leadership(p) + STAT_OF(p, DATA.PRESIDENT.stat)) / 3);
-      const top = DATA.EXECS.filter((x) => s.execs[x.id]).sort((a, b) => pskill(s.execs[b.id]) - pskill(s.execs[a.id]))[0];
-      if (top && canAppointPresident(s) && (!s.president || pskill(s.execs[top.id]) > pskill(s.president))) {
-        const old = s.president;
-        s.president = s.execs[top.id];
-        s.execs[top.id] = old;
-        move(s, `President: ${s.president.n}${old ? ` replaces ${old.n}, who takes the ${EXEC[top.id].short} seat` : ' is named President'}`);
-      }
+      goalSeek(s, (x) => allSlots(x).filter((sl) => sl.k === 'exec' || sl.k === 'pres'), RANK.exec).forEach((m) => move(s, `C-suite: ${m}`));
     },
-    // Managers: every team is led by its best leader.
+    // Managers: any leader in the company may take any team.
     mgr(s) {
+      goalSeek(s, (x) => allSlots(x).filter((sl) => sl.k === 'mgr'), RANK.mgr, { k: 12, rounds: 4 }).forEach((m) => move(s, `Managers: ${m}`));
+      // A manager also hires and reviews the team, which output can't show: fill any
+      // seat still empty with the team's best leader, as long as nothing gets worse.
       for (const dept of HIREABLE) {
         const st = s.depts[dept.id];
-        if (!st.p0 || !st.team.length) continue;
-        const i = st.team.reduce((b, p, k, a) => (leadership(p) > leadership(a[b]) ? k : b), 0);
-        if (st.mgr && leadership(st.team[i]) <= leadership(st.mgr)) continue;
-        const was = st.mgr;
-        promote(s, dept.id, i);
-        move(s, `${dept.name}: ${st.mgr.n} (LEA ${leadership(st.mgr)}) ${was ? `takes over from ${was.n}` : 'becomes manager'}`);
+        if (!st.p0 || st.mgr || !st.team.length) continue;
+        const base = shakeScore(s);
+        const i = st.team.reduce((b, p, k, a) => (leadership(p) > leadership(a[b]) ? k : b), 0), p = st.team[i];
+        const undo = trySwap(s, { k: 'mgr', d: dept.id }, { k: 'team', d: dept.id, i });
+        if (noWorse(shakeScore(s), base)) { st.auto = true; move(s, `Managers: ${p.n} leads ${dept.name}`); } else undo();
       }
     },
-    // Employees: everyone moves to where they fit best; each department keeps its head count.
+    // Employees: pairwise swaps between departments, the most promising first, until
+    // no swap helps (head counts stay the same).
     staff(s) {
-      const depts = HIREABLE.filter((d) => s.depts[d.id].p0);
-      const slots = Object.fromEntries(depts.map((d) => [d.id, s.depts[d.id].team.length]));
-      const people = depts.flatMap((d) => s.depts[d.id].team.map((p) => ({ p, from: d.id })));
-      const pairs = [];
-      for (const x of people) for (const d of depts) pairs.push({ x, d: d.id, e: effectiveness(x.p, d.id) });
-      pairs.sort((a, b) => b.e - a.e);
-      const placed = new Map();
-      for (const pr of pairs) {
-        if (placed.has(pr.x) || slots[pr.d] <= 0) continue;
-        placed.set(pr.x, pr.d);
-        slots[pr.d]--;
+      let moved = 0, gain = 0;
+      for (let iter = 0; iter < 400; iter++) {
+        const team = allSlots(s).filter((sl) => sl.k === 'team');
+        const fit = new Map(team.map((sl) => [sl, effectiveness(slotGet(s, sl), sl.d)]));
+        const pairs = [];
+        for (let i = 0; i < team.length; i++) for (let j = i + 1; j < team.length; j++) {
+          const a = team[i], b = team[j];
+          if (a.d === b.d) continue;
+          const pa = slotGet(s, a), pb = slotGet(s, b);
+          const h = effectiveness(pb, a.d) + effectiveness(pa, b.d) - fit.get(a) - fit.get(b);
+          if (h > 1e-9) pairs.push({ a, b, h });
+        }
+        pairs.sort((x, y) => y.h - x.h);
+        const base = shakeScore(s);
+        let best = null;
+        for (const pr of pairs.slice(0, 60)) {
+          const undo = trySwap(s, pr.a, pr.b);
+          const g = shakeGain(shakeScore(s), base);
+          undo();
+          if (g > (best ? best.g : 0)) best = { ...pr, g };
+        }
+        if (!best) break;
+        trySwap(s, best.a, best.b);
+        moved++; gain += best.g;
       }
-      for (const d of depts) s.depts[d.id].team = [];
-      let moved = 0;
-      for (const [x, to] of placed) {
-        if (to !== x.from) { moved++; if (to === 'engineering' || x.from === 'engineering') delete x.p.g; }
-        if (to === 'engineering' && !x.p.g) x.p.g = leastEngTeam(s.depts.engineering);
-        s.depts[to].team.push(x.p);
-      }
-      if (moved) move(s, `Employees: ${moved} people moved to jobs that suit them better`);
+      if (moved) move(s, `Employees: ${moved} swap${moved === 1 ? '' : 's'} between departments (+${(gain * 100).toFixed(1)}%)`);
     },
   };
 
@@ -1371,7 +1487,7 @@
     SHAKE_STEP[sh.phase](s);
     const next = SHAKE_PHASES[SHAKE_PHASES.indexOf(sh.phase) + 1];
     if (next) { sh.phase = next; sh.left = C.shakePhaseS[next]; return null; }
-    const after = companyStrength(s);
+    const after = shakeScore(s).inc;
     sh.report = { moves: sh.moves.length, change: sh.before > 0 ? after / sh.before - 1 : 0, at: Math.round(s.time) };
     sh.phase = null;
     sh.cooldown = C.shakeCooldownS;
@@ -1426,7 +1542,7 @@
     boardOpen, boardSeatCost, fillBoardPool, electDirector, directorQuality, boardProposal, replaceDirector, presidentReview, presReplaceGap,
     scadaReady, canBuyScada, buyScada, scadaMult, scadaScan, scadaTick, bestGrowth, sustained, panelEff, hasPanel, nextPanel, canBuyPanel, buyPanel,
     officeOpen, fileCost, fileQuote, filePatents,
-    SHAKE_PHASES, shakeOpen, shakeCost, canShake, startShake, shakeTick, companyStrength,
+    SHAKE_PHASES, shakeOpen, shakeCost, canShake, startShake, shakeTick, companyStrength, shakeScore,
     pakOpen, sysReady, pakTarget, pakNext, pakHoursRate, pakGrade, pakPrice, pakChainHours, pakIncome, setPakTarget, pakTick,
     serialize, deserialize,
   };

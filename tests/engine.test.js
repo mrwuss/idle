@@ -10,7 +10,7 @@ const close = (a, b, rel = 1e-9) => assert.ok(Math.abs(a - b) <= rel * Math.max(
 /** A mid-game shop: plenty of flow, some lines, departments open. */
 function midGame() {
   const s = E.newState();
-  s.seed = 12345;
+  s.seed = 12345; s.safety.seed = 777; // deterministic applicants and incidents
   s.cash = 1e9; s.lifetime = 1e9; s.runEarnings = 1e9; s.tier = 2;
   s.pumps.gear = 40; s.pumps.vane = 30; s.pumps.axial = 10;
   s.actuators.jack = 50; s.actuators.splitter = 30; s.actuators.press = 20;
@@ -557,6 +557,7 @@ test('SCADA holds growth while the Order Line caps income, and picks the best re
   s.scadaPrefs.pumps = true; s.scadaPrefs.lines = true; s.scadaPrefs.budget = 2;
   // Short-staff the Order Line: no machines get bought, and the log says why.
   for (const d of E.STAFFED) { s.depts[d.id].team = []; s.depts[d.id].staff = 0; s.depts[d.id].mgr = null; }
+  s.safety.incident = null; // a line down for an incident would hide the shortage
   const o = E.derive(s).order;
   assert.ok(o.factor < 0.999, 'test setup: line capped');
   const acts = JSON.stringify([s.pumps, s.actuators]);
@@ -595,4 +596,18 @@ test('SCADA growth buys the best production gain per dollar', () => {
     const c = E.quote(s, 'actuator', a.id, 1).cost;
     if (c <= s.cash * 0.05) assert.ok(g / c <= best.gain / best.cost + 1e-12, a.id);
   }
+});
+
+test('a shake-up goal-seeks company output and never makes any measure worse', () => {
+  const s = lateGame();
+  for (const d of E.HIREABLE) s.depts[d.id].mgr = null;
+  const before = E.shakeScore(s);
+  E.startShake(s);
+  for (let i = 0; i < 400 && s.shake.phase; i++) E.shakeTick(s, 1);
+  const after = E.shakeScore(s);
+  assert.ok(after.inc > before.inc, 'income up');
+  assert.ok(s.shake.report.change > 0);
+  assert.ok(after.kh >= before.kh * (1 - 1e-9) && after.ctl >= before.ctl - 1e-9 && after.cost <= before.cost * (1 + 1e-9), 'nothing else worse');
+  // People are free to cross divisions.
+  assert.ok(s.shake.moves.some((m) => /: (\w[\w ]*) → (?!\1)/.test(m)));
 });

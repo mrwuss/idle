@@ -35,6 +35,6 @@
   `s.patentsSpent`, kept through Overhaul; the Chair's swap offer is `boardProposal()`/`replaceDirector()`) are in engine.js. SCADA (`s.scada`, `buyScada()`, `scadaTick()` automation, `scadaMult()` tuning; switches in `s.scadaPrefs`,
   kept through Overhaul) has a full-screen cockpit in ui.js (`openScada()`, digital gauges `DGAUGES` with `spark()`, history sampled in `sample()`); operator-panel upgrades are `DATA.SCADA_PANEL` (`buyPanel()`, `panelEff()`). The Patent Office (`officeOpen()`, `filePatents()`, `s.patentsFiled`; `overhaulGain()` ignores filed
   patents) spends Know-how once every tech is done. A shake-up (`s.shake`, `startShake()`, `shakeTick()`, phases in `SHAKE_STEP`)
-  reorganizes Board → execs → managers → staff and raises `incidentRate()` while it runs. The org chart and exec sheet (`exec:<id>`) are in ui.js.
+  goal-seeks every seat (`goalSeek()` over slots, judged by `shakeScore()`/`shakeGain()`) Board → execs → managers → staff and raises `incidentRate()` while it runs. The org chart and exec sheet (`exec:<id>`) are in ui.js.
   The remaining department twists are still a design scaffold. Location unlocks
   (`state.locations`, `checkLocations()`) are real and persist through Overhaul. The plans are in `docs/DEPARTMENTS.md` and `docs/TERRITORY.md`.
