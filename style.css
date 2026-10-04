@@ -768,7 +768,38 @@ ul.plain b { color: var(--text); }
 .ts-val { font: 700 20px var(--font-mono); color: #e8f0f6; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .ts-sub { font: 10.5px var(--font-mono); color: var(--muted); min-height: 2.6em; }
 .scada-instruments { display: grid; grid-template-columns: minmax(150px, 220px) minmax(150px, 220px) 1fr; gap: 8px; align-items: center; }
-.scada-instruments .gauge { background: #12171c; }
+.scada-instruments .gauge { background: linear-gradient(#141a20, #0b0f13); border-color: #2a333c; padding: 8px 6px 6px; }
+.scada-instruments .gauge figcaption { color: #9aa7b4; letter-spacing: .18em; }
+.inst .i-track { fill: none; stroke: rgba(255, 255, 255, .07); stroke-width: 7; }
+.inst .i-zones path { fill: none; stroke-width: 3; }
+.inst .z-ok { stroke: rgba(70, 195, 123, .55); }
+.inst .z-warn { stroke: #f2a900; }
+.inst .z-alarm { stroke: #e5484d; }
+.inst .i-value { fill: none; stroke-width: 7; stroke-linecap: butt; transition: d .25s ease-out; }
+.inst .i-value.s-ok { stroke: #46c37b; }
+.inst .i-value.s-warn { stroke: #f2a900; }
+.inst .i-value.s-alarm { stroke: #e5484d; }
+.inst .i-ticks line { stroke: #8a96a3; stroke-width: .7; }
+.inst .i-ticks line.mid { stroke: #b6c0ca; stroke-width: 1; }
+.inst .i-ticks line.maj { stroke: #eef2f6; stroke-width: 1.8; }
+.inst .i-ticks text { fill: #c9d2db; font: 600 9px var(--font-mono); text-anchor: middle; }
+.inst .i-needle path { fill: var(--accent); stroke: #ffb59f; stroke-width: .4; }
+.inst .i-needle { transition: transform .25s ease-out; }
+.inst .i-pin { fill: var(--accent); }
+.inst .m-lo, .inst .m-hi { fill: #dde3ea; opacity: .8; }
+.inst .m-target { stroke: #5ec8ff; stroke-width: 2.4; stroke-linecap: round; }
+.inst .i-lcd { fill: #05080b; stroke: #2a333c; }
+.inst .i-read { fill: #f1f5f9; font: 700 14px var(--font-mono); text-anchor: middle; }
+.inst .i-unit { fill: #8a96a3; font: 600 5.5px var(--font-mono); text-anchor: middle; letter-spacing: .2em; }
+.inst .s-alarm .i-lamp { animation: lamp 1s steps(2) infinite; }
+@keyframes lamp { 50% { opacity: .2; } }
+.inst .i-state { font: 700 7.5px var(--font-mono); text-anchor: middle; letter-spacing: .14em; fill: #46c37b; }
+.inst .i-state.s-warn { fill: #f2a900; }
+.inst .i-state.s-alarm { fill: #e5484d; }
+.inst .i-sub { fill: #9aa7b4; font: 600 8.5px var(--font-mono); text-anchor: middle; }
+.inst-legend { display: flex; justify-content: center; gap: 10px; font: 9px var(--font-mono); color: #8a96a3; margin-top: 2px; }
+.inst-legend i { font-style: normal; }
+.inst-legend .tgt { color: #5ec8ff; }
 .scada-meters { background: #12171c; border: 1px solid var(--edge); border-radius: 6px; padding: 10px; margin: 0; }
 .scada-charts { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 8px; }
 .trend { display: block; width: 100%; height: 150px; }
