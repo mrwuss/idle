@@ -717,3 +717,19 @@ ul.plain b { color: var(--text); }
   .brand-logo .ifp-logo { height: 30px; }
   .topbar { border-bottom-width: 2px; }
 }
+
+/* ---- shake-up ---- */
+.shake { background: var(--panel-2); border: 1px solid var(--edge); border-radius: var(--radius); padding: 10px; margin-top: 8px; display: grid; gap: 6px; }
+.shake-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.shake-head h4 { margin: 0; font: 800 12px var(--font-head); text-transform: uppercase; letter-spacing: .1em; }
+.shake-steps { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; counter-reset: step; }
+.shake-steps li { border: 1px solid var(--edge); border-radius: 4px; padding: 4px 6px; display: grid; font-size: 12px; background: var(--panel); }
+.shake-steps li span { font: 10px var(--font-mono); color: var(--muted); }
+.shake-steps li.done { border-color: var(--ok); }
+.shake-steps li.done b { color: var(--ok); }
+.shake-steps li.now { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent) inset; }
+.shake-prog { height: 6px; }
+.shake-prog div { background: var(--accent); }
+.shake p { margin: 0; }
+.shake .btn.primary { justify-self: start; min-height: 44px; }
+.bad-text { color: var(--pressure); }

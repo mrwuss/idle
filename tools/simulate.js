@@ -58,6 +58,8 @@ function manageCompany(s) {
       E.appointPresident(s, best.id);
     }
   }
+  // Shake-up whenever it's off cooldown and cheap.
+  if (E.canShake(s) && E.shakeCost(s) < s.cash * 0.05) E.startShake(s);
   // Board: elect the first candidate when the seat costs under a fifth of our patents.
   if (E.boardOpen(s)) {
     E.fillBoardPool(s);
@@ -202,7 +204,7 @@ const d = E.derive(s);
 console.log('\nFinal:', {
   orderLine: d.order.factor.toFixed(2), surplusBonus: '+' + Math.round((d.order.bonus - 1) * 100) + '%',
   execs: Object.fromEntries(E.DATA.EXECS.map((x) => [x.id, s.execs[x.id] ? E.execSkill(s, x.id) : '-'])), president: E.presidentSkill(s),
-  board: s.board.map((m) => m.perk).join(','), execActions: s.execLog.length,
+  board: s.board.map((m) => m.perk).join(','), execActions: s.execLog.length, shakes: s.shake.done,
   paks: { ...s.pak.built, earned: fmt(s.pak.earned), target: s.pak.target },
   load: Object.fromEntries(Object.entries(d.order.depts).filter(([, o]) => o.open).map(([k, o]) => [k, +o.load.toFixed(2)])),
   income: fmt(d.income) + '/s', lifetime: fmt(s.lifetime), patentsAvailable: E.overhaulGain(s),

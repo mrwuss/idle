@@ -398,6 +398,24 @@ Overhaul) and appear as an org chart under **Leadership** on the Company tab.
   executive +1 skill. **Directors stay through Overhaul.**
 - **Overhaul** resets executives and the President (they are part of the run),
   but not the Board.
+- **Director strength:** a director's perk scales with their Leadership:
+  `1 + (perk − 1) × (0.6 + 0.08 × LEA)`, so ×1.0 at LEA 5 and ×1.4 at LEA 10.
+
+### Shake-up (implemented, v0.2.7)
+
+A shake-up is a timed, top-down reorganization you start from the Leadership
+section. It costs 2 minutes of production and then cools down for 30 minutes.
+
+| Phase | Time | What happens when it ends |
+|---|---:|---|
+| Board | 45 s | The company's strongest leaders take Board seats from weaker directors (each seat keeps its perk; the old director retires) |
+| Executives | 60 s | The best person anywhere takes each C-suite seat if they beat the incumbent by 1+ skill (the incumbent returns to the division); the best executive becomes President |
+| Managers | 60 s | Every team's best leader becomes its manager |
+| Employees | 120 s | Everyone moves to the department where they fit best; each department keeps its head count |
+
+While it runs, **incidents are 3× likelier** and Order Line teams work at **90%**.
+At the end you get a report (moves made, change in company team strength), and
+every move is listed in the shake-up card.
 
 ## Support departments and Purchasing (implemented, v0.2.3)
 

@@ -360,3 +360,45 @@ test('board seats cost Patents, survive Overhaul and are not refunded', () => {
   E.overhaul(s);
   assert.equal(s.board[0].perk, perk);
 });
+
+test('a shake-up runs Board → executives → managers → employees, then cools down', () => {
+  const s = lateGame();
+  s.overhauls = 2; s.patents = 50;
+  E.fillBoardPool(s); E.electDirector(s, 0);
+  for (const d of E.HIREABLE) s.depts[d.id].mgr = null;
+  assert.ok(E.canShake(s));
+  const d = E.derive(s);
+  assert.ok(E.startShake(s));
+  assert.equal(s.shake.phase, 'board');
+  // Disruption while it runs: incidents likelier, the Order Line slower.
+  assert.ok(E.derive(s).order.depts.outside_sales.effective < d.order.depts.outside_sales.effective);
+  const phases = [];
+  for (let t = 0; t < 400 && s.shake.phase; t++) { if (phases.at(-1) !== s.shake.phase) phases.push(s.shake.phase); E.shakeTick(s, 1); }
+  assert.deepEqual(phases, ['board', 'cxo', 'mgr', 'staff']);
+  assert.ok(s.shake.report && s.shake.report.moves > 0);
+  assert.ok(E.HIREABLE.filter((x) => s.depts[x.id].team.length).every((x) => s.depts[x.id].mgr), 'every staffed team has a manager');
+  assert.ok(E.execCount(s) >= 1, 'executive seats filled from inside');
+  assert.equal(E.canShake(s), false, 'cooling down');
+  E.shakeTick(s, E.DATA.CONSTANTS.shakeCooldownS);
+  assert.ok(E.canShake(s));
+});
+
+test('the employee phase never lowers total fit and keeps head counts', () => {
+  const s = lateGame();
+  const heads = Object.fromEntries(E.HIREABLE.map((d) => [d.id, s.depts[d.id].team.length]));
+  const fit = () => E.HIREABLE.reduce((a, d) => a + s.depts[d.id].team.reduce((b, p) => b + E.effectiveness(p, d.id), 0), 0);
+  const before = fit();
+  E.startShake(s);
+  s.shake.phase = 'staff'; s.shake.left = 0;
+  E.shakeTick(s, 1);
+  for (const d of E.HIREABLE) assert.equal(s.depts[d.id].team.length, heads[d.id], d.id);
+  assert.ok(fit() >= before - 1e-9);
+});
+
+test('directors with more Leadership make stronger perks', () => {
+  const s = lateGame();
+  s.board = [{ n: 'A', a: 1, s: [5, 5, 5, 5, 5, 5, 5, 2], perk: 'founder' }];
+  const weak = E.boardEff(s, 'incomeMult');
+  s.board[0].s[7] = 10;
+  assert.ok(E.boardEff(s, 'incomeMult') > weak);
+});
