@@ -1,5 +1,7 @@
 # Pressure Works
 
+**Play:** https://mrwuss.github.io/idle/ (deployed from `main` by `.github/workflows/pages.yml`)
+
 *A hydraulic idle game. Grow IFP MSI from one bottle jack in Cedar Rapids to a four-branch fluid-power company.*
 
 It's 1972 in Cedar Rapids, Iowa. **IFP MSI** opens its doors with one bottle jack and a gear pump. Pump by

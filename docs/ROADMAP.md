@@ -65,7 +65,7 @@ Design: [TERRITORY.md](TERRITORY.md)
 - [x] "Next" buy quantity: up to the next ×2 milestone
 - [x] Achievements: 23 goals in the Logbook, +1% income each, kept through Overhaul
 - [x] Unit tests for engine.js (`npm test`: cost curves, flow balance, heat, hiring, save migration, offline, Overhaul)
-- [ ] GitHub Pages deploy
+- [x] GitHub Pages deploy (`.github/workflows/pages.yml`)
 
 ## v0.4 — Depth
 
