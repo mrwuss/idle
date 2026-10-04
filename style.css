@@ -413,10 +413,16 @@ textarea { width: 100%; background: var(--sunk); color: var(--text); border: 1px
 .tab-ico { display: none; }
 .m-only, .works-close-btn { display: none; }
 @media (max-width: 760px) {
-  :root { --nav-h: 54px; --act-h: 64px; --qty-h: 42px; --safe: max(env(safe-area-inset-bottom, 0px), 4px); }
-  body { padding-bottom: calc(var(--nav-h) + var(--act-h) + var(--qty-h) + var(--safe) + 8px); }
+  /* The dock (tab bar, Stroke/Surge, buy quantity) sizes itself to its text, so a
+     phone's larger system font can't squash it; main.js measures the real heights
+     into --tabs-h / --act-full / --qty-full and the page leaves room for them. */
+  /* Never let one wide card widen the page (that pushes the fixed dock off-screen). */
+  html { overflow-x: clip; }
+  :root { --nav-h: 54px; --act-h: 64px; --qty-h: 42px; --safe: max(env(safe-area-inset-bottom, 0px), 4px);
+    --tabs-h: calc(var(--nav-h) + var(--safe)); --act-full: var(--act-h); --qty-full: var(--qty-h); }
+  body { padding-bottom: calc(var(--tabs-h) + var(--act-full) + var(--qty-full) + 16px); }
   body[data-view="works"], body[data-view="tech"], body[data-view="overhaul"], body[data-view="settings"] {
-    padding-bottom: calc(var(--nav-h) + var(--act-h) + var(--safe) + 8px);
+    padding-bottom: calc(var(--tabs-h) + var(--act-full) + 16px);
   }
   .m-only { display: revert; }
 
@@ -426,7 +432,8 @@ textarea { width: 100%; background: var(--sunk); color: var(--text); border: 1px
   .brand-gauge { width: 26px; height: 26px; }
   .topbar .resources { flex: 1; gap: 4px; flex-wrap: nowrap; min-width: 0; }
   .res { padding: 2px 6px; min-width: 0; flex: 1; border-radius: 4px; }
-  .res dt { font-size: 8.5px; letter-spacing: .06em; }
+  .res dt { font-size: 8.5px; letter-spacing: .06em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .res dd, .res small { overflow: hidden; text-overflow: ellipsis; }
   .res dd { font-size: 14px; line-height: 1.15; white-space: nowrap; }
   .res small { font-size: 9.5px; white-space: nowrap; }
   .icon-btn { width: 34px; height: 34px; padding: 6px; }
@@ -459,8 +466,8 @@ textarea { width: 100%; background: var(--sunk); color: var(--text); border: 1px
 
   /* bottom dock: Stroke and Surge, then the tab bar */
   .actions {
-    position: fixed; left: 0; right: 0; bottom: calc(var(--nav-h) + var(--safe)); z-index: 12; margin: 0;
-    height: var(--act-h); padding: 6px 10px; grid-template-columns: 1fr 1.5fr; gap: 8px;
+    position: fixed; left: 0; right: 0; bottom: var(--tabs-h); z-index: 12; margin: 0;
+    min-height: var(--act-h); padding: 6px 10px; grid-template-columns: 1fr 1.5fr; gap: 8px;
     background: var(--bar); border-top: 1px solid var(--edge);
   }
   .big-btn { padding: 6px 4px; justify-content: center; min-width: 0; }
@@ -471,7 +478,7 @@ textarea { width: 100%; background: var(--sunk); color: var(--text); border: 1px
   .tabs {
     position: fixed; left: 0; right: 0; bottom: 0; z-index: 13; margin: 0; overflow: visible;
     display: grid; grid-template-columns: repeat(8, 1fr); gap: 0;
-    height: calc(var(--nav-h) + var(--safe)); padding-bottom: var(--safe);
+    min-height: calc(var(--nav-h) + var(--safe)); padding-bottom: var(--safe);
     background: var(--bar); border-top: 1px solid var(--edge); border-bottom: 0;
   }
   .tabs button {
@@ -481,16 +488,17 @@ textarea { width: 100%; background: var(--sunk); color: var(--text); border: 1px
   }
   .tabs button[aria-selected="true"] { border-top-color: var(--accent); background: var(--panel); }
   .tab-ico { display: block; width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
-  .tl { font-size: 0; }
-  .tl::after { content: attr(data-short); font-size: 10px; }
+  .tl { font-size: 0; display: block; max-width: 100%; padding: 0 1px; overflow: hidden; }
+  .tl::after { content: attr(data-short); font-size: clamp(8px, 2.25vw, 10px); letter-spacing: 0; display: block;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .tabs .badge { position: absolute; top: 3px; left: 54%; margin: 0; padding: 0 4px; font-size: 9px; }
 
   /* buy quantity just above Stroke/Surge, big enough for a thumb */
   .buyqty {
-    position: fixed; left: 0; right: 0; bottom: calc(var(--nav-h) + var(--act-h) + var(--safe)); z-index: 11;
-    height: var(--qty-h); margin: 0; padding: 5px 10px; gap: 6px; background: var(--bar-a); border-top: 1px solid var(--edge);
+    position: fixed; left: 0; right: 0; bottom: calc(var(--tabs-h) + var(--act-full)); z-index: 11;
+    min-height: var(--qty-h); margin: 0; padding: 5px 10px; gap: 6px; background: var(--bar); border-top: 1px solid var(--edge);
   }
-  .buyqty button { flex: 1; height: 100%; font-size: 13px; }
+  .buyqty button { flex: 1 1 0; min-width: 0; min-height: 32px; padding: 2px; font-size: 13px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
 
   /* shop rows: the buy button on the right, under the thumb */
   .item { grid-template-columns: 34px 1fr auto; gap: 2px 8px; padding: 8px; }
@@ -728,11 +736,12 @@ ul.plain b { color: var(--text); }
 }
 
 /* ---- shake-up ---- */
-.shake { background: var(--panel-2); border: 1px solid var(--edge); border-radius: var(--radius); padding: 10px; margin-top: 8px; display: grid; gap: 6px; }
+.shake { background: var(--panel-2); border: 1px solid var(--edge); border-radius: var(--radius); padding: 10px; margin-top: 8px; display: grid; grid-template-columns: minmax(0, 1fr); gap: 6px; }
 .shake-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
 .shake-head h4 { margin: 0; font: 800 12px var(--font-head); text-transform: uppercase; letter-spacing: .1em; }
-.shake-steps { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; counter-reset: step; }
-.shake-steps li { border: 1px solid var(--edge); border-radius: 4px; padding: 4px 6px; display: grid; font-size: 12px; background: var(--panel); }
+.shake-steps { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 4px; counter-reset: step; }
+.shake-steps li { min-width: 0; border: 1px solid var(--edge); border-radius: 4px; padding: 4px 6px; display: grid; font-size: 12px; background: var(--panel); }
+.shake-steps li b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .shake-steps li span { font: 10px var(--font-mono); color: var(--muted); }
 .shake-steps li.done { border-color: var(--ok); }
 .shake-steps li.done b { color: var(--ok); }
