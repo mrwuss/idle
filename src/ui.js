@@ -917,10 +917,10 @@
           <div class="scada-row">
             <section class="scada-panel"><h4>Alarms</h4><ul class="scada-alarms" data-k="alarms"></ul></section>
             <section class="scada-panel"><h4>Autonomous control</h4>
-              ${[['cool', 'Auto-cooling', 'buys the best cooler per $ while the oil runs toward its limit'],
-                 ['pumps', 'Auto-pumps', 'buys pumps whenever actuators would be starved'],
-                 ['lines', 'Auto-lines', 'puts spare flow to work on the best-paying actuator that fits'],
-                 ['tier', 'Auto-tier & accumulator', 'upgrades the pressure tier when its extra output pays it back within 10 min, and the accumulator when it fits the budget']].map(([k, n, w]) =>
+              ${[['cool', 'Auto-cooling', 'keeps the oil under its limit, and buys coolers when heat is costing output'],
+                 ['pumps', 'Auto-pumps', 'buys pumps for a starved plant, and the pumps to feed each new line'],
+                 ['lines', 'Auto-lines', 'adds the actuator line that grows revenue most per $'],
+                 ['tier', 'Auto-tier & accumulator', 'raises the pressure tier when it beats every other buy per $; the accumulator when no revenue buy fits']].map(([k, n, w]) =>
                 `<button class="auto-row${P[k] ? ' on' : ''}" data-scada-auto="${k}"><b>${n}</b><span>${w}</span><i>${P[k] ? 'ON' : 'OFF'}</i></button>`).join('')}
               <div class="seg scada-budget">${C.scadaBudgets.map((b, i) => `<button class="btn mini${P.budget === i ? ' on' : ' ghost'}" data-scada-budget="${i}">≤ ${b * 100}% cash / action</button>`).join('')}</div>
               <p class="muted small" data-k="scan"></p>

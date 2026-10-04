@@ -1142,6 +1142,64 @@
     }
     return best;
   }
+  /** Short numbers for log lines (the engine has no access to the UI's fmt()). */
+  function fmtNum(v) {
+    const a = Math.abs(v);
+    if (a < 1000) return a < 10 ? v.toFixed(1) : String(Math.round(v));
+    if (a >= 1e15) return v.toExponential(2).replace('e+', 'e');
+    const k = Math.floor(Math.log10(a) / 3);
+    return (v / 1000 ** k).toFixed(2) + ['', 'K', 'M', 'B', 'T'][k];
+  }
+  /**
+   * The purchase with the best production gain per $ among what the SCADA switches
+   * allow, within `budget`: lines (bundled with the pumps to feed them), pumps for a
+   * starved plant, coolers, and the next pressure tier. Gains are measured with
+   * derive() on the sustained plant (accumulator empty, oil at its equilibrium
+   * temperature), so milestones, starvation, heat and relief all count, and a
+   * charged accumulator can't hide a flow shortage. Null if nothing pays.
+   */
+  function sustained(s) {
+    const c = s.accCharge;
+    s.accCharge = 0;
+    const p = derive(s, { steady: true }).production;
+    s.accCharge = c;
+    return p;
+  }
+  const art = (n) => (/^[AEIOU]/i.test(n) ? 'an ' : 'a ') + n;
+  function bestGrowth(s, P, budget) {
+    const base = derive(s), bp = sustained(s), cash = Math.min(budget, s.cash);
+    let best = null;
+    const consider = (label, items, tier) => {
+      let cost = tier ? nextTier(s).cost * mods(s).costMult : 0;
+      for (const [kind, id, n] of items) cost += quote(s, kind, id, n).cost;
+      if (!(cost > 0) || cost > cash) return;
+      for (const [kind, id, n] of items) s[KINDS[kind][0]][id] += n;
+      if (tier) s.tier++;
+      const gain = sustained(s) - bp;
+      for (const [kind, id, n] of items) s[KINDS[kind][0]][id] -= n;
+      if (tier) s.tier--;
+      if (gain > 0 && (!best || gain / cost > best.gain / best.cost)) best = { label, items, tier, gain, cost };
+    };
+    const pumpsOk = PUMPS.filter((p) => isUnlocked(s, 'pump', p.id));
+    const pumpGpm = (p) => p.gpm * base.m.pumpMult * milestoneMult(s.pumps[p.id] + 1);
+    const perDollar = (p) => pumpGpm(p) / quote(s, 'pump', p.id, 1).cost;
+    const feeder = pumpsOk.reduce((b, p) => (!b || perDollar(p) > perDollar(b) ? p : b), null);
+    if (P.lines) {
+      for (const a of ACTUATORS) {
+        if (!isUnlocked(s, 'actuator', a.id)) continue;
+        const short = base.demand + a.gpm - base.supply;
+        if (short <= 0) consider(`bought ${art(a.name)}`, [['actuator', a.id, 1]]);
+        else if (P.pumps && feeder) {
+          const k = Math.ceil(short / pumpGpm(feeder));
+          consider(`bought ${art(a.name)} + ${k} ${feeder.name}${k > 1 ? 's' : ''} to feed it`, [['actuator', a.id, 1], ['pump', feeder.id, k]]);
+        }
+      }
+    }
+    if (P.pumps && base.supply < base.demand) for (const p of pumpsOk) consider(`bought ${art(p.name)} (flow short)`, [['pump', p.id, 1]]);
+    if (P.cool) for (const c of COOLERS) if (isUnlocked(s, 'cooler', c.id)) consider(`bought ${art(c.name)} (heat was costing output)`, [['cooler', c.id, 1]]);
+    if (P.tier) { const t = nextTier(s); if (t && (!t.requires || s.tech[t.requires])) consider(`raised pressure to ${t.name}`, [], true); }
+    return best;
+  }
   function scadaTick(s, d) {
     if (!s.scada.owned) return [];
     const P = s.scadaPrefs, done = [];
@@ -1157,39 +1215,24 @@
     // While the Order Line caps income, more machines earn nothing: hold growth and say why.
     const o = d.order, held = o.factor < 0.999 && o.bottleneck;
     const hold = held ? `Holding growth: Order Line at ${Math.round(o.factor * 100)}%, ${DEPT[o.bottleneck].name} is short-staffed` : '';
-    if ((P.pumps || P.lines) && hold !== (s.scada.hold || '')) { if (hold || s.scada.hold) scadaLog(s, hold || 'Order Line clear: growth resumes'); s.scada.hold = hold; }
-    // 2. Tier & accumulator, ahead of routine growth so big steps aren't starved of
-    //    actions: a pressure-tier upgrade when it pays for itself quickly
-    //    (its production gain, measured, repays the cost within scadaTierPayback s; the
-    //    Order Line then staffs up to it), unless the line is already the cap; then the
-    //    accumulator whenever it fits the budget.
-    if (P.tier && !held && actions > 0) {
-      const t = nextTier(s);
-      if (t && (!t.requires || s.tech[t.requires])) {
-        const cost = t.cost * mods(s).costMult, before = derive(s).production;
-        s.tier++; const gain = derive(s).production - before; s.tier--;
-        if (cost <= budget() && gain > 0 && cost / gain <= C.scadaTierPayback && upgradeTier(s)) {
-          actions--; const m = `Pressure tier: upgraded to ${TIERS[s.tier].name} (pays back in ${Math.ceil(cost / gain)}s)`; scadaLog(s, m); done.push(m);
-        }
-      }
+    if ((P.pumps || P.lines || P.tier) && hold !== (s.scada.hold || '')) { if (hold || s.scada.hold) scadaLog(s, hold || 'Order Line clear: growth resumes'); s.scada.hold = hold; }
+    // 2. Growth: price every option the switches allow, measure what each adds to
+    //    production, and buy the best gain per $ that fits the budget; repeat while
+    //    actions remain. A new line that would outrun the flow comes bundled with the
+    //    pumps to feed it (when Auto-pumps is on).
+    let grew = false;
+    while (!held && actions > 0 && (P.pumps || P.lines || P.tier || P.cool)) {
+      const best = bestGrowth(s, P, budget());
+      if (!best) break;
+      for (const [kind, id, n] of best.items) buy(s, kind, id, n);
+      if (best.tier) upgradeTier(s);
+      actions--; grew = true;
+      const m = `Best return: ${best.label} · +$${fmtNum(best.gain)}/s for $${fmtNum(best.cost)} (pays back in ${fmtNum(best.cost / best.gain)}s)`;
+      scadaLog(s, m); done.push(m);
     }
-    if (P.tier && actions > 0 && accUpgradeCost(s) <= budget() && upgradeAccumulator(s)) {
+    // 3. Accumulator: no steady revenue of its own, so only when no revenue buy fits.
+    if (P.tier && !grew && actions > 0 && accUpgradeCost(s) <= budget() && upgradeAccumulator(s)) {
       actions--; const m = `Accumulator: upgraded to level ${s.accLevel}`; scadaLog(s, m); done.push(m);
-    }
-    // 3. Pumps: no starved actuators (5% margin).
-    while (P.pumps && !held && actions > 0) {
-      const dd = derive(s);
-      if (dd.supply >= dd.demand * 1.05 || dd.demand === 0) break;
-      const b = bestBuy(s, 'pump', PUMPS, (p) => p.gpm * milestoneMult(s.pumps[p.id] + 1), budget());
-      if (!b) break;
-      act('pump', b.it, 'Flow short');
-    }
-    // 4. Lines: put spare flow to work on the best-paying actuator that fits.
-    while (P.lines && !held && actions > 0) {
-      const dd = derive(s), spare = dd.supply - dd.demand;
-      const b = bestBuy(s, 'actuator', ACTUATORS.filter((a) => a.gpm <= spare), (a) => a.rate * Math.sqrt(dd.psi / a.psi), budget());
-      if (!b) break;
-      act('actuator', b.it, 'Spare flow');
     }
     return done;
   }
@@ -1381,7 +1424,7 @@
     EXEC, execOpen, execOf, execSkill, presidentSkill, execMult, presidentMult, execCount, boardEff, execCandidates, fillExecPool,
     execHireCost, appointExec, dismissExec, canAppointPresident, appointPresident, execTick,
     boardOpen, boardSeatCost, fillBoardPool, electDirector, directorQuality, boardProposal, replaceDirector, presidentReview, presReplaceGap,
-    scadaReady, canBuyScada, buyScada, scadaMult, scadaScan, scadaTick, panelEff, hasPanel, nextPanel, canBuyPanel, buyPanel,
+    scadaReady, canBuyScada, buyScada, scadaMult, scadaScan, scadaTick, bestGrowth, sustained, panelEff, hasPanel, nextPanel, canBuyPanel, buyPanel,
     officeOpen, fileCost, fileQuote, filePatents,
     SHAKE_PHASES, shakeOpen, shakeCost, canShake, startShake, shakeTick, companyStrength,
     pakOpen, sysReady, pakTarget, pakNext, pakHoursRate, pakGrade, pakPrice, pakChainHours, pakIncome, setPakTarget, pakTick,

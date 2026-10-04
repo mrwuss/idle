@@ -371,16 +371,21 @@ it, but your automation switches are remembered.
 - **Autonomous control** (each switch off until you turn it on), scanning every
   2 s with `1 + Controls strength ÷ 3` actions per scan, each spending at most 1%,
   5% or 20% of cash (your choice):
-  - *Auto-cooling* buys the best cooler per $ while equilibrium temperature is
-    within 5°F of the limit;
-  - *Auto-pumps* buys the most GPM per $ whenever demand exceeds supply (5% margin);
-  - *Auto-lines* buys the best-paying actuator per $ that fits in the spare flow;
-  - *Auto-tier & accumulator* (v0.3.2) upgrades the pressure tier when the extra
-    production repays its cost within 10 minutes, and the accumulator whenever it
-    fits the budget. It runs before pumps and lines so big steps get an action.
-  - **Order Line aware (v0.3.2):** while short staffing caps income, pumps, lines and
-    tiers are put on hold (more machines would earn nothing); the log says which
-    department is short and when growth resumes. Cooling keeps running.
+  - **Best return per $ (v0.3.3):** each action prices every option the switches
+    allow and measures what it adds to *sustained* production (accumulator empty,
+    oil at equilibrium, so a charged accumulator can't hide a flow shortage, and
+    milestones, heat and relief all count). It buys the best gain per $ within the
+    budget, and logs the gain, the cost and the payback time.
+  - *Auto-lines* offers every unlocked actuator; with *Auto-pumps* on, a line that
+    would outrun the flow comes bundled with the pumps to feed it.
+  - *Auto-pumps* also offers single pumps while the plant is starved.
+  - *Auto-cooling* still keeps equilibrium within 5°F of the limit first (safety),
+    and offers coolers whenever heat is costing output.
+  - *Auto-tier & accumulator* offers the next pressure tier like any other buy; the
+    accumulator (no steady revenue of its own) only when no revenue buy fits.
+  - **Order Line aware:** while short staffing caps income, growth is put on hold
+    (more machines would earn nothing); the log says which department is short and
+    when growth resumes. Cooling keeps running.
   Every automated purchase is logged on the screen. Automation runs in the game
   loop whether or not the screen is open, but not while the game is closed.
 

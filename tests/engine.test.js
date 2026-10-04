@@ -548,7 +548,7 @@ test('operator-panel upgrades are bought in order with Know-how and pay off', ()
   assert.equal(E.hasPanel(s, 'historian'), false, 'goes with the SCADA install');
 });
 
-test('SCADA holds growth while the Order Line caps income, and can climb pressure tiers', () => {
+test('SCADA holds growth while the Order Line caps income, and picks the best return per $', () => {
   const s = lateGame();
   s.kh = 1e9; s.tech.telematics = true;
   E.hire(s, 'engineering', 6);
@@ -569,9 +569,30 @@ test('SCADA holds growth while the Order Line caps income, and can climb pressur
   assert.ok(s.scada.log.some((l) => /growth resumes/.test(l.m)));
   // Auto-tier: buys the next tier when it pays back fast, and the accumulator.
   for (const t of E.DATA.TECH) s.tech[t.id] = true;
-  s.scadaPrefs.tier = true;
+  s.scadaPrefs.tier = true; s.scadaPrefs.pumps = false; s.scadaPrefs.lines = false;
   const tier = s.tier, acc = s.accLevel;
-  for (let i = 0; i < 20; i++) { E.staffLine(s); E.scadaTick(s, E.derive(s)); }
+  for (let i = 0; i < 40; i++) { E.staffLine(s); E.scadaTick(s, E.derive(s)); }
   assert.ok(s.tier > tier, 'tier upgraded');
-  assert.ok(s.accLevel > acc, 'accumulator upgraded');
+  assert.ok(s.accLevel > acc, 'accumulator upgraded once no revenue buy fits');
+  assert.ok(s.scada.log.some((l) => /Best return: raised pressure/.test(l.m)));
+});
+
+test('SCADA growth buys the best production gain per dollar', () => {
+  const s = lateGame();
+  s.kh = 1e9; s.tech.telematics = true;
+  E.hire(s, 'engineering', 6);
+  for (const i of s.depts.engineering.team.keys()) E.setEngTeam(s, i, 'controls');
+  E.buyScada(s);
+  const P = { pumps: true, lines: true, tier: true, cool: true };
+  const best = E.bestGrowth(s, P, s.cash * 0.05);
+  assert.ok(best && best.gain > 0);
+  // No single option the switches allow beats it per dollar.
+  for (const a of E.DATA.ACTUATORS) {
+    if (!E.isUnlocked(s, 'actuator', a.id)) continue;
+    const d = E.derive(s);
+    if (d.demand + a.gpm > d.supply) continue;
+    const before = E.sustained(s); s.actuators[a.id]++; const g = E.sustained(s) - before; s.actuators[a.id]--;
+    const c = E.quote(s, 'actuator', a.id, 1).cost;
+    if (c <= s.cash * 0.05) assert.ok(g / c <= best.gain / best.cost + 1e-12, a.id);
+  }
 });
