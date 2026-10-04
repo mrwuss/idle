@@ -84,6 +84,99 @@
     };
   }
 
+  /**
+   * The SCADA cockpit's instrument: a bezel-mounted 270° dial with a live value arc,
+   * operating zones, 5-minute low/high tattletales, a target marker and a digital
+   * readout with a status lamp. Same scale and needle physics as the control panel's
+   * gauge; labels go through fmt() so any magnitude reads cleanly.
+   */
+  let instN = 0;
+  function makeInstrument(fig, unit) {
+    const id = `inst${++instN}`;
+    const svg = document.createElementNS(SVGNS, 'svg');
+    svg.setAttribute('viewBox', '0 0 200 184');
+    svg.classList.add('inst');
+    fig.prepend(svg);
+    const cx = 100, cy = 96, r = 74;
+    const ang = (f) => (-225 + 270 * f) * Math.PI / 180;
+    const pt = (f, rr) => [cx + rr * Math.cos(ang(f)), cy + rr * Math.sin(ang(f))];
+    const arc = (f0, f1, rr) => {
+      if (f1 - f0 < 1e-4) return '';
+      const [x0, y0] = pt(f0, rr), [x1, y1] = pt(f1, rr);
+      return `M${x0.toFixed(2)} ${y0.toFixed(2)} A${rr} ${rr} 0 ${(f1 - f0) * 270 > 180 ? 1 : 0} 1 ${x1.toFixed(2)} ${y1.toFixed(2)}`;
+    };
+    svg.innerHTML = `<defs>
+        <radialGradient id="${id}-face" cx="50%" cy="38%" r="70%"><stop offset="0" stop-color="#1f2933"/><stop offset=".7" stop-color="#11171d"/><stop offset="1" stop-color="#090c10"/></radialGradient>
+        <linearGradient id="${id}-bezel" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#5b6874"/><stop offset=".5" stop-color="#222a32"/><stop offset="1" stop-color="#3d4752"/></linearGradient>
+        <radialGradient id="${id}-hub" cx="40%" cy="35%" r="70%"><stop offset="0" stop-color="#9aa7b4"/><stop offset="1" stop-color="#2a323a"/></radialGradient>
+        <filter id="${id}-glow" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="2.2" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+        <filter id="${id}-shadow" x="-50%" y="-50%" width="200%" height="200%"><feDropShadow dx="0" dy="1.5" stdDeviation="1.2" flood-color="#000" flood-opacity=".7"/></filter>
+      </defs>
+      <circle cx="${cx}" cy="${cy}" r="${r + 16}" fill="url(#${id}-bezel)"/>
+      <circle cx="${cx}" cy="${cy}" r="${r + 12}" fill="url(#${id}-face)" stroke="#05070a" stroke-width="1.5"/>
+      <path class="i-track" d="${arc(0, 1, r - 4)}"/>
+      <g class="i-zones"></g>
+      <path class="i-value" filter="url(#${id}-glow)"/>
+      <g class="i-ticks"></g>
+      <g class="i-marks"></g>
+      <g class="i-needle" filter="url(#${id}-shadow)" style="transform-origin:${cx}px ${cy}px">
+        <path d="M${cx - 3.2} ${cy + 14} L${cx - 1.4} ${cy - r + 14} L${cx} ${cy - r + 8} L${cx + 1.4} ${cy - r + 14} L${cx + 3.2} ${cy + 14} Z"/>
+      </g>
+      <circle cx="${cx}" cy="${cy}" r="7.5" fill="url(#${id}-hub)" stroke="#05070a"/>
+      <circle class="i-pin" cx="${cx}" cy="${cy}" r="2.2"/>
+      <rect class="i-lcd" x="${cx - 27}" y="${cy + 22}" width="54" height="25" rx="3.5"/>
+      <text class="i-read" x="${cx}" y="${cy + 37.5}"></text>
+      <text class="i-unit" x="${cx}" y="${cy + 44}">${unit}</text>
+      <text class="i-state" x="${cx}" y="${cy + 58}"><tspan class="i-lamp">●</tspan> <tspan class="i-st"></tspan></text>
+      <text class="i-sub" x="${cx}" y="${cy + 71}"></text>`;
+    const q = (c) => svg.querySelector(c);
+    const zones = q('.i-zones'), ticks = q('.i-ticks'), marks = q('.i-marks'), needle = q('.i-needle');
+    const valueArc = q('.i-value'), read = q('.i-read'), stateEl = q('.i-state'), st = q('.i-st'), sub = q('.i-sub');
+    let lastScale = null;
+    const frac = (v, min, max) => Math.min(1, Math.max(0, (v - min) / (max - min)));
+    return {
+      /**
+       * value, scale [min, max]; zones: [{from, to, cls}] in value units; lo/hi: 5-minute
+       * extremes; target: where the value is heading (or a setpoint); state: 'ok' | 'warn' | 'alarm'.
+       */
+      set({ value, min, max, zones: zs = [], lo, hi, target, label, state = 'ok', stateText = 'NORMAL', subText = '' }) {
+        const key = `${min}|${max}|${zs.map((z) => z.from + z.to + z.cls).join()}`;
+        if (key !== lastScale) {
+          lastScale = key;
+          let html = '';
+          for (let i = 0; i <= 50; i++) {
+            const f = i / 50, major = i % 10 === 0, mid = i % 5 === 0;
+            const [x0, y0] = pt(f, r + (major ? -1 : mid ? 2 : 4)), [x1, y1] = pt(f, r + 9);
+            html += `<line class="${major ? 'maj' : mid ? 'mid' : 'min'}" x1="${x0.toFixed(2)}" y1="${y0.toFixed(2)}" x2="${x1.toFixed(2)}" y2="${y1.toFixed(2)}"/>`;
+            if (major) {
+              const [tx, ty] = pt(f, r - 14);
+              html += `<text x="${tx.toFixed(2)}" y="${(ty + 3).toFixed(2)}">${fmt(min + (max - min) * f, 0)}</text>`;
+            }
+          }
+          ticks.innerHTML = html;
+          zones.innerHTML = zs.map((z) => `<path class="z-${z.cls}" d="${arc(frac(z.from, min, max), frac(z.to, min, max), r + 5)}"/>`).join('');
+        }
+        const f = frac(value, min, max);
+        valueArc.setAttribute('d', arc(0, Math.max(f, 0.0001), r - 4));
+        valueArc.setAttribute('class', `i-value s-${state}`);
+        needle.style.transform = `rotate(${-135 + 270 * Math.min(1.02, f)}deg)`;
+        let m = '';
+        const tri = (v, cls, inward = true) => {
+          const g = frac(v, min, max), [x, y] = pt(g, r + 12), a = ang(g) * 180 / Math.PI;
+          return `<path class="${cls}" transform="translate(${x.toFixed(2)} ${y.toFixed(2)}) rotate(${(a + (inward ? 90 : -90)).toFixed(1)})" d="M-3.4 -4 L3.4 -4 L0 1.6 Z"/>`;
+        };
+        if (Number.isFinite(lo) && Number.isFinite(hi) && hi > lo) m += tri(lo, 'm-lo') + tri(hi, 'm-hi');
+        if (Number.isFinite(target)) { const [x0, y0] = pt(frac(target, min, max), r - 9), [x1, y1] = pt(frac(target, min, max), r + 1); m += `<line class="m-target" x1="${x0.toFixed(2)}" y1="${y0.toFixed(2)}" x2="${x1.toFixed(2)}" y2="${y1.toFixed(2)}"/>`; }
+        if (m !== marks._m) { marks._m = m; marks.innerHTML = m; }
+        read.textContent = label;
+        read.style.fontSize = label.length > 6 ? '11px' : label.length > 5 ? '13px' : '';
+        st.textContent = stateText;
+        stateEl.setAttribute('class', `i-state s-${state}`);
+        sub.textContent = subText;
+      },
+    };
+  }
+
   // ---- Builders ---------------------------------------------------------------
 
   const rows = { pump: {}, actuator: {}, cooler: {} };
@@ -818,8 +911,8 @@
           <button class="btn primary" data-scada-buy="1">Install SCADA<small>${fmt(C.scadaKH)} Know-how</small></button></div>`;
       } else {
         body.innerHTML = `<div class="scada-instruments">
-            <figure class="gauge" id="sc-g-psi"><figcaption>Pressure</figcaption></figure>
-            <figure class="gauge" id="sc-g-temp"><figcaption>Oil temp</figcaption></figure>
+            <figure class="gauge" id="sc-g-psi"><figcaption>Pressure</figcaption><div class="inst-legend"><i>▲ 5-min range</i></div></figure>
+            <figure class="gauge" id="sc-g-temp"><figcaption>Oil temp</figcaption><div class="inst-legend"><i>▲ 5-min range</i><i class="tgt">┃ heading</i></div></figure>
             <div class="meters scada-meters">
               <div class="meter"><div class="meter-head"><span>Flow</span><span data-k="m-flow"></span></div>
                 <div class="bar"><div class="bar-mark" data-k="m-flow-mark"></div><div class="bar-fill flow" data-k="m-flow-fill"></div></div></div>
@@ -841,7 +934,7 @@
               <p class="muted small" data-k="scan"></p>
               <ul class="exec-log scada-log" data-k="log"></ul></section>
           </div>`;
-        scG = { psi: makeGauge($('sc-g-psi'), 'PSI'), temp: makeGauge($('sc-g-temp'), '°F') };
+        scG = { psi: makeInstrument($('sc-g-psi'), 'PSI'), temp: makeInstrument($('sc-g-temp'), '°F') };
       }
     }
     const k = (n) => body.querySelector(`[data-k="${n}"]`);
@@ -851,10 +944,20 @@
       if (b) b.disabled = !E.canBuyScada(s);
       return;
     }
-    // Instruments: the control panel's own dials and meters, on the true (unwobbled) values.
-    const lim = d.tempLimit;
-    scG.psi.set(d.psi, 0, niceMax(d.psi * 1.25), d.psi, fmt(d.psi, 0));
-    scG.temp.set(s.temp, 60, Math.max(260, lim + 80), lim, `${Math.round(s.temp)}°`);
+    // Instruments: the control panel's scale and needle, on the true (unwobbled) values,
+    // with zones, 5-minute low/high tattletales and where each value is heading.
+    const lim = d.tempLimit, span = (a) => (a.length > 1 ? [Math.min(...a), Math.max(...a)] : [NaN, NaN]);
+    const pMax = niceMax(d.psi * 1.25), [pLo, pHi] = span(hist.psi), relief = d.overRelief > 0;
+    scG.psi.set({ value: d.psi, min: 0, max: pMax, lo: pLo, hi: pHi, label: fmt(d.psi, 0),
+      zones: [{ from: 0, to: d.psi, cls: 'ok' }, { from: d.psi, to: d.psi * 1.1, cls: 'warn' }, { from: d.psi * 1.1, to: pMax, cls: 'alarm' }],
+      state: relief ? 'warn' : 'ok', stateText: relief ? 'RELIEF' : 'RATED',
+      subText: sign(roc('psi'), ' psi/min', 0) });
+    const tMax = Math.max(260, lim + 80), [tLo, tHi] = span(hist.temp), eq = Math.min(d.tempEq, tMax * 1.02);
+    const tState = s.temp > lim ? 'alarm' : s.temp > lim - 15 || d.tempEq > lim ? 'warn' : 'ok';
+    scG.temp.set({ value: s.temp, min: 60, max: tMax, lo: tLo, hi: tHi, target: eq, label: `${Math.round(s.temp)}°`,
+      zones: [{ from: 60, to: lim - 15, cls: 'ok' }, { from: lim - 15, to: lim, cls: 'warn' }, { from: lim, to: tMax, cls: 'alarm' }],
+      state: tState, stateText: tState === 'alarm' ? 'OVER LIMIT' : tState === 'warn' ? (s.temp > lim - 15 ? 'HIGH' : 'RISING') : 'NORMAL',
+      subText: `${sign(roc('temp'), '°/min')} → ${fmt(Math.min(d.tempEq, 9999), 0)}°` });
     const flowMax = Math.max(d.supply, d.demand, 1) * 1.1;
     k('m-flow-fill').style.width = `${(d.supply / flowMax) * 100}%`;
     k('m-flow-fill').classList.toggle('starved', d.utilization < 1);

@@ -349,8 +349,11 @@ panel opens the screen either way and shows what's missing). Overhaul uninstalls
 it, but your automation switches are remembered.
 
 - **Cockpit:** a full-screen control-room view (always dark) built from the
-  game's own instruments: the control panel's pressure and temperature dials and
-  its flow and accumulator meters. Live tiles show income (and its % change per
+  instrument-grade dials on the control panel's scale: a live value arc, operating
+  zones (normal / warning / alarm), 5-minute low and high tattletales, a "heading to"
+  marker for oil temperature, a digital readout and a status lamp (RATED / RELIEF,
+  NORMAL / RISING / HIGH / OVER LIMIT); plus the control panel's flow and
+  accumulator meters. Live tiles show income (and its % change per
   minute), production and the Order Line, pressure, oil temperature (°F/min,
   equilibrium, limit, thermal penalty), flow supply vs demand (utilization,
   relief dumping, accumulator charging), the accumulator, the heat balance (pump
