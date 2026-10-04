@@ -440,7 +440,12 @@
     execBudgetBase: 0.002,  // each action may spend 0.2% of cash…
     execBudgetPer: 0.001,   // …+0.1% per skill point
     execReplaceGap: 0.45,   // replace someone when an applicant is this much better…
-    execReplaceGapPer: 0.03,// …minus 0.03 per skill point (better executives are pickier)
+    execReplaceGapPer: 0.03,// …minus 0.03 per skill point (better executives act on smaller gains)
+    presReviewEvery: 30,    // seconds between the President's reviews of the C-suite
+    presReplaceGap: 3,      // replace an executive when someone would be this much more skilled (−1 per 4 President skill, min 1)
+    presFillSkill: 4,       // the President fills a vacant seat with anyone this skilled
+    boardReplaceGap: 2,     // the Chair proposes a swap when an insider leads this much better than a director
+    boardReplaceCost: 0.25, // …for a quarter of that seat's Patent price (min 1)
     execHireS: 600,         // an outside executive hire costs 10 min of production
     execPoolBoost: 2,       // outside candidates: Leadership and key stat +2
     // SCADA: Controls' high-level supervisory system (bought with Know-how)
@@ -465,6 +470,11 @@
     presidentSkillDiv: 3,   // …and every executive +1 skill per 3 President skill
     mgrPoolPer: 3,          // …and reviews 1 more applicant per 3 Leadership points
     mgrEvery: 2,            // seconds between a manager's staffing checks
+    mgrReviewEvery: 15,     // seconds between a manager's team reviews
+    mgrReplaceGap: 0.6,     // a manager replaces someone when an applicant is this much better…
+    mgrReplaceGapPer: 0.04, // …minus 0.04 per Leadership point…
+    mgrReplaceGapMin: 0.2,  // …but never less than this
+    mgrReviewBudget: 0.005, // and the fee (half a hire) is at most 0.5% of cash
     // Support departments
     itPerStrength: 0.04,    // IT: every Order Line department's strength +4% per IT staff-equivalent…
     itMax: 1,               // …up to +100%

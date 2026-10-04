@@ -56,7 +56,7 @@
       scadaPrefs: { cool: false, pumps: false, lines: false, budget: 1 }, // automation switches (kept)
       shake: { phase: null, left: 0, cooldown: 0, moves: [], before: 0, report: null, done: 0 },
       pak: { target: 'valve', building: 'valve', work: 0, stock: { valve: 0, base: 0 }, built: { valve: 0, base: 0, sys: 0 }, earned: 0 },
-      mgrClock: 0,
+      mgrClock: 0, mgrReviewClock: 0, presClock: 0,
       safety: { streak: 0, incident: null, seed: (Math.random() * 2 ** 32) >>> 0 },
       ach: {},                 // achievements earned (kept forever)
       tips: {},                // first-time tips already shown (kept forever)
@@ -189,12 +189,16 @@
     safetyTick(s, d, dt);
     s.mgrClock += dt;
     if (s.mgrClock >= C.mgrEvery) { s.mgrClock = 0; managersTick(s, d); }
+    s.mgrReviewClock += dt;
+    if (s.mgrReviewClock >= C.mgrReviewEvery) { s.mgrReviewClock = 0; managersReview(s); }
     pakTick(s, d, dt);
     shakeTick(s, dt);
     s.scada.clock += dt;
     if (s.scada.clock >= C.scadaEvery) { s.scada.clock = 0; scadaTick(s, d); }
     s.execClock += dt;
     if (s.execClock >= C.execEvery) { s.execClock = 0; execTick(s, d); }
+    s.presClock += dt;
+    if (s.presClock >= C.presReviewEvery) { s.presClock = 0; presidentReview(s); }
     const earned = d.income * dt;
     s.cash += earned;
     s.runEarnings += earned;
@@ -521,6 +525,44 @@
       }
     }
     return hires;
+  }
+
+  /**
+   * Swap a department's weakest person for its best applicant when the applicant is
+   * at least `gap` more effective and the fee (half a hire) is within `maxCost`.
+   * The weaker person is let go. Returns { weak, best } or null.
+   */
+  function upgradeWeakest(s, id, gap, maxCost) {
+    const st = s.depts[id];
+    if (!st || !st.team.length || !st.pool.length) return null;
+    const wi = st.team.reduce((b, p, i, a) => (effectiveness(p, id) < effectiveness(a[b], id) ? i : b), 0);
+    const bi = st.pool.reduce((b, p, i, a) => (effectiveness(p, id) > effectiveness(a[b], id) ? i : b), 0);
+    const weak = st.team[wi], best = st.pool[bi];
+    if (effectiveness(best, id) < effectiveness(weak, id) + gap) return null;
+    const cost = 0.5 * hireQuote(s, id, 1).cost;
+    if (cost > maxCost || cost > s.cash) return null;
+    s.cash -= cost;
+    if (weak.g) best.g = weak.g;
+    st.team[wi] = best;
+    st.pool[bi] = newPerson(s);
+    return { weak, best };
+  }
+  /** Gap a manager needs before replacing someone: smaller with more Leadership. */
+  const mgrReplaceGap = (lea) => Math.max(C.mgrReplaceGapMin, C.mgrReplaceGap - C.mgrReplaceGapPer * lea);
+
+  /** Managers (with auto-staff on) replace their weakest person when a clearly better applicant is waiting. */
+  function managersReview(s) {
+    const done = [];
+    for (const dept of HIREABLE) {
+      const st = s.depts[dept.id];
+      if (!st || !st.p0 || !st.mgr || !st.auto || !departmentOpen(s, dept)) continue;
+      const r = upgradeWeakest(s, dept.id, mgrReplaceGap(leadership(st.mgr)), s.cash * C.mgrReviewBudget);
+      if (!r) continue;
+      const msg = `${st.mgr.n} replaced ${r.weak.n} (×${effectiveness(r.weak, dept.id).toFixed(2)}) with ${r.best.n} (×${effectiveness(r.best, dept.id).toFixed(2)})`;
+      logExec(s, 'mgr:' + dept.id, msg);
+      done.push({ dept: dept.id, msg });
+    }
+    return done;
   }
 
   // ---- Engineering --------------------------------------------------------------
@@ -935,19 +977,8 @@
       const gap = Math.max(0.1, C.execReplaceGap - C.execReplaceGapPer * skill);
       for (const id of depts) {
         if (actions <= 0) break;
-        const st = s.depts[id];
-        if (!st.team.length || !st.pool.length) continue;
-        const wi = st.team.reduce((b, p, i, a) => (effectiveness(p, id) < effectiveness(a[b], id) ? i : b), 0);
-        const bi = st.pool.reduce((b, p, i, a) => (effectiveness(p, id) > effectiveness(a[b], id) ? i : b), 0);
-        const weak = st.team[wi], best = st.pool[bi];
-        if (effectiveness(best, id) < effectiveness(weak, id) + gap) continue;
-        const cost = 0.5 * hireQuote(s, id, 1).cost;
-        if (cost > budget()) continue;
-        s.cash -= cost;
-        if (weak.g) best.g = weak.g;
-        st.team[wi] = best;
-        st.pool[bi] = newPerson(s);
-        act(id, `${DEPT[id].name}: replaced ${weak.n} (×${effectiveness(weak, id).toFixed(2)}) with ${best.n} (×${effectiveness(best, id).toFixed(2)})`);
+        const r = upgradeWeakest(s, id, gap, budget());
+        if (r) act(id, `${DEPT[id].name}: replaced ${r.weak.n} (×${effectiveness(r.weak, id).toFixed(2)}) with ${r.best.n} (×${effectiveness(r.best, id).toFixed(2)})`);
       }
       // 4. Refresh an applicant pool that has nobody worth hiring.
       for (const id of depts) {
@@ -989,6 +1020,69 @@
 
 
 
+
+  /**
+   * The President reviews the C-suite: a vacant seat goes to the best person in its
+   * division (skill presFillSkill+), and a seated executive is replaced when someone
+   * in the division would be clearly better. The outgoing executive takes the
+   * newcomer's old job. One change per review; a better President needs less of a gap.
+   */
+  const presReplaceGap = (s) => Math.max(1, C.presReplaceGap - Math.floor(presidentSkill(s) / 4));
+  function presidentReview(s) {
+    if (!s.president || !execOpen(s)) return null;
+    const gap = presReplaceGap(s);
+    for (const x of DATA.EXECS) {
+      const c = execCandidates(s, x.id)[0], cur = s.execs[x.id];
+      if (!c) continue;
+      let msg;
+      if (!cur) {
+        if (c.skill < C.presFillSkill) continue;
+        appointExec(s, x.id, c);
+        msg = `named ${c.p.n} (skill ${c.skill}) ${x.short}`;
+      } else {
+        const now = execSkill(s, x.id);
+        if (c.skill < now + gap) continue;
+        const st = s.depts[c.dept];
+        if (c.kind === 'mgr') st.mgr = cur; else st.team[c.idx] = cur;
+        if (c.dept === 'engineering' && !ENG_TEAMS.includes(cur.g)) cur.g = c.p.g || leastEngTeam(st);
+        s.execs[x.id] = c.p;
+        msg = `${c.p.n} (skill ${c.skill}) replaces ${cur.n} (skill ${now}) as ${x.short}; ${firstName(cur.n)} returns to ${DEPT[c.dept].name}${c.kind === 'mgr' ? ' as manager' : ''}`;
+        logExec(s, x.id, `${c.p.n} takes the ${x.short} seat from ${cur.n}`);
+      }
+      logExec(s, 'pres', msg);
+      return msg;
+    }
+    return null;
+  }
+  const firstName = (n) => String(n).split(' ')[0];
+
+  /**
+   * The Chair (the strongest director) keeps an eye out: when someone in the company
+   * leads clearly better than the weakest other director, they propose a swap at a
+   * fraction of that seat's price. The seat keeps its perk; the old director retires.
+   */
+  function boardProposal(s) {
+    if (!boardOpen(s) || (s.board || []).length < 2) return null;
+    const idx = s.board.map((m, i) => i);
+    const chair = idx.reduce((a, b) => (leadership(s.board[b]) > leadership(s.board[a]) ? b : a));
+    const seat = idx.filter((i) => i !== chair).reduce((a, b) => (leadership(s.board[b]) < leadership(s.board[a]) ? b : a));
+    const c = insiders(s).sort((a, b) => leadership(b.p) - leadership(a.p))[0];
+    const m = s.board[seat];
+    if (!c || leadership(c.p) < leadership(m) + C.boardReplaceGap) return null;
+    const cost = Math.max(1, Math.ceil(DATA.BOARD_COSTS[seat] * C.boardReplaceCost));
+    return { chair: s.board[chair], seat, out: m, cand: c, cost };
+  }
+  function replaceDirector(s) {
+    const pr = boardProposal(s);
+    if (!pr || s.patents < pr.cost) return false;
+    s.patents -= pr.cost;
+    s.patentsSpent = (s.patentsSpent || 0) + pr.cost;
+    takeOut(s, pr.cand);
+    delete pr.cand.p.g;
+    s.board[pr.seat] = { ...pr.cand.p, perk: pr.out.perk };
+    logExec(s, 'board', `${pr.cand.p.n} (LEA ${leadership(pr.cand.p)}) replaces ${pr.out.n} (LEA ${leadership(pr.out)}) on the Board`);
+    return true;
+  }
 
   // ---- SCADA: supervisory control (Controls engineering) --------------------------
   // Installed with Know-how once Telematics is researched and the Controls team is
@@ -1231,13 +1325,13 @@
     patentsTotal, overhaulGain, canOverhaul, overhaul, opensMet, departmentOpen, regionOpen, checkLocations, customerBase, currentEra,
     orderLine, snapshotDepts, hireQuote, hire, hirePerson, rerollPool, rerollCost, staffLineQuote, staffLine,
     effectiveness, headcount, strength, strokeGal, STAFFED, HIREABLE,
-    leadership, mgrBonus, poolSize, promote, setAuto, managersTick, engKhMult, canBuyEng, buyEng,
+    leadership, mgrBonus, poolSize, promote, setAuto, managersTick, managersReview, upgradeWeakest, mgrReplaceGap, engKhMult, canBuyEng, buyEng,
     itMult, mgmtMult, mgmtPool, purchasingDiscount, incidentRate, safeDays, safetyStreakMult, achievementMult,
     achStat, checkAchievements,
     ENG_TEAMS, engTeamOf, teamStrength, setEngTeam, techCost,
     EXEC, execOpen, execOf, execSkill, presidentSkill, execMult, presidentMult, execCount, boardEff, execCandidates, fillExecPool,
     execHireCost, appointExec, dismissExec, canAppointPresident, appointPresident, execTick,
-    boardOpen, boardSeatCost, fillBoardPool, electDirector, directorQuality,
+    boardOpen, boardSeatCost, fillBoardPool, electDirector, directorQuality, boardProposal, replaceDirector, presidentReview, presReplaceGap,
     scadaReady, canBuyScada, buyScada, scadaMult, scadaScan, scadaTick,
     officeOpen, fileCost, fileQuote, filePatents,
     SHAKE_PHASES, shakeOpen, shakeCost, canShake, startShake, shakeTick, companyStrength,

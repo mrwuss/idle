@@ -19,7 +19,7 @@
   department a bottleneck on income, and `hire()`/`hirePerson()`/`staffLine()` fix it. Hires are people
   (`depts[id].team`, applicants in `.pool`) generated from the seeded `s.seed`, so
   quotes match results; `effectiveness()` weighs each department's two stats. Managers (`depts[id].mgr`,
-  promoted with `promote()`) boost strength and auto-hire in `managersTick()`; Engineering,
+  promoted with `promote()`) boost strength, auto-hire in `managersTick()` and swap out weak staff in `managersReview()` (shared `upgradeWeakest()`); Engineering,
   IT, Safety and Management are in `HIREABLE` (not the Order Line): `engKhMult()`, `itMult()`,
   `safetyTick()`/`incidentRate()` (own seed in `s.safety`) and `mgmtMult()`.
   machine.js pauses off-screen and drops to a low-quality mode on slow devices. Phones (≤760px) use the
@@ -31,8 +31,8 @@
   discounts `techCost()`, and Project runs the Pak line (`s.pak`, `pakTick()`, target via `setPakTarget()`).
   The Company tab cards open a focus sheet (`openDept()`) and faces open an ID badge (`data-person`).
   Executives (`s.execs`, `execTick()` every `execEvery` s, `execMult()` per division), the President
-  (`s.president`, `presidentMult()`) and the Board (`s.board`, `boardEff(key)`, bought with Patents tracked in
-  `s.patentsSpent`, kept through Overhaul) are in engine.js. SCADA (`s.scada`, `buyScada()`, `scadaTick()` automation, `scadaMult()` tuning; switches in `s.scadaPrefs`,
+  (`s.president`, `presidentMult()`, C-suite reviews in `presidentReview()`) and the Board (`s.board`, `boardEff(key)`, bought with Patents tracked in
+  `s.patentsSpent`, kept through Overhaul; the Chair's swap offer is `boardProposal()`/`replaceDirector()`) are in engine.js. SCADA (`s.scada`, `buyScada()`, `scadaTick()` automation, `scadaMult()` tuning; switches in `s.scadaPrefs`,
   kept through Overhaul) has a full-screen cockpit in ui.js (`openScada()`, history sampled in `sample()`). The Patent Office (`officeOpen()`, `filePatents()`, `s.patentsFiled`; `overhaulGain()` ignores filed
   patents) spends Know-how once every tech is done. A shake-up (`s.shake`, `startShake()`, `shakeTick()`, phases in `SHAKE_STEP`)
   reorganizes Board → execs → managers → staff and raises `incidentRate()` while it runs. The org chart and exec sheet (`exec:<id>`) are in ui.js.
