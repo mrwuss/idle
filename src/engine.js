@@ -53,7 +53,7 @@
       board: [], boardPool: [], patentsSpent: 0,               // directors survive Overhaul
       patentsFiled: 0,                                         // patents bought with Know-how (kept)
       scada: { owned: false, clock: 0, log: [], panel: {} },   // installed this run (panel upgrades too)
-      scadaPrefs: { cool: false, pumps: false, lines: false, budget: 1 }, // automation switches (kept)
+      scadaPrefs: { cool: false, pumps: false, lines: false, tier: false, budget: 1 }, // automation switches (kept)
       shake: { phase: null, left: 0, cooldown: 0, moves: [], before: 0, report: null, done: 0 },
       pak: { target: 'valve', building: 'valve', work: 0, stock: { valve: 0, base: 0 }, built: { valve: 0, base: 0, sys: 0 }, earned: 0 },
       mgrClock: 0, mgrReviewClock: 0, presClock: 0,
@@ -1154,16 +1154,38 @@
       if (!b) break;
       act('cooler', b.it, 'Oil running hot');
     }
-    // 2. Pumps: no starved actuators (5% margin).
-    while (P.pumps && actions > 0) {
+    // While the Order Line caps income, more machines earn nothing: hold growth and say why.
+    const o = d.order, held = o.factor < 0.999 && o.bottleneck;
+    const hold = held ? `Holding growth: Order Line at ${Math.round(o.factor * 100)}%, ${DEPT[o.bottleneck].name} is short-staffed` : '';
+    if ((P.pumps || P.lines) && hold !== (s.scada.hold || '')) { if (hold || s.scada.hold) scadaLog(s, hold || 'Order Line clear: growth resumes'); s.scada.hold = hold; }
+    // 2. Tier & accumulator, ahead of routine growth so big steps aren't starved of
+    //    actions: a pressure-tier upgrade when it pays for itself quickly
+    //    (its production gain, measured, repays the cost within scadaTierPayback s; the
+    //    Order Line then staffs up to it), unless the line is already the cap; then the
+    //    accumulator whenever it fits the budget.
+    if (P.tier && !held && actions > 0) {
+      const t = nextTier(s);
+      if (t && (!t.requires || s.tech[t.requires])) {
+        const cost = t.cost * mods(s).costMult, before = derive(s).production;
+        s.tier++; const gain = derive(s).production - before; s.tier--;
+        if (cost <= budget() && gain > 0 && cost / gain <= C.scadaTierPayback && upgradeTier(s)) {
+          actions--; const m = `Pressure tier: upgraded to ${TIERS[s.tier].name} (pays back in ${Math.ceil(cost / gain)}s)`; scadaLog(s, m); done.push(m);
+        }
+      }
+    }
+    if (P.tier && actions > 0 && accUpgradeCost(s) <= budget() && upgradeAccumulator(s)) {
+      actions--; const m = `Accumulator: upgraded to level ${s.accLevel}`; scadaLog(s, m); done.push(m);
+    }
+    // 3. Pumps: no starved actuators (5% margin).
+    while (P.pumps && !held && actions > 0) {
       const dd = derive(s);
       if (dd.supply >= dd.demand * 1.05 || dd.demand === 0) break;
       const b = bestBuy(s, 'pump', PUMPS, (p) => p.gpm * milestoneMult(s.pumps[p.id] + 1), budget());
       if (!b) break;
       act('pump', b.it, 'Flow short');
     }
-    // 3. Lines: put spare flow to work on the best-paying actuator that fits.
-    while (P.lines && actions > 0) {
+    // 4. Lines: put spare flow to work on the best-paying actuator that fits.
+    while (P.lines && !held && actions > 0) {
       const dd = derive(s), spare = dd.supply - dd.demand;
       const b = bestBuy(s, 'actuator', ACTUATORS.filter((a) => a.gpm <= spare), (a) => a.rate * Math.sqrt(dd.psi / a.psi), budget());
       if (!b) break;
