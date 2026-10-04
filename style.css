@@ -27,6 +27,10 @@
   --chip-a: #ffffff; --chip-b: #f1f2f4;
   --danger-edge: #e6a3a3;
   --shadow: rgba(0, 0, 0, .18);
+  /* SCADA cockpit */
+  --sc-bg: #eef0f3; --sc-head: #ffffff; --sc-tile: #ffffff; --sc-tile-2: #f5f6f8; --sc-hi: rgba(255, 255, 255, .7);
+  --sc-read: #eef1f4; --sc-read-text: #14181d; --sc-glow: transparent; --sc-track: rgba(0, 0, 0, .08); --sc-mark: #14181d;
+  --sc-warn: #c88a00; --sc-warn-text: #8f6200; --sc-alarm-text: #c62828; --sc-text2: #3b444e;
   --font-body: 'Nunito Sans', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
   --font-head: 'Nunito Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
   --font-mono: 'JetBrains Mono', ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace;
@@ -61,6 +65,9 @@
   --chip-a: #34404c; --chip-b: #26303a;
   --danger-edge: #6b2a2c;
   --shadow: rgba(0, 0, 0, .5);
+  --sc-bg: #0b0e11; --sc-head: #0d1013; --sc-tile: #12171c; --sc-tile-2: #0f1317; --sc-hi: rgba(255, 255, 255, .04);
+  --sc-read: #05080b; --sc-read-text: #f1f5f9; --sc-glow: rgba(255, 255, 255, .12); --sc-track: rgba(255, 255, 255, .06); --sc-mark: #ffffff;
+  --sc-warn: #f2a900; --sc-warn-text: #ffd166; --sc-alarm-text: #ff8a8d; --sc-text2: #c9d2db;
 }
 
 * { box-sizing: border-box; }
@@ -812,21 +819,21 @@ ul.plain b { color: var(--text); }
 /* ---- SCADA cockpit (always dark, like a control room) ---- */
 .title-right { display: flex; gap: 6px; align-items: center; }
 .scada-btn { font-family: var(--font-mono); letter-spacing: .08em; }
-.scada { position: fixed; inset: 0; z-index: 65; display: flex; flex-direction: column; background: #0b0e11; color: var(--text); }
-.scada-head { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; padding: 10px 14px; border-bottom: 2px solid #f04b25; background: #0d1013; flex-wrap: wrap; }
-.scada-title { font: 800 15px var(--font-mono); letter-spacing: .12em; color: #f04b25; }
+.scada { position: fixed; inset: 0; z-index: 65; display: flex; flex-direction: column; background: var(--sc-bg); color: var(--text); }
+.scada-head { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; padding: 10px 14px; border-bottom: 2px solid var(--accent); background: var(--sc-head); flex-wrap: wrap; }
+.scada-title { font: 800 15px var(--font-mono); letter-spacing: .12em; color: var(--accent); }
 .scada-meta { font: 11px var(--font-mono); color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
 .scada-body { flex: 1; overflow-y: auto; padding: 12px 14px; display: grid; gap: 12px; align-content: start;
-  background-image: linear-gradient(rgba(255,255,255,.02) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.02) 1px, transparent 1px); background-size: 20px 20px; }
-.scada-foot { display: flex; justify-content: flex-end; padding: 8px 14px calc(8px + env(safe-area-inset-bottom, 0px)); border-top: 1px solid var(--edge); background: #0d1013; }
+  background-image: linear-gradient(var(--grid) 1px, transparent 1px), linear-gradient(90deg, var(--grid) 1px, transparent 1px); background-size: 20px 20px; }
+.scada-foot { display: flex; justify-content: flex-end; padding: 8px 14px calc(8px + env(safe-area-inset-bottom, 0px)); border-top: 1px solid var(--edge); background: var(--sc-head); }
 .scada-foot .btn { min-height: 44px; min-width: 120px; }
 .scada-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 8px; }
-.tile-s { background: #12171c; border: 1px solid var(--edge); border-radius: 6px; padding: 8px 10px; display: grid; gap: 2px; min-width: 0; }
+.tile-s { background: var(--sc-tile); border: 1px solid var(--edge); border-radius: 6px; padding: 8px 10px; display: grid; gap: 2px; min-width: 0; }
 .tile-s.alarm { border-color: var(--pressure); box-shadow: 0 0 0 1px var(--pressure) inset; animation: scada-blink 1.2s steps(2) infinite; }
-.tile-s.warn { border-color: #f2a900; }
+.tile-s.warn { border-color: var(--sc-warn); }
 @keyframes scada-blink { 50% { box-shadow: none; } }
 .ts-label { font: 600 10px var(--font-mono); text-transform: uppercase; letter-spacing: .1em; color: var(--muted); }
-.ts-val { font: 700 20px var(--font-mono); color: #e8f0f6; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ts-val { font: 700 20px var(--font-mono); color: var(--sc-read-text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 /* Fixed-height readouts: live text changes length every second, so it must never
    change how many lines it takes (that made the whole screen jump). */
 .ts-sub { --lines: 2; font: 10.5px/1.3 var(--font-mono); color: var(--muted); height: calc(1.3em * var(--lines)); overflow: hidden;
@@ -834,12 +841,12 @@ ul.plain b { color: var(--text); }
 .ts-val, .dg-read b, .ts-sub { font-variant-numeric: tabular-nums; }
 /* Digital gauges: readout, state lamp, range bar and sparkline */
 .dg-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
-.dg { --st: #46c37b; min-width: 0; position: relative; display: grid; align-content: start; gap: 4px; padding: 9px 10px 7px; border-radius: 6px;
-  background: linear-gradient(180deg, #151b21, #0b0f13); border: 1px solid #26303a; box-shadow: inset 0 1px 0 rgba(255,255,255,.04); overflow: hidden; }
+.dg { --st: var(--ok); min-width: 0; position: relative; display: grid; align-content: start; gap: 4px; padding: 9px 10px 7px; border-radius: 6px;
+  background: linear-gradient(180deg, var(--sc-tile), var(--sc-tile-2)); border: 1px solid var(--edge); box-shadow: inset 0 1px 0 var(--sc-hi); overflow: hidden; }
 .dg::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 3px; background: var(--st); opacity: .9; }
-.dg.s-warn { --st: #f2a900; }
-.dg.s-alarm { --st: #e5484d; border-color: #6b2a2c; }
-.dg-head { display: flex; justify-content: space-between; align-items: center; gap: 6px; font: 600 10px var(--font-mono); letter-spacing: .14em; text-transform: uppercase; color: #8a96a3; }
+.dg.s-warn { --st: var(--sc-warn); }
+.dg.s-alarm { --st: var(--pressure); border-color: var(--danger-edge); }
+.dg-head { display: flex; justify-content: space-between; align-items: center; gap: 6px; font: 600 10px var(--font-mono); letter-spacing: .14em; text-transform: uppercase; color: var(--muted); }
 .dg-head > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .dg-state { flex-shrink: 0; max-width: 55%; }
 .dg-read b { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
@@ -847,60 +854,60 @@ ul.plain b { color: var(--text); }
 .dg-state i { width: 7px; height: 7px; border-radius: 50%; background: var(--st); box-shadow: 0 0 6px var(--st); }
 .dg.s-alarm .dg-state i { animation: lamp 1s steps(2) infinite; }
 @keyframes lamp { 50% { opacity: .2; } }
-.dg-read { display: flex; align-items: baseline; gap: 6px; padding: 2px 8px; border-radius: 4px; background: #05080b; border: 1px solid #1d252d; }
-.dg-read b { font: 700 24px/1.15 var(--font-mono); color: #f1f5f9; letter-spacing: .02em; text-shadow: 0 0 10px rgba(255,255,255,.12); font-variant-numeric: tabular-nums; }
-.dg.s-warn .dg-read b { color: #ffd166; }
-.dg.s-alarm .dg-read b { color: #ff8a8d; }
-.dg-read small { font: 600 10px var(--font-mono); color: #8a96a3; letter-spacing: .1em; }
-.dg-range { position: relative; height: 5px; border-radius: 3px; background: rgba(255,255,255,.06); margin: 2px 0; }
+.dg-read { display: flex; align-items: baseline; gap: 6px; padding: 2px 8px; border-radius: 4px; background: var(--sc-read); border: 1px solid var(--edge); }
+.dg-read b { font: 700 24px/1.15 var(--font-mono); color: var(--sc-read-text); letter-spacing: .02em; text-shadow: 0 0 10px var(--sc-glow); font-variant-numeric: tabular-nums; }
+.dg.s-warn .dg-read b { color: var(--sc-warn-text); }
+.dg.s-alarm .dg-read b { color: var(--sc-alarm-text); }
+.dg-read small { font: 600 10px var(--font-mono); color: var(--muted); letter-spacing: .1em; }
+.dg-range { position: relative; height: 5px; border-radius: 3px; background: var(--sc-track); margin: 2px 0; }
 .dg-range > div span { position: absolute; top: 0; bottom: 0; opacity: .55; }
-.dg-range .z-ok { background: #46c37b; }
-.dg-range .z-warn { background: #f2a900; }
-.dg-range .z-alarm { background: #e5484d; }
-.dg-range i { position: absolute; top: -3px; width: 2px; height: 11px; margin-left: -1px; background: #fff; box-shadow: 0 0 4px #fff; transition: left .25s ease-out; }
+.dg-range .z-ok { background: var(--ok); }
+.dg-range .z-warn { background: var(--sc-warn); }
+.dg-range .z-alarm { background: var(--pressure); }
+.dg-range i { position: absolute; top: -3px; width: 2px; height: 11px; margin-left: -1px; background: var(--sc-mark); box-shadow: 0 0 4px var(--sc-mark); transition: left .25s ease-out; }
 .dg-spark { display: block; width: 100%; height: 46px; }
-.dg-foot { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.3fr) minmax(0, 1fr); gap: 6px; font: 10px/13px var(--font-mono); color: #8a96a3; height: 13px; }
+.dg-foot { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.3fr) minmax(0, 1fr); gap: 6px; font: 10px/13px var(--font-mono); color: var(--muted); height: 13px; }
 .dg-foot span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .dg-foot span:nth-child(2) { text-align: center; }
 .dg-foot span:nth-child(3) { text-align: right; }
-.dg-foot span:nth-child(2) { color: #c9d2db; }
+.dg-foot span:nth-child(2) { color: var(--sc-text2); }
 .dg.locked { opacity: .55; border-style: dashed; min-height: 120px; align-content: start; }
 .dg.locked::before { display: none; }
-.dg-lock { font: 11px var(--font-mono); color: #8a96a3; padding: 6px 0; }
+.dg-lock { font: 11px var(--font-mono); color: var(--muted); padding: 6px 0; }
 .dg-lock.wide { text-align: center; padding: 14px; }
 /* Operator panel upgrades */
 .pn-steps { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
-.pn-step { display: grid; grid-template-columns: auto 1fr; gap: 4px 8px; align-items: start; padding: 8px; border-radius: 6px; border: 1px solid #26303a; background: #0f1418; }
+.pn-step { display: grid; grid-template-columns: auto 1fr; gap: 4px 8px; align-items: start; padding: 8px; border-radius: 6px; border: 1px solid var(--edge); background: var(--sc-tile-2); }
 .pn-step > button, .pn-step > em { grid-column: 1 / -1; justify-self: start; }
-.pn-step em { font: 600 10px var(--font-mono); font-style: normal; color: #8a96a3; letter-spacing: .1em; text-transform: uppercase; }
-.pn-n { width: 20px; height: 20px; border-radius: 50%; display: grid; place-items: center; font: 700 11px var(--font-mono); background: #26303a; color: #c9d2db; }
-.pn-txt { display: grid; gap: 2px; font-size: 11px; color: #8a96a3; }
-.pn-txt b { color: #dde3ea; font-size: 12px; }
-.pn-step.own { border-color: rgba(70,195,123,.45); }
-.pn-step.own .pn-n { background: #46c37b; color: #06110a; }
-.pn-step.own em { color: #46c37b; }
+.pn-step em { font: 600 10px var(--font-mono); font-style: normal; color: var(--muted); letter-spacing: .1em; text-transform: uppercase; }
+.pn-n { width: 20px; height: 20px; border-radius: 50%; display: grid; place-items: center; font: 700 11px var(--font-mono); background: var(--edge); color: var(--sc-text2); }
+.pn-txt { display: grid; gap: 2px; font-size: 11px; color: var(--muted); }
+.pn-txt b { color: var(--text); font-size: 12px; }
+.pn-step.own { border-color: var(--ok); }
+.pn-step.own .pn-n { background: var(--ok); color: #06110a; }
+.pn-step.own em { color: var(--ok); }
 .pn-step.next { border-color: var(--accent); }
 .pn-step.next .pn-n { background: var(--accent); color: #fff; }
 .pn-step.later { opacity: .6; }
 .scada-charts { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 8px; }
 .trend { display: block; width: 100%; height: 150px; }
 .scada-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-.scada-panel { background: #12171c; border: 1px solid var(--edge); border-radius: 6px; padding: 8px 10px; display: grid; gap: 6px; align-content: start; }
-.scada-panel h4 { margin: 0; font: 600 11px var(--font-mono); text-transform: uppercase; letter-spacing: .12em; color: #f04b25; }
+.scada-panel { background: var(--sc-tile); border: 1px solid var(--edge); border-radius: 6px; padding: 8px 10px; display: grid; gap: 6px; align-content: start; }
+.scada-panel h4 { margin: 0; font: 600 11px var(--font-mono); text-transform: uppercase; letter-spacing: .12em; color: var(--accent); }
 .scada-alarms { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; font: 12px var(--font-mono); }
-.scada-alarms li { border-left: 3px solid var(--edge); padding: 3px 8px; background: #0f1317; }
-.scada-alarms .bad { border-color: var(--pressure); color: #ffb3b5; }
-.scada-alarms .warn { border-color: #f2a900; }
+.scada-alarms li { border-left: 3px solid var(--edge); padding: 3px 8px; background: var(--sc-tile-2); }
+.scada-alarms .bad { border-color: var(--pressure); color: var(--sc-alarm-text); }
+.scada-alarms .warn { border-color: var(--sc-warn); }
 .scada-alarms .good { border-color: var(--ok); }
-.auto-row { display: grid; grid-template-columns: 1fr auto; gap: 0 8px; text-align: left; background: #0f1317; border: 1px solid var(--edge); border-radius: 6px; padding: 8px 10px; cursor: pointer; color: var(--text); min-height: 48px; touch-action: manipulation; }
+.auto-row { display: grid; grid-template-columns: 1fr auto; gap: 0 8px; text-align: left; background: var(--sc-tile-2); border: 1px solid var(--edge); border-radius: 6px; padding: 8px 10px; cursor: pointer; color: var(--text); min-height: 48px; touch-action: manipulation; }
 .auto-row b { font: 700 13px var(--font-mono); }
 .auto-row span { grid-column: 1; font-size: 11px; color: var(--muted); }
 .auto-row i { grid-column: 2; grid-row: 1 / span 2; align-self: center; font: 700 12px var(--font-mono); font-style: normal; padding: 4px 10px; border-radius: 99px; border: 1px solid var(--edge); color: var(--muted); }
 .auto-row.on { border-color: var(--ok); }
 .auto-row.on i { background: var(--ok); color: #0b0e11; border-color: var(--ok); }
 .scada-budget { flex-wrap: wrap; }
-.scada-install { max-width: 620px; background: #12171c; border: 1px solid var(--edge); border-radius: 8px; padding: 14px; display: grid; gap: 8px; }
-.scada-install h3 { color: #f04b25; margin: 0; }
+.scada-install { max-width: 620px; background: var(--sc-tile); border: 1px solid var(--edge); border-radius: 8px; padding: 14px; display: grid; gap: 8px; }
+.scada-install h3 { color: var(--accent); margin: 0; }
 .scada-install p { margin: 0; font-size: 13px; }
 .scada-install .btn { justify-self: start; min-height: 48px; }
 .ok-text { color: var(--ok); }
