@@ -866,10 +866,11 @@
     return 'Locked';
   }
 
-  let lastState = null;
+  let lastState = null, lastKhRate = 0;
   function render(s) {
     lastState = s;
     const d = E.derive(s);
+    lastKhRate = d.khRate;
     const m = d.m;
 
     // top bar
@@ -932,7 +933,7 @@
     if (ui.tab === 'overhaul') renderOverhaul(s);
     if (ui.tab === 'settings') renderStats(s, d);
 
-    const ready = TECH.filter((t) => E.techAvailable(s, t.id) && s.kh >= E.techCost(s, t.id)).length;
+    const ready = TECH.filter((t) => E.techAvailable(s, t.id) && s.kh >= E.techCost(s, t.id)).length + (E.officeOpen(s) && s.kh >= E.fileCost(s) ? 1 : 0);
     $('tech-badge').hidden = !ready;
     $('tech-badge').textContent = ready;
     $('tab-overhaul').classList.toggle('locked', !E.canOverhaul(s) && s.patents === 0);
@@ -1012,7 +1013,29 @@
     if (el._html !== html) { el.innerHTML = html; el._html = html; }
   }
 
+  /** Patent Office: once the tree is finished, Know-how files patents. */
+  function renderOffice(s) {
+    const box = $('patent-office'), open = E.officeOpen(s);
+    const done = TECH.filter((t) => s.tech[t.id]).length, cost = E.fileCost(s), q = E.fileQuote(s);
+    const key = [open, s.patentsFiled || 0].join('|');
+    if (box._key !== key) {
+      box._key = key;
+      box.innerHTML = `<h3>Patent Office</h3>` + (open
+        ? `<p>Your engineers have researched everything. Now Know-how can <b>file patents</b>: each one adds <b>+10% income forever</b>, survives Overhaul, and can be spent on Board seats. Each filing costs ×${E.DATA.CONSTANTS.patentFileGrowth} more than the last.</p>
+          <p class="muted small" data-k="pf-status"></p>
+          <div class="row-btns"><button class="btn primary" data-file="1"></button><button class="btn" data-file="max"></button></div>`
+        : `<p class="muted">Opens once every technology is researched (<span data-k="pf-done"></span>/${TECH.length}). From then on, Know-how files patents: +10% income each, forever.</p>`);
+    }
+    const k = (n) => box.querySelector(`[data-k="${n}"]`);
+    if (!open) return setPart(k('pf-done'), String(done), true);
+    setPart(k('pf-status'), `Filed so far: ${fmt(s.patentsFiled || 0)} · you hold ${fmt(s.patents)} patents (+${fmt(s.patents * 10)}% income) · Know-how ${fmt(s.kh)} (+${fmt(lastKhRate)}/s)`, true);
+    const set = (b, html, ok) => { if (b._html !== html) { b._html = html; b.innerHTML = html; } b.disabled = !ok; };
+    set(box.querySelector('[data-file="1"]'), `File a patent<small>${fmt(cost)} KH</small>`, s.kh >= cost);
+    set(box.querySelector('[data-file="max"]'), q.n > 1 ? `File ${q.n}<small>${fmt(q.cost)} KH</small>` : `File max<small>${q.n ? fmt(q.cost) + ' KH' : 'not enough KH'}</small>`, q.n > 0);
+  }
+
   function renderTech(s) {
+    renderOffice(s);
     for (const t of TECH) {
       const { el, cost: costEl } = techEls[t.id];
       const cost = E.techCost(s, t.id), done = !!s.tech[t.id], avail = E.techAvailable(s, t.id), ready = avail && s.kh >= cost;

@@ -412,3 +412,26 @@ test('directors saved before they had stats still load and count', () => {
   E.startShake(m); for (let i = 0; i < 400; i++) E.shakeTick(m, 1);
   assert.ok(m.shake.report);
 });
+
+test('the Patent Office opens after the whole tree and turns Know-how into patents', () => {
+  const s = lateGame();
+  s.kh = 1e9;
+  assert.equal(E.filePatents(s), 0, 'closed until every technology is researched');
+  for (const t of E.DATA.TECH) s.tech[t.id] = true;
+  const p0 = s.patents, gain0 = E.overhaulGain(s);
+  const first = E.fileCost(s);
+  assert.equal(E.filePatents(s), 1);
+  assert.equal(s.patents, p0 + 1);
+  close(s.kh, 1e9 - first);
+  assert.ok(E.fileCost(s) > first, 'each filing costs more');
+  assert.equal(E.overhaulGain(s), gain0, 'filed patents do not eat into the next Overhaul');
+  const q = E.fileQuote(s);
+  assert.equal(E.filePatents(s, Infinity), q.n);
+  assert.ok(s.kh < E.fileCost(s));
+  // Filed patents and the price climb survive Overhaul.
+  const filed = s.patentsFiled, held = s.patents;
+  s.lifetime = 1e13;
+  E.overhaul(s);
+  assert.equal(s.patentsFiled, filed);
+  assert.ok(s.patents >= held);
+});

@@ -34,6 +34,7 @@ tap the machine for full screen, and turn the phone sideways to see it large.
 - Every pump wastes some power as heat too. Buy **coolers** or the oil thins out and income drops.
 - Spare flow charges the **accumulator**. Dump it with **Surge** for ×3–×4 income.
 - **Know-how** funds a 17-node **R&D tree** of real hydraulic breakthroughs.
+- Finish the tree and the **Patent Office** turns spare Know-how into Patents.
 - **Overhaul** (prestige) trades everything for **Patents**, each one +10% income forever.
 - **Departments** open as you grow. Each needs more staff as production climbs, and the Order Line runs at its least-covered department. Hire on the **Company** tab from a pool of applicants: random people whose stats and quirks suit some jobs better than others. Promote your best leaders to **manager** and they'll keep the department staffed.
 - **Engineering** opens mid-game with three teams: Design multiplies Know-how, Controls makes automation research cheaper, and Project builds **Valve-Paks → Base-Paks → Sys-Paks** to sell.

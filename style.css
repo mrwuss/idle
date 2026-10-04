@@ -734,3 +734,8 @@ ul.plain b { color: var(--text); }
 .shake p { margin: 0; }
 .shake .btn.primary { justify-self: start; min-height: 44px; }
 .bad-text { color: var(--pressure); }
+
+/* ---- Patent Office ---- */
+.patent-office { margin-top: 12px; border-color: var(--accent-dim); }
+.patent-office p { margin: 4px 0; font-size: 13px; }
+.patent-office .btn { min-height: 44px; }

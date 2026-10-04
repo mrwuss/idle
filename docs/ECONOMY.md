@@ -37,6 +37,7 @@ update the tables here.
 | Patents (total) | `floor(2 × ∛(lifetime $ / 1,000,000))` (was √; the cube root stops the late-run snowball) |
 | Executives | skill `(2 × LEA + key stat) ÷ 3`; division strength × `(1 + 0.03 × skill)`; President income × `(1 + 0.02 × skill)` |
 | Board seats | 3 / 8 / 20 / 50 / 120 Patents (spent, not refunded); perk strength `0.6 + 0.08 × LEA` |
+| Patent Office | after all 17 techs: filing *n* costs `1M × 1.6^n` Know-how (n counts every filing ever); filed patents don't reduce Overhaul gain |
 | Shake-up | costs 120 s of production, 5 min long, 30 min cooldown; incidents ×3 and Order Line ×0.9 while it runs |
 | Achievements | +1% income each (23 in all, kept through Overhaul) |
 | Safety streak | +1% income per 10 min without an incident, max +25% |

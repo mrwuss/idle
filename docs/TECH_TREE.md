@@ -96,3 +96,14 @@ Drives (pump η +3%) · Hydraulic Hybrids (energy recovery from lowering loads).
 **Scale:** Water Hydraulics (Ship Lift ×3; Victorian London ran a citywide
 pressurised-water power network) · Isostatic Pressing (new actuator: 30,000 psi) · Hydraulic Fracturing (new
 era, maybe a moral-choice flavor beat) · Geo-Press (Tectonic Press ×10).
+
+## After the tree: the Patent Office (implemented, v0.2.8)
+
+Once all 17 technologies are researched, Know-how has a permanent use: the
+**Patent Office** on the R&D tab files patents. Each filing gives **+1 Patent**
+(+10% income forever, kept through Overhaul, spendable on Board seats). The first
+costs **1M Know-how** and each one after costs **×1.6** more, counted across
+Overhauls, so it stays a steady trickle rather than a second prestige layer.
+Filed patents don't reduce the next Overhaul's payout. In the simulator the bot
+files 8 in run 1 (Overhaul would pay 295) and 16 across an 8-hour prestige run
+(about 1,000 earned by Overhauls).

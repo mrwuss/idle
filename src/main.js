@@ -61,8 +61,14 @@
 
   // Hiring buttons inside re-rendered department cards.
   document.addEventListener('click', (ev) => {
-    const b = ev.target.closest('[data-shake], [data-hire], [data-hire-best], [data-reroll], [data-promote], [data-auto], [data-eng], [data-engteam], [data-pak-target], [data-exec-appoint], [data-exec-hire], [data-exec-dismiss], [data-exec-pres], [data-board-elect]');
+    const b = ev.target.closest('[data-file], [data-shake], [data-hire], [data-hire-best], [data-reroll], [data-promote], [data-auto], [data-eng], [data-engteam], [data-pak-target], [data-exec-appoint], [data-exec-hire], [data-exec-dismiss], [data-exec-pres], [data-board-elect]');
     if (!b || b.disabled) return;
+    if (b.dataset.file) {
+      const n = E.filePatents(state, b.dataset.file === 'max' ? Infinity : 1);
+      SFX.play(n ? 'research' : 'cant');
+      if (n) UI.toast(`Filed <b>${n}</b> patent${n === 1 ? '' : 's'}. You now hold <b>${state.patents}</b> (+${state.patents * 10}% income).`, 3500);
+      return render();
+    }
     if (b.dataset.shake) {
       const ok = E.startShake(state);
       SFX.play(ok ? 'upgrade' : 'cant');
@@ -298,6 +304,8 @@
       msg: '<b>Research ready.</b> You have enough Know-how for a technology. Open the R&D tab.' },
     { id: 'tier', when: (s) => E.canUpgradeTier(s),
       msg: '<b>Pressure upgrade affordable.</b> Higher psi unlocks new actuators and makes every line pay more. See the System tab.' },
+    { id: 'office', when: (s) => E.officeOpen(s),
+      msg: '<b>Research complete!</b> The Patent Office on the R&D tab now turns Know-how into Patents: +10% income each, forever.' },
     { id: 'engineering', when: (s) => E.pakOpen(s),
       msg: '<b>Engineering is open.</b> Engineers join a team: Design (Know-how), Controls (cheaper Controls research) or Project (builds Paks you sell). Tap a face on the Company tab to see their ID and move them.' },
     { id: 'execs', when: (s) => E.execOpen(s),
