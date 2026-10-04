@@ -2,6 +2,8 @@
 
 **Play:** https://mrwuss.github.io/idle/ (deployed from `main` by `.github/workflows/pages.yml`)
 
+Moving a save (for example from the Claude artifact to the web version): Logbook → **Open in GitHub Pages** carries the save in the link, and the web version asks before importing it. **Copy save code** / **Download save file** and **Import** / **Load save file** work too.
+
 *A hydraulic idle game. Grow IFP MSI from one bottle jack in Cedar Rapids to a four-branch fluid-power company.*
 
 It's 1972 in Cedar Rapids, Iowa. **IFP MSI** opens its doors with one bottle jack and a gear pump. Pump by
