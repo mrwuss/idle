@@ -20,13 +20,12 @@
     state = E.newState();
   }
 
+  // Time away is played out for real (managers, executives, SCADA, Paks) at the offline
+  // rate, in the background like a Time Machine jump; the report comes when it's done.
   const away = (Date.now() - (state.lastSeen || Date.now())) / 1000;
-  if (away > 60) {
-    const r = E.applyOffline(state, away);
-    if (r && r.earned > 0) {
-      setTimeout(() => UI.toast(`While you were away (${fmtTime(r.seconds)}) the shop earned
-        <b>$${fmt(r.earned)}</b> and <b>${fmt(r.kh)} KH</b> at ${Math.round(r.rate * 100)}% efficiency.`, 7000), 300);
-    }
+  if (away > 60 && !state.warp) {
+    const sim = E.startCatchUp(state, away);
+    if (sim) UI.toast(`Welcome back. Catching up on ${fmtTime(away)} away…`, 3000); // the report replaces it when done
   }
 
   function save() {
@@ -282,7 +281,10 @@
   // just means bigger steps. Lists re-render at 5 Hz; gauges animate per frame.
 
   let derived = null, lastTick = performance.now(), lastFrame = performance.now();
-  function render() { derived = UI.render(state); }
+  function render() {
+    derived = UI.render(state);
+    if (derived && SFX.ambient) SFX.ambient({ gpm: derived.supply, util: derived.utilization, relief: derived.supply > 0 ? derived.overRelief / derived.supply : 0, surging: derived.surging });
+  }
 
   setInterval(() => {
     const now = performance.now();
@@ -295,7 +297,9 @@
       lastTick = performance.now();
       if (r) {
         save();
-        UI.toast(`<b>Jumped ahead ${r.hours} h.</b> Earned $${fmt(r.earned)} and ${fmt(r.kh)} Know-how${r.lines > 0 ? `; ${fmt(r.lines, 0)} new lines` : ''}.`, 6000);
+        UI.toast(r.offline
+          ? `While you were away (${fmtTime(r.away)}) the shop earned <b>$${fmt(r.earned)}</b> and <b>${fmt(r.kh)} KH</b> at ${Math.round(r.rate * 100)}% efficiency${r.lines > 0 ? `; SCADA added ${fmt(r.lines, 0)} lines` : ''}.`
+          : `<b>Jumped ahead ${r.hours} h.</b> Earned $${fmt(r.earned)} and ${fmt(r.kh)} Know-how${r.lines > 0 ? `; ${fmt(r.lines, 0)} new lines` : ''}.`, 7000);
       }
       return;
     }

@@ -43,7 +43,7 @@
     g: 0, belt: 0, flow: 0, ret: 0, relief: 0, spin: 0, fan: 0, beacon: 0,
     lever: 0, clock: 0, prevPhase: {}, shipped: 0,
   };
-  const products = [], particles = [];
+  const products = [], particles = [], popups = [];
   // The floor has 8 bays. Once more than 8 lines exist, it shows the 8 most advanced
   // ones you've unlocked (late in the game the first bays slide off to the left).
   const BAYS = 8;
@@ -270,9 +270,18 @@
     t.beacon += dt * 5;
     t.lever = Math.max(0, t.lever - dt * 2.5);
 
-    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    // A short shake when Surge kicks in (skipped for reduced motion).
+    if (d.surging && !t.wasSurging && !reduceMotion) t.shake = 0.45;
+    t.wasSurging = d.surging;
+    let ox = 0, oy = 0;
+    if (t.shake > 0) {
+      const k = (t.shake / 0.45) * 5 * dpr;
+      ox = (Math.random() - 0.5) * 2 * k; oy = (Math.random() - 0.5) * 2 * k;
+      t.shake = Math.max(0, t.shake - dt);
+    }
+    ctx.setTransform(1, 0, 0, 1, ox, oy);
     ctx.drawImage(bg, 0, 0);
-    ctx.setTransform(scale(), 0, 0, scale(), 0, 0);
+    ctx.setTransform(scale(), 0, 0, scale(), ox, oy);
 
     drawOffice(s, d);
     ctx.save();
@@ -291,6 +300,7 @@
     drawWarehouse(s, d, dt, speed);
     drawShipping(dt);
     drawParticles(dt);
+    drawPopups(dt);
     drawOverlay(s, d);
     ctx.restore();
   }
@@ -586,7 +596,13 @@
 
       // finished part → conveyor (fires once per cycle at full extension)
       const prev = t.prevPhase[a.id] ?? ph;
-      if (active && speed > 0 && prev < 0.3 && ph >= 0.3) spawnProduct(a.id, cx);
+      if (active && speed > 0 && prev < 0.3 && ph >= 0.3) {
+        spawnProduct(a.id, cx);
+        // "+$" for what this line earned over the lap (its share of income × lap time).
+        const lap = CYCLE_S / Math.max(speed, 0.15);
+        const earned = d.rawIncome > 0 ? (d.perActuator[a.id] / d.rawIncome) * d.income * lap : 0;
+        if (earned > 0 && popups.length < 24) popups.push({ x: cx, y: 300, life: 1.4, text: `+$${fmt(earned)}` });
+      }
       t.prevPhase[a.id] = ph;
     });
 
@@ -874,6 +890,17 @@
       particles.push({ kind: 'spark', color, x, y, vx: (Math.random() - 0.5) * 120, vy: -40 - Math.random() * 80, life: 0.6 });
     }
   }
+  function drawPopups(dt) {
+    for (let i = popups.length - 1; i >= 0; i--) {
+      const p = popups[i];
+      p.life -= dt; p.y -= (reduceMotion ? 6 : 26) * dt;
+      if (p.life <= 0) { popups.splice(i, 1); continue; }
+      ctx.save(); ctx.globalAlpha = Math.min(1, p.life / 0.6);
+      text(p.text, p.x, p.y, { size: 13, color: colors.ok, align: 'center', weight: 'bold' });
+      ctx.restore();
+    }
+  }
+
   function drawParticles(dt) {
     for (let i = particles.length - 1; i >= 0; i--) {
       const p = particles[i];

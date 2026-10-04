@@ -773,3 +773,18 @@ test('department signatures: interest, certified Paks, Rush Ship, more offers, F
   for (let i = 0; i < 901; i++) E.tick(s, 1);
   assert.ok(E.canFocus(s, 'quality'), 'ready again');
 });
+
+test('time away is played out for real at the offline rate', () => {
+  const s = lateGame();
+  s.safety.incident = null;
+  const life = s.lifetime, t0 = s.time;
+  const sim = E.startCatchUp(s, 4 * 3600);
+  const m = E.mods(s);
+  assert.equal(sim, Math.min(4 * 3600, m.offlineCapH * 3600) * m.offlineRate);
+  let r = null;
+  for (let i = 0; i < 200 && !r; i++) r = E.warpStep(s, 200);
+  assert.ok(r && r.offline && r.earned > 0 && s.lifetime > life);
+  assert.ok(Math.abs(s.time - t0 - sim) < 1e-6);
+  assert.equal(s.warpsDone, 0, "catching up isn't a Time Machine jump");
+  assert.equal(E.startCatchUp(s, 30), 0, 'short absences do nothing');
+});

@@ -61,8 +61,8 @@ Design: [TERRITORY.md](TERRITORY.md)
 - [x] First-time tips: flow starvation, relief dumping, overheating, a full accumulator, research ready, pressure upgrade, first manager
 - [ ] Highlight the gear pump and jack for brand-new players
 - [x] Sound effects (Kenney CC0) with a mute toggle: stroke, buy, upgrade, research, Surge, overheat, new location, Overhaul
-- [ ] Ambient sound: pump whine tied to flow, relief squeal while dumping
-- [ ] Number popups on actuators, a screen shake on Surge
+- [x] Ambient sound: pump hum tied to flow, relief hiss while dumping (synthesized with Web Audio)
+- [x] Number popups on actuators, a screen shake on Surge
 - [x] "Next" buy quantity: up to the next ×2 milestone
 - [x] Achievements: 23 goals in the Logbook, +1% income each, kept through Overhaul
 - [x] Unit tests for engine.js (`npm test`: cost curves, flow balance, heat, hiring, save migration, offline, Overhaul)
