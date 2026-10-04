@@ -348,22 +348,25 @@ researched and the Controls team has strength 2+ (the SCADA button on the contro
 panel opens the screen either way and shows what's missing). Overhaul uninstalls
 it, but your automation switches are remembered.
 
-- **Cockpit:** a full-screen control-room view (always dark) built from the
-  instrument-grade dials on the control panel's scale: a live value arc, operating
-  zones (normal / warning / alarm), 5-minute low and high tattletales, a "heading to"
-  marker for oil temperature, a digital readout and a status lamp (RATED / RELIEF,
-  NORMAL / RISING / HIGH / OVER LIMIT); plus the control panel's flow and
-  accumulator meters. Live tiles show income (and its % change per
-  minute), production and the Order Line, pressure, oil temperature (°F/min,
-  equilibrium, limit, thermal penalty), flow supply vs demand (utilization,
-  relief dumping, accumulator charging), the accumulator, the heat balance (pump
-  losses, relief heat, cooling capacity), Know-how, the Pak line and safety; plus
-  the alarm list.
-- **Trends:** four labeled 5-minute charts (money, temperature with its limit
-  line, flow supply vs demand, Know-how). Axes use the game's number format and
-  switch to a log scale on their own once a series spans more than 100×, so
-  ridiculous late-game numbers (1e40 $/s and up) stay readable. Rate-of-change
-  percentages need 10 s of history and a positive base, and are clamped to ±999%.
+- **Cockpit:** a full-screen control-room view (always dark). **Digital gauges**
+  for income, pressure and oil temperature: a big readout, a status lamp (e.g.
+  RATED / RELIEF, NORMAL / RISING / HIGH / OVER LIMIT, BALANCED / STARVED), a range
+  bar with normal / warning / alarm zones, and a sparkline (1 minute, or 5 with the
+  historian; time-based, so a fresh install fills the strip). Below them: live tiles
+  (income and its % change per minute, production and the Order Line, pressure, oil
+  temperature, flow, accumulator, heat balance, Know-how, the Pak line, safety) and
+  the alarm list. Axes and readouts use the game's number format and switch to a log
+  scale on their own, so 1e40 $/s reads cleanly.
+- **Operator panel (v0.3.1):** four upgrades bought in order with Know-how; each
+  adds to the screen and pays off in play. They go with the SCADA install at Overhaul.
+
+| Upgrade | Know-how | On screen | Effect |
+|---|---:|---|---|
+| Trend historian | 5M | 5-minute sparklines with low/high; the four trend charts | Income +5% (on top of loop tuning) |
+| Alarm management | 20M | Flow, accumulator and heat-load gauges | Incidents −20% |
+| Predictive analytics | 80M | Next-minute forecast on every sparkline; rates of change | Automation +1 action per scan |
+| Advanced process control | 300M | — | Loop tuning doubled: +1% per Controls strength, up to +40% |
+
 - **Loop tuning:** all income **+0.5% per Controls strength**, up to +20%.
 - **Autonomous control** (each switch off until you turn it on), scanning every
   2 s with `1 + Controls strength ÷ 3` actions per scan, each spending at most 1%,

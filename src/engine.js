@@ -52,7 +52,7 @@
       president: null, execClock: 0, execLog: [],
       board: [], boardPool: [], patentsSpent: 0,               // directors survive Overhaul
       patentsFiled: 0,                                         // patents bought with Know-how (kept)
-      scada: { owned: false, clock: 0, log: [] },              // installed this run
+      scada: { owned: false, clock: 0, log: [], panel: {} },   // installed this run (panel upgrades too)
       scadaPrefs: { cool: false, pumps: false, lines: false, budget: 1 }, // automation switches (kept)
       shake: { phase: null, left: 0, cooldown: 0, moves: [], before: 0, report: null, done: 0 },
       pak: { target: 'valve', building: 'valve', work: 0, stock: { valve: 0, base: 0 }, built: { valve: 0, base: 0, sys: 0 }, earned: 0 },
@@ -411,7 +411,8 @@
     if (d.psi < C.incidentMinPsi || d.demand === 0) return 0;
     const heat = Math.max(0.5, s.temp / d.tempLimit);
     const shaking = s.shake && s.shake.phase ? C.shakeIncidentMult : 1;
-    return (C.incidentPerMin / 60) * (d.psi / 3000) * heat * shaking * boardEff(s, 'incidentMult') / (1 + C.safetyPer * openStrength(s, 'safety'));
+    return (C.incidentPerMin / 60) * (d.psi / 3000) * heat * shaking * boardEff(s, 'incidentMult') * panelEff(s, 'incidentMult')
+      / (1 + C.safetyPer * openStrength(s, 'safety'));
   }
   function safetyRand(s) {
     let t = (s.safety.seed = (s.safety.seed + 0x6d2b79f5) >>> 0);
@@ -1097,8 +1098,34 @@
     s.scada.owned = true;
     return true;
   }
-  const scadaMult = (s) => (s.scada && s.scada.owned ? 1 + Math.min(C.scadaTuneMax, C.scadaTunePer * teamStrength(s, 'controls')) : 1);
-  const scadaScan = (s) => 1 + Math.floor(teamStrength(s, 'controls') / 3);
+  /** Operator-panel effects: multiplied (or, with `add`, summed) across the upgrades bought. */
+  function panelEff(s, key, add = false) {
+    let v = add ? 0 : 1;
+    if (!s.scada || !s.scada.owned) return v;
+    for (const u of DATA.SCADA_PANEL) {
+      const e = s.scada.panel && s.scada.panel[u.id] ? u.eff[key] : null;
+      if (e != null) v = add ? v + e : v * e;
+    }
+    return v;
+  }
+  const hasPanel = (s, id) => !!(s.scada && s.scada.owned && s.scada.panel && s.scada.panel[id]);
+  /** The next operator-panel upgrade on offer (they're bought in order), or null. */
+  const nextPanel = (s) => (s.scada && s.scada.owned ? DATA.SCADA_PANEL.find((u) => !hasPanel(s, u.id)) || null : null);
+  const canBuyPanel = (s, id) => { const u = nextPanel(s); return !!u && u.id === id && s.kh >= u.kh; };
+  function buyPanel(s, id) {
+    if (!canBuyPanel(s, id)) return false;
+    const u = nextPanel(s);
+    s.kh -= u.kh;
+    s.scada.panel = { ...(s.scada.panel || {}), [id]: true };
+    scadaLog(s, `Operator panel: ${u.name} commissioned`);
+    return true;
+  }
+  const scadaMult = (s) => {
+    if (!s.scada || !s.scada.owned) return 1;
+    const m = panelEff(s, 'tuneMult');
+    return 1 + panelEff(s, 'tunePlus', true) + Math.min(C.scadaTuneMax * m, C.scadaTunePer * m * teamStrength(s, 'controls'));
+  };
+  const scadaScan = (s) => 1 + Math.floor(teamStrength(s, 'controls') / 3) + panelEff(s, 'scanPlus', true);
   function scadaLog(s, msg) {
     s.scada.log.unshift({ t: Math.round(s.time), m: msg });
     if (s.scada.log.length > 30) s.scada.log.length = 30;
@@ -1332,7 +1359,7 @@
     EXEC, execOpen, execOf, execSkill, presidentSkill, execMult, presidentMult, execCount, boardEff, execCandidates, fillExecPool,
     execHireCost, appointExec, dismissExec, canAppointPresident, appointPresident, execTick,
     boardOpen, boardSeatCost, fillBoardPool, electDirector, directorQuality, boardProposal, replaceDirector, presidentReview, presReplaceGap,
-    scadaReady, canBuyScada, buyScada, scadaMult, scadaScan, scadaTick,
+    scadaReady, canBuyScada, buyScada, scadaMult, scadaScan, scadaTick, panelEff, hasPanel, nextPanel, canBuyPanel, buyPanel,
     officeOpen, fileCost, fileQuote, filePatents,
     SHAKE_PHASES, shakeOpen, shakeCost, canShake, startShake, shakeTick, companyStrength,
     pakOpen, sysReady, pakTarget, pakNext, pakHoursRate, pakGrade, pakPrice, pakChainHours, pakIncome, setPakTarget, pakTick,

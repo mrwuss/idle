@@ -84,99 +84,6 @@
     };
   }
 
-  /**
-   * The SCADA cockpit's instrument: a bezel-mounted 270° dial with a live value arc,
-   * operating zones, 5-minute low/high tattletales, a target marker and a digital
-   * readout with a status lamp. Same scale and needle physics as the control panel's
-   * gauge; labels go through fmt() so any magnitude reads cleanly.
-   */
-  let instN = 0;
-  function makeInstrument(fig, unit) {
-    const id = `inst${++instN}`;
-    const svg = document.createElementNS(SVGNS, 'svg');
-    svg.setAttribute('viewBox', '0 0 200 184');
-    svg.classList.add('inst');
-    fig.prepend(svg);
-    const cx = 100, cy = 96, r = 74;
-    const ang = (f) => (-225 + 270 * f) * Math.PI / 180;
-    const pt = (f, rr) => [cx + rr * Math.cos(ang(f)), cy + rr * Math.sin(ang(f))];
-    const arc = (f0, f1, rr) => {
-      if (f1 - f0 < 1e-4) return '';
-      const [x0, y0] = pt(f0, rr), [x1, y1] = pt(f1, rr);
-      return `M${x0.toFixed(2)} ${y0.toFixed(2)} A${rr} ${rr} 0 ${(f1 - f0) * 270 > 180 ? 1 : 0} 1 ${x1.toFixed(2)} ${y1.toFixed(2)}`;
-    };
-    svg.innerHTML = `<defs>
-        <radialGradient id="${id}-face" cx="50%" cy="38%" r="70%"><stop offset="0" stop-color="#1f2933"/><stop offset=".7" stop-color="#11171d"/><stop offset="1" stop-color="#090c10"/></radialGradient>
-        <linearGradient id="${id}-bezel" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#5b6874"/><stop offset=".5" stop-color="#222a32"/><stop offset="1" stop-color="#3d4752"/></linearGradient>
-        <radialGradient id="${id}-hub" cx="40%" cy="35%" r="70%"><stop offset="0" stop-color="#9aa7b4"/><stop offset="1" stop-color="#2a323a"/></radialGradient>
-        <filter id="${id}-glow" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="2.2" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
-        <filter id="${id}-shadow" x="-50%" y="-50%" width="200%" height="200%"><feDropShadow dx="0" dy="1.5" stdDeviation="1.2" flood-color="#000" flood-opacity=".7"/></filter>
-      </defs>
-      <circle cx="${cx}" cy="${cy}" r="${r + 16}" fill="url(#${id}-bezel)"/>
-      <circle cx="${cx}" cy="${cy}" r="${r + 12}" fill="url(#${id}-face)" stroke="#05070a" stroke-width="1.5"/>
-      <path class="i-track" d="${arc(0, 1, r - 4)}"/>
-      <g class="i-zones"></g>
-      <path class="i-value" filter="url(#${id}-glow)"/>
-      <g class="i-ticks"></g>
-      <g class="i-marks"></g>
-      <g class="i-needle" filter="url(#${id}-shadow)" style="transform-origin:${cx}px ${cy}px">
-        <path d="M${cx - 3.2} ${cy + 14} L${cx - 1.4} ${cy - r + 14} L${cx} ${cy - r + 8} L${cx + 1.4} ${cy - r + 14} L${cx + 3.2} ${cy + 14} Z"/>
-      </g>
-      <circle cx="${cx}" cy="${cy}" r="7.5" fill="url(#${id}-hub)" stroke="#05070a"/>
-      <circle class="i-pin" cx="${cx}" cy="${cy}" r="2.2"/>
-      <rect class="i-lcd" x="${cx - 27}" y="${cy + 22}" width="54" height="25" rx="3.5"/>
-      <text class="i-read" x="${cx}" y="${cy + 37.5}"></text>
-      <text class="i-unit" x="${cx}" y="${cy + 44}">${unit}</text>
-      <text class="i-state" x="${cx}" y="${cy + 58}"><tspan class="i-lamp">●</tspan> <tspan class="i-st"></tspan></text>
-      <text class="i-sub" x="${cx}" y="${cy + 71}"></text>`;
-    const q = (c) => svg.querySelector(c);
-    const zones = q('.i-zones'), ticks = q('.i-ticks'), marks = q('.i-marks'), needle = q('.i-needle');
-    const valueArc = q('.i-value'), read = q('.i-read'), stateEl = q('.i-state'), st = q('.i-st'), sub = q('.i-sub');
-    let lastScale = null;
-    const frac = (v, min, max) => Math.min(1, Math.max(0, (v - min) / (max - min)));
-    return {
-      /**
-       * value, scale [min, max]; zones: [{from, to, cls}] in value units; lo/hi: 5-minute
-       * extremes; target: where the value is heading (or a setpoint); state: 'ok' | 'warn' | 'alarm'.
-       */
-      set({ value, min, max, zones: zs = [], lo, hi, target, label, state = 'ok', stateText = 'NORMAL', subText = '' }) {
-        const key = `${min}|${max}|${zs.map((z) => z.from + z.to + z.cls).join()}`;
-        if (key !== lastScale) {
-          lastScale = key;
-          let html = '';
-          for (let i = 0; i <= 50; i++) {
-            const f = i / 50, major = i % 10 === 0, mid = i % 5 === 0;
-            const [x0, y0] = pt(f, r + (major ? -1 : mid ? 2 : 4)), [x1, y1] = pt(f, r + 9);
-            html += `<line class="${major ? 'maj' : mid ? 'mid' : 'min'}" x1="${x0.toFixed(2)}" y1="${y0.toFixed(2)}" x2="${x1.toFixed(2)}" y2="${y1.toFixed(2)}"/>`;
-            if (major) {
-              const [tx, ty] = pt(f, r - 14);
-              html += `<text x="${tx.toFixed(2)}" y="${(ty + 3).toFixed(2)}">${fmt(min + (max - min) * f, 0)}</text>`;
-            }
-          }
-          ticks.innerHTML = html;
-          zones.innerHTML = zs.map((z) => `<path class="z-${z.cls}" d="${arc(frac(z.from, min, max), frac(z.to, min, max), r + 5)}"/>`).join('');
-        }
-        const f = frac(value, min, max);
-        valueArc.setAttribute('d', arc(0, Math.max(f, 0.0001), r - 4));
-        valueArc.setAttribute('class', `i-value s-${state}`);
-        needle.style.transform = `rotate(${-135 + 270 * Math.min(1.02, f)}deg)`;
-        let m = '';
-        const tri = (v, cls, inward = true) => {
-          const g = frac(v, min, max), [x, y] = pt(g, r + 12), a = ang(g) * 180 / Math.PI;
-          return `<path class="${cls}" transform="translate(${x.toFixed(2)} ${y.toFixed(2)}) rotate(${(a + (inward ? 90 : -90)).toFixed(1)})" d="M-3.4 -4 L3.4 -4 L0 1.6 Z"/>`;
-        };
-        if (Number.isFinite(lo) && Number.isFinite(hi) && hi > lo) m += tri(lo, 'm-lo') + tri(hi, 'm-hi');
-        if (Number.isFinite(target)) { const [x0, y0] = pt(frac(target, min, max), r - 9), [x1, y1] = pt(frac(target, min, max), r + 1); m += `<line class="m-target" x1="${x0.toFixed(2)}" y1="${y0.toFixed(2)}" x2="${x1.toFixed(2)}" y2="${y1.toFixed(2)}"/>`; }
-        if (m !== marks._m) { marks._m = m; marks.innerHTML = m; }
-        read.textContent = label;
-        read.style.fontSize = label.length > 6 ? '11px' : label.length > 5 ? '13px' : '';
-        st.textContent = stateText;
-        stateEl.setAttribute('class', `i-state s-${state}`);
-        sub.textContent = subText;
-      },
-    };
-  }
-
   // ---- Builders ---------------------------------------------------------------
 
   const rows = { pump: {}, actuator: {}, cooler: {} };
@@ -792,7 +699,7 @@
   // switch to a log scale when they span orders of magnitude, and every label uses fmt().
 
   const HIST_N = 300;            // 5 minutes at one sample per second
-  const hist = { t: [], income: [], production: [], psi: [], temp: [], tempEq: [], supply: [], demand: [], kh: [], pak: [] };
+  const hist = { t: [], income: [], production: [], psi: [], temp: [], tempEq: [], supply: [], demand: [], kh: [], pak: [], acc: [], heat: [] };
   let lastSample = 0;
   function sample(s, d) {
     if (s.time - lastSample < 1 && hist.t.length) return;
@@ -800,7 +707,7 @@
     const push = (k, v) => { hist[k].push(Number.isFinite(v) ? v : 0); if (hist[k].length > HIST_N) hist[k].shift(); };
     push('t', s.time); push('income', d.income); push('production', d.production); push('psi', d.psi);
     push('temp', s.temp); push('tempEq', Math.min(d.tempEq, 9999)); push('supply', d.supply); push('demand', d.demand);
-    push('kh', d.khRate); push('pak', E.pakIncome(s, d));
+    push('kh', d.khRate); push('pak', E.pakIncome(s, d)); push('acc', d.accCap > 0 ? (100 * s.accCharge) / d.accCap : 0); push('heat', d.heatHP);
   }
   /** Change per minute over (up to) the last minute of history; null until there's 10 s of it. */
   function rocWin(key) {
@@ -823,6 +730,80 @@
   const sign = (v, unit, dp = 1) => (v == null ? '— ' + unit.trim()
     : `${v >= 0 ? '▲ +' : '▼ −'}${Math.abs(v) < 1000 ? Math.abs(v).toFixed(dp) : fmt(Math.abs(v))}${unit}`);
 
+  /** A y-scale for `vals`: linear, or log10 when `log` and the positive values span more than 100×. */
+  function yScale(vals, log, padF = 0.08) {
+    const pos = vals.filter((v) => v > 0);
+    let lo = Math.min(...vals), hi = Math.max(...vals);
+    const useLog = log && pos.length > 1 && Math.max(...pos) / Math.min(...pos) > 100;
+    if (useLog) { lo = Math.min(...pos); hi = Math.max(...pos); }
+    const tf = (v) => (useLog ? Math.log10(Math.max(v, lo)) : v);
+    let a = tf(lo), b = tf(hi);
+    if (b - a < 1e-9) { const pad = useLog ? 0.5 : Math.max(1, Math.abs(a) * 0.05); a -= pad; b += pad; }
+    else { const pad = (b - a) * padF; a -= pad; b += pad; }
+    if (!useLog && lo >= 0 && a < 0) a = 0;
+    return { a, b, tf, useLog };
+  }
+
+  /**
+   * A digital gauge's sparkline: the last `win` seconds of history stretched across the
+   * width (time-based, so a fresh install fills the strip instead of bunching up), an area
+   * fill under the main series, dashed references, and optionally a forecast of the next
+   * stretch from the current rate of change.
+   */
+  function spark(cv, { series, win, marks = [], forecast = false, log = false }) {
+    if (!cv) return null;
+    const dpr = Math.min(2, root.devicePixelRatio || 1), W = cv.clientWidth, H = cv.clientHeight;
+    if (!W || !H) return null;
+    if (cv.width !== Math.round(W * dpr) || cv.height !== Math.round(H * dpr)) { cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr); }
+    const g = cv.getContext('2d'), cs = getComputedStyle($('scada')), col = (n) => (n.startsWith('#') ? n : cs.getPropertyValue(n).trim());
+    g.setTransform(dpr, 0, 0, dpr, 0, 0);
+    g.clearRect(0, 0, W, H);
+    const t = hist.t, n = t.length;
+    if (n < 2) return null;
+    const now = t[n - 1];
+    let i0 = n - 1;
+    while (i0 > 0 && now - t[i0 - 1] <= win) i0--;
+    if (n - i0 < 2) return null;
+    const t0 = t[i0], span = Math.max(1, now - t0), fw = forecast ? span * 0.25 : 0;
+    const main = hist[series[0].key].slice(i0);
+    const r = forecast ? rocWin(series[0].key) : null;
+    const fEnd = r ? main[main.length - 1] + (r.per / 60) * fw : null;
+    const vals = series.flatMap((x) => hist[x.key].slice(i0)).concat(marks.map((m) => m.v), fEnd != null ? [fEnd] : []).filter(Number.isFinite);
+    const { a, b, tf } = yScale(vals, log, 0.12);
+    const T = 4, B = 4, h = H - T - B;
+    const X = (tt) => ((tt - t0) / (span + fw)) * (W - 4);
+    const Y = (v) => T + h - ((tf(v) - a) / (b - a)) * h;
+    // faint grid
+    g.strokeStyle = 'rgba(255,255,255,.05)'; g.lineWidth = 1;
+    for (let k = 1; k < 4; k++) { const yy = Math.round(T + (h * k) / 4) + 0.5; g.beginPath(); g.moveTo(0, yy); g.lineTo(W, yy); g.stroke(); }
+    if (fw) { const xn = Math.round(X(now)) + 0.5; g.setLineDash([2, 3]); g.beginPath(); g.moveTo(xn, 0); g.lineTo(xn, H); g.stroke(); g.setLineDash([]); }
+    for (const m of marks) {
+      const yy = Y(m.v);
+      if (yy < 0 || yy > H) continue;
+      g.setLineDash([4, 3]); g.strokeStyle = col(m.color); g.globalAlpha = 0.8; g.beginPath(); g.moveTo(0, yy); g.lineTo(W, yy); g.stroke(); g.setLineDash([]); g.globalAlpha = 1;
+    }
+    series.forEach((x, si) => {
+      const arr = hist[x.key].slice(i0), c = col(x.color);
+      const pts = arr.map((v, i) => [X(t[i0 + i]), Y(v)]);
+      if (si === 0) {
+        const grad = g.createLinearGradient(0, T, 0, H);
+        grad.addColorStop(0, c); grad.addColorStop(1, 'rgba(0,0,0,0)');
+        g.fillStyle = grad; g.globalAlpha = 0.3; g.beginPath(); g.moveTo(pts[0][0], H);
+        for (const [xx, yy] of pts) g.lineTo(xx, yy);
+        g.lineTo(pts[pts.length - 1][0], H); g.closePath(); g.fill(); g.globalAlpha = 1;
+      }
+      g.strokeStyle = c; g.lineWidth = si === 0 ? 1.8 : 1.3; g.lineJoin = 'round';
+      if (x.dash) g.setLineDash([3, 3]);
+      g.beginPath(); pts.forEach(([xx, yy], i) => (i ? g.lineTo(xx, yy) : g.moveTo(xx, yy))); g.stroke(); g.setLineDash([]);
+      if (si === 0) {
+        const [lx, ly] = pts[pts.length - 1];
+        if (fEnd != null) { g.setLineDash([2, 3]); g.globalAlpha = 0.7; g.beginPath(); g.moveTo(lx, ly); g.lineTo(X(now + fw), Y(fEnd)); g.stroke(); g.setLineDash([]); g.globalAlpha = 1; }
+        g.shadowColor = c; g.shadowBlur = 8; g.fillStyle = c; g.beginPath(); g.arc(lx, ly, 2.8, 0, Math.PI * 2); g.fill(); g.shadowBlur = 0;
+      }
+    });
+    return { lo: Math.min(...main), hi: Math.max(...main), fEnd };
+  }
+
   /**
    * A trend chart in the game's style: gridlines, y-axis labels through fmt(), "−5m … now",
    * the latest value marked. `log` switches to log10 when the data spans more than 100×.
@@ -841,15 +822,7 @@
     if (vals.length < 2) { g.fillStyle = col('--muted'); g.font = `11px ${col('--font-mono')}`; g.fillText('collecting data…', L, T + h / 2); return; }
     // Log scale looks at positive values only (a 0 before the first sale mustn't disable it);
     // zeros and negatives then sit on the bottom edge.
-    const pos = vals.filter((v) => v > 0);
-    let lo = Math.min(...vals), hi = Math.max(...vals);
-    const useLog = log && pos.length > 1 && Math.max(...pos) / Math.min(...pos) > 100;
-    if (useLog) { lo = Math.min(...pos); hi = Math.max(...pos); }
-    const tf = (v) => (useLog ? Math.log10(Math.max(v, lo)) : v);
-    let a = tf(lo), b = tf(hi);
-    if (b - a < 1e-9) { const pad = useLog ? 0.5 : Math.max(1, Math.abs(a) * 0.05); a -= pad; b += pad; }
-    else { const pad = (b - a) * 0.08; a -= pad; b += pad; }
-    if (!useLog && lo >= 0 && a < 0) a = 0;   // nothing here goes negative: keep the axis at 0
+    const { a, b, tf, useLog } = yScale(vals, log);
     const y = (v) => T + h - ((tf(v) - a) / (b - a)) * h;
     const inv = (yy) => { const f = a + (1 - (yy - T) / h) * (b - a); return useLog ? 10 ** f : f; };
     // grid + y labels
@@ -890,6 +863,16 @@
     { id: 'kh', title: 'Know-how · per second', series: [{ key: 'kh', color: '--steel' }], log: true },
   ];
   let scG = null;
+  // Digital gauges. `needs`: the operator-panel upgrade that adds it.
+  const DGAUGES = [
+    { id: 'income', title: 'Income', unit: '$/s', series: [{ key: 'income', color: '--ok' }], log: true, pct: true },
+    { id: 'psi', title: 'System pressure', unit: 'psi', series: [{ key: 'psi', color: '--accent' }] },
+    { id: 'temp', title: 'Oil temperature', unit: '°F', series: [{ key: 'temp', color: '--oil' }, { key: 'tempEq', color: '--muted', dash: true }] },
+    { id: 'flow', title: 'Flow · supply vs demand', unit: 'GPM', series: [{ key: 'supply', color: '--cool' }, { key: 'demand', color: '--accent', dash: true }], log: true, needs: 'alarms' },
+    { id: 'acc', title: 'Accumulator', unit: '%', series: [{ key: 'acc', color: '--cool' }], needs: 'alarms' },
+    { id: 'heat', title: 'Heat load', unit: 'HP', series: [{ key: 'heat', color: '--pressure' }], log: true, needs: 'alarms' },
+  ];
+  const PANEL_BY_ID = Object.fromEntries(E.DATA.SCADA_PANEL.map((u) => [u.id, u]));
 
   function openScada() { ui.scada = true; $('scada').hidden = false; document.body.classList.add('modal-open'); $('scada-body')._key = null; render(lastState); }
   function closeScada() { ui.scada = false; $('scada').hidden = true; if (!ui.sheet && !ui.person) document.body.classList.remove('modal-open'); }
@@ -897,7 +880,8 @@
   function renderScada(s, d) {
     const body = $('scada-body'), C = E.DATA.CONSTANTS, P = s.scadaPrefs, owned = s.scada.owned;
     setPart($('scada-meta'), `T+${fmtTime(s.time)} · ${owned ? `scan ${C.scadaEvery}s × ${E.scadaScan(s)} · tuning +${Math.round((E.scadaMult(s) - 1) * 1000) / 10}%` : 'NOT INSTALLED'}`, true);
-    const key = [owned, E.scadaReady(s), P.cool, P.pumps, P.lines, P.budget].join('|');
+    const panel = (id) => E.hasPanel(s, id), nextP = E.nextPanel(s);
+    const key = [owned, E.scadaReady(s), P.cool, P.pumps, P.lines, P.budget, E.DATA.SCADA_PANEL.map((u) => +panel(u.id)).join('')].join('|');
     if (body._key !== key) {
       body._key = key;
       scG = null;
@@ -910,19 +894,26 @@
             <li data-k="kh-req"></li></ul>
           <button class="btn primary" data-scada-buy="1">Install SCADA<small>${fmt(C.scadaKH)} Know-how</small></button></div>`;
       } else {
-        body.innerHTML = `<div class="scada-instruments">
-            <figure class="gauge" id="sc-g-psi"><figcaption>Pressure</figcaption><div class="inst-legend"><i>▲ 5-min range</i></div></figure>
-            <figure class="gauge" id="sc-g-temp"><figcaption>Oil temp</figcaption><div class="inst-legend"><i>▲ 5-min range</i><i class="tgt">┃ heading</i></div></figure>
-            <div class="meters scada-meters">
-              <div class="meter"><div class="meter-head"><span>Flow</span><span data-k="m-flow"></span></div>
-                <div class="bar"><div class="bar-mark" data-k="m-flow-mark"></div><div class="bar-fill flow" data-k="m-flow-fill"></div></div></div>
-              <div class="meter"><div class="meter-head"><span>Accumulator</span><span data-k="m-acc"></span></div>
-                <div class="bar"><div class="bar-fill acc" data-k="m-acc-fill"></div></div></div>
-            </div>
-          </div>
+        const dg = (g) => g.needs && !panel(g.needs)
+          ? `<div class="dg locked"><div class="dg-head"><span>${g.title}</span></div><div class="dg-lock">🔒 ${PANEL_BY_ID[g.needs].name}</div></div>`
+          : `<div class="dg" data-dg="${g.id}"><div class="dg-head"><span>${g.title}</span><span class="dg-state"><i></i><b data-x="st"></b></span></div>
+              <div class="dg-read"><b data-x="v"></b><small>${g.unit}</small></div>
+              <div class="dg-range"><div data-x="zones"></div><i data-x="mk"></i></div>
+              <canvas class="dg-spark"></canvas>
+              <div class="dg-foot"><span data-x="f1"></span><span data-x="f2"></span><span data-x="f3"></span></div></div>`;
+        const step = (u, i) => {
+          const own = panel(u.id), isNext = nextP && nextP.id === u.id;
+          return `<div class="pn-step${own ? ' own' : isNext ? ' next' : ' later'}"><div class="pn-n">${own ? '✓' : i + 1}</div>
+            <div class="pn-txt"><b>${u.name}</b><span>${u.desc}</span></div>
+            ${own ? '<em>online</em>' : isNext ? `<button class="btn mini" data-scada-panel="${u.id}">${fmt(u.kh)}<small>Know-how</small></button>` : `<em>${fmt(u.kh)} KH</em>`}</div>`;
+        };
+        body.innerHTML = `<div class="dg-grid">${DGAUGES.map(dg).join('')}</div>
+          <section class="scada-panel pn"><h4>Operator panel <span class="muted">· ${E.DATA.SCADA_PANEL.filter((u) => panel(u.id)).length}/${E.DATA.SCADA_PANEL.length} upgrades</span></h4>
+            <div class="pn-steps">${E.DATA.SCADA_PANEL.map(step).join('')}</div></section>
           <div class="scada-grid">${SCADA_TILES.map((id) => `<div class="tile-s" data-tile="${id}">
             <div class="ts-label">${TILE_LABEL[id]}</div><div class="ts-val" data-k="v-${id}"></div><div class="ts-sub" data-k="s-${id}"></div></div>`).join('')}</div>
-          <div class="scada-charts">${CHARTS.map((c) => `<section class="scada-panel"><h4>${c.title}</h4><canvas class="trend" data-c="${c.id}"></canvas></section>`).join('')}</div>
+          ${panel('historian') ? `<div class="scada-charts">${CHARTS.map((c) => `<section class="scada-panel"><h4>${c.title}</h4><canvas class="trend" data-c="${c.id}"></canvas></section>`).join('')}</div>`
+            : `<div class="scada-panel dg-lock wide">🔒 5-minute trend charts come with the ${PANEL_BY_ID.historian.name}</div>`}
           <div class="scada-row">
             <section class="scada-panel"><h4>Alarms</h4><ul class="scada-alarms" data-k="alarms"></ul></section>
             <section class="scada-panel"><h4>Autonomous control</h4>
@@ -934,7 +925,6 @@
               <p class="muted small" data-k="scan"></p>
               <ul class="exec-log scada-log" data-k="log"></ul></section>
           </div>`;
-        scG = { psi: makeInstrument($('sc-g-psi'), 'PSI'), temp: makeInstrument($('sc-g-temp'), '°F') };
       }
     }
     const k = (n) => body.querySelector(`[data-k="${n}"]`);
@@ -944,28 +934,48 @@
       if (b) b.disabled = !E.canBuyScada(s);
       return;
     }
-    // Instruments: the control panel's scale and needle, on the true (unwobbled) values,
-    // with zones, 5-minute low/high tattletales and where each value is heading.
-    const lim = d.tempLimit, span = (a) => (a.length > 1 ? [Math.min(...a), Math.max(...a)] : [NaN, NaN]);
-    const pMax = niceMax(d.psi * 1.25), [pLo, pHi] = span(hist.psi), relief = d.overRelief > 0;
-    scG.psi.set({ value: d.psi, min: 0, max: pMax, lo: pLo, hi: pHi, label: fmt(d.psi, 0),
-      zones: [{ from: 0, to: d.psi, cls: 'ok' }, { from: d.psi, to: d.psi * 1.1, cls: 'warn' }, { from: d.psi * 1.1, to: pMax, cls: 'alarm' }],
-      state: relief ? 'warn' : 'ok', stateText: relief ? 'RELIEF' : 'RATED',
-      subText: sign(roc('psi'), ' psi/min', 0) });
-    const tMax = Math.max(260, lim + 80), [tLo, tHi] = span(hist.temp), eq = Math.min(d.tempEq, tMax * 1.02);
-    const tState = s.temp > lim ? 'alarm' : s.temp > lim - 15 || d.tempEq > lim ? 'warn' : 'ok';
-    scG.temp.set({ value: s.temp, min: 60, max: tMax, lo: tLo, hi: tHi, target: eq, label: `${Math.round(s.temp)}°`,
-      zones: [{ from: 60, to: lim - 15, cls: 'ok' }, { from: lim - 15, to: lim, cls: 'warn' }, { from: lim, to: tMax, cls: 'alarm' }],
-      state: tState, stateText: tState === 'alarm' ? 'OVER LIMIT' : tState === 'warn' ? (s.temp > lim - 15 ? 'HIGH' : 'RISING') : 'NORMAL',
-      subText: `${sign(roc('temp'), '°/min')} → ${fmt(Math.min(d.tempEq, 9999), 0)}°` });
-    const flowMax = Math.max(d.supply, d.demand, 1) * 1.1;
-    k('m-flow-fill').style.width = `${(d.supply / flowMax) * 100}%`;
-    k('m-flow-fill').classList.toggle('starved', d.utilization < 1);
-    k('m-flow-mark').style.left = `${(d.demand / flowMax) * 100}%`;
-    setPart(k('m-flow'), `${fmt(d.supply)} / ${fmt(d.demand)} GPM`, true);
-    const accF = s.accCharge / d.accCap;
-    k('m-acc-fill').style.width = `${accF * 100}%`;
-    setPart(k('m-acc'), `${fmt(s.accCharge)} / ${fmt(d.accCap)} gal`, true);
+    // Digital gauges: value, state lamp, a range bar with zones, and a sparkline whose
+    // window, low/high and forecast depend on the operator-panel upgrades.
+    const lim = d.tempLimit, accF = s.accCharge / d.accCap;
+    const win = panel('historian') ? 300 : 60, fc = panel('predictive');
+    const red = '--pressure';
+    const G = {
+      income: { v: d.income, label: fmt(d.income), state: d.income > 0 ? 'ok' : 'warn', st: d.surging ? `SURGE ×${d.m.surgeMult}` : 'ONLINE',
+        rate: () => sign(pctRoc('income'), '%/min') },
+      psi: { v: d.psi, label: fmt(d.psi, 0), state: d.overRelief > 0 ? 'warn' : 'ok', st: d.overRelief > 0 ? 'RELIEF' : 'RATED',
+        range: [0, niceMax(d.psi * 1.25)], zones: [[0, d.psi, 'ok'], [d.psi, d.psi * 1.1, 'warn'], [d.psi * 1.1, Infinity, 'alarm']],
+        rate: () => sign(roc('psi'), '/min', 0) },
+      temp: { v: s.temp, label: `${Math.round(s.temp)}`, range: [60, Math.max(260, lim + 80)], zones: [[60, lim - 15, 'ok'], [lim - 15, lim, 'warn'], [lim, Infinity, 'alarm']],
+        state: s.temp > lim ? 'alarm' : s.temp > lim - 15 || d.tempEq > lim ? 'warn' : 'ok',
+        st: s.temp > lim ? 'OVER LIMIT' : s.temp > lim - 15 ? 'HIGH' : d.tempEq > lim ? 'RISING' : 'NORMAL',
+        marks: [{ v: lim, color: red }], rate: () => sign(roc('temp'), '°/min') },
+      flow: { v: d.supply, label: fmt(d.supply), state: d.utilization < 0.999 ? 'alarm' : d.overRelief > 0 ? 'warn' : 'ok',
+        st: d.utilization < 0.999 ? 'STARVED' : d.overRelief > 0 ? 'DUMPING' : 'BALANCED',
+        range: [0, Math.max(d.supply, d.demand, 1) * 1.1], zones: [[0, d.demand, 'warn'], [d.demand, Infinity, 'ok']], rate: () => sign(pctRoc('supply'), '%/min') },
+      acc: { v: 100 * accF, label: `${Math.round(100 * accF)}`, range: [0, 100], zones: [[0, 100, 'ok']],
+        state: d.surging ? 'warn' : 'ok', st: E.canSurge(s) ? 'READY' : d.surging ? `SURGE ${Math.ceil(s.surgeLeft)}s` : 'CHARGING', rate: () => sign(roc('acc'), '%/min') },
+      heat: { v: d.heatHP, label: fmt(d.heatHP), state: d.tempEq > lim ? 'alarm' : 'ok', st: d.tempEq > lim ? 'OVER COOLING' : 'IN BUDGET',
+        rate: () => sign(pctRoc('heat'), '%/min') },
+    };
+    for (const def of DGAUGES) {
+      const el = body.querySelector(`[data-dg="${def.id}"]`);
+      if (!el) continue;
+      const g = G[def.id], x = (n) => el.querySelector(`[data-x="${n}"]`);
+      el.className = `dg s-${g.state}`;
+      setPart(x('v'), g.label, true);
+      setPart(x('st'), g.st, true);
+      const rangeEl = el.querySelector('.dg-range');
+      if (g.range) {
+        const [mn, mx] = g.range, f = (v) => Math.min(100, Math.max(0, ((v - mn) / (mx - mn)) * 100));
+        const zk = g.zones.map((z) => z.join()).join('|') + mx;
+        if (rangeEl._k !== zk) { rangeEl._k = zk; x('zones').innerHTML = g.zones.map(([z0, z1, c]) => `<span class="z-${c}" style="left:${f(z0)}%;width:${f(z1) - f(z0)}%"></span>`).join(''); }
+        x('mk').style.left = `${f(g.v)}%`;
+      } else rangeEl.hidden = true;
+      const sp = spark(el.querySelector('.dg-spark'), { series: def.series, win, log: def.log, marks: g.marks || [], forecast: fc });
+      setPart(x('f1'), panel('historian') && sp ? `lo ${fmt(sp.lo)}` : `${win / 60} min`, true);
+      setPart(x('f2'), fc ? g.rate() : '', true);
+      setPart(x('f3'), panel('historian') && sp ? `hi ${fmt(sp.hi)}` : '', true);
+    }
 
     const o = d.order, tRoc = roc('temp');
     const v = {

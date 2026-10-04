@@ -33,7 +33,7 @@
   Executives (`s.execs`, `execTick()` every `execEvery` s, `execMult()` per division), the President
   (`s.president`, `presidentMult()`, C-suite reviews in `presidentReview()`) and the Board (`s.board`, `boardEff(key)`, bought with Patents tracked in
   `s.patentsSpent`, kept through Overhaul; the Chair's swap offer is `boardProposal()`/`replaceDirector()`) are in engine.js. SCADA (`s.scada`, `buyScada()`, `scadaTick()` automation, `scadaMult()` tuning; switches in `s.scadaPrefs`,
-  kept through Overhaul) has a full-screen cockpit in ui.js (`openScada()`, history sampled in `sample()`). The Patent Office (`officeOpen()`, `filePatents()`, `s.patentsFiled`; `overhaulGain()` ignores filed
+  kept through Overhaul) has a full-screen cockpit in ui.js (`openScada()`, digital gauges `DGAUGES` with `spark()`, history sampled in `sample()`); operator-panel upgrades are `DATA.SCADA_PANEL` (`buyPanel()`, `panelEff()`). The Patent Office (`officeOpen()`, `filePatents()`, `s.patentsFiled`; `overhaulGain()` ignores filed
   patents) spends Know-how once every tech is done. A shake-up (`s.shake`, `startShake()`, `shakeTick()`, phases in `SHAKE_STEP`)
   reorganizes Board → execs → managers → staff and raises `incidentRate()` while it runs. The org chart and exec sheet (`exec:<id>`) are in ui.js.
   The remaining department twists are still a design scaffold. Location unlocks
