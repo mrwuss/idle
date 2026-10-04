@@ -658,7 +658,7 @@
     const box = $('shake'), sh = s.shake, C = E.DATA.CONSTANTS;
     box.hidden = !E.shakeOpen(s);
     if (box.hidden) return;
-    const key = [sh.phase, sh.moves.length, sh.report && sh.report.at, sh.cooldown > 0].join('|');
+    const key = [sh.phase, sh.moves.length, sh.report && sh.report.at, sh.cooldown > 0, E.canFreeShake(s)].join('|');
     if (box._key !== key) {
       box._key = key;
       const idx = E.SHAKE_PHASES.indexOf(sh.phase);
@@ -671,8 +671,8 @@
           <p class="small">${SHAKE_WHAT[sh.phase]} <span class="bad-text">While it runs: incidents ×${C.shakeIncidentMult}, Order Line at ${Math.round(C.shakeDisruption * 100)}%.</span></p>`
           : `<p class="small muted">Reorganize the whole company for output: anyone can move to any seat, from the Board down. Each phase tests thousands of moves, keeps the ones that raise income (without hurting Know-how, safety, Controls or costs) and stops when nothing helps. It takes about ${Math.round(Object.values(C.shakePhaseS).reduce((a, b) => a + b, 0) / 60)} minutes, and while it runs incidents are ${C.shakeIncidentMult}× likelier and the Order Line works at ${Math.round(C.shakeDisruption * 100)}%.</p>`}
         ${moves ? `<ul class="exec-log">${moves}</ul>` : ''}
-        ${!sh.phase && sh.report ? `<p class="small">Last shake-up: <b>${sh.report.moves}</b> move${sh.report.moves === 1 ? '' : 's'}, income <b>${sh.report.change >= 0 ? '+' : ''}${(sh.report.change * 100).toFixed(1)}%</b>.</p>` : ''}
-        ${sh.phase ? '' : '<button class="btn primary" data-shake="1"></button>'}`;
+        ${!sh.phase && sh.report ? `<p class="small">Last ${sh.report.free ? 'reorg (free)' : 'shake-up'}: <b>${sh.report.moves}</b> move${sh.report.moves === 1 ? '' : 's'}, income <b>${sh.report.change >= 0 ? '+' : ''}${(sh.report.change * 100).toFixed(1)}%</b>.</p>` : ''}
+        ${sh.phase ? '' : `<div class="shake-btns">${E.canFreeShake(s) ? '<button class="btn primary" data-shake-free="1">Free instant reorg<small>one time · no cost, no disruption</small></button>' : ''}<button class="btn ${E.canFreeShake(s) ? 'ghost' : 'primary'}" data-shake="1"></button></div>`}`;
     }
     const k = (n) => box.querySelector(`[data-k="${n}"]`);
     if (sh.phase) {

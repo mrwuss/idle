@@ -849,3 +849,5 @@ ul.plain b { color: var(--text); }
   .scada-row { grid-template-columns: 1fr; }
   .scada-body { padding: 8px; }
 }
+
+.shake-btns { display: flex; flex-wrap: wrap; gap: 8px; }
