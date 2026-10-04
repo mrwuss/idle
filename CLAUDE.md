@@ -29,7 +29,7 @@
   Management, Purchasing discount) are live; achievements (`s.ach`) and first-time tips (`s.tips`)
   persist through Overhaul. Engineering people have a team (`p.g`: design/controls/project; `teamStrength()`), Controls
   discounts `techCost()`, and Project runs the Pak line (`s.pak`, `pakTick()`, target via `setPakTarget()`; an active Pak contract in `s.contracts` overrides `pakTarget()`, see `contractsTick()`/`acceptContract()`).
-  The Company tab cards open a focus sheet (`openDept()`) and faces open an ID badge (`data-person`).
+  The Company tab is split into sections (`setTeam()`: Order Line / Leadership / Paks / Territory, `[data-team-group]`); its cards open a focus sheet (`openDept()`) and faces open an ID badge (`data-person`). On phones `fitRes()` in ui.js shrinks top-bar numbers, tab labels and the big buttons to fit instead of truncating (Android large text). `node tools/simulate.js 3 --save=x.json` writes a save for UI checks.
   Executives (`s.execs`, `execTick()` every `execEvery` s, `execMult()` per division), the President
   (`s.president`, `presidentMult()`, C-suite reviews in `presidentReview()`) and the Board (`s.board`, `boardEff(key)`, bought with Patents tracked in
   `s.patentsSpent`, kept through Overhaul; the Chair's swap offer is `boardProposal()`/`replaceDirector()`) are in engine.js. SCADA (`s.scada`, `buyScada()`, `scadaTick()` automation, `scadaMult()` tuning; switches in `s.scadaPrefs`,

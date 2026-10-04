@@ -302,6 +302,7 @@ textarea { width: 100%; background: var(--sunk); color: var(--text); border: 1px
 .dept-role { font-size: 12px; }
 .dept-twist { font-size: 11px; color: var(--muted); }
 .dept-era { font: 10px var(--font-mono); color: var(--muted); }
+.dept:not(.closed) .dept-era { display: none; } /* only worth saying until it opens */
 .dept-teams { display: flex; gap: 4px; flex-wrap: wrap; }
 .dept-teams span { font: 10px var(--font-mono); border: 1px solid var(--edge); border-radius: 3px; padding: 1px 6px; color: var(--accent); }
 .dept-progress { height: 3px; background: var(--sunk); border-radius: 2px; overflow: hidden; }
@@ -444,6 +445,7 @@ textarea { width: 100%; background: var(--sunk); color: var(--text); border: 1px
     display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; width: 100%; order: 5;
     background: none; border: 0; padding: 2px 0 0; color: var(--text); cursor: pointer; text-align: left;
   }
+  body[data-view="works"] .m-status { display: none; } /* the control panel right below shows the same four readings */
   .m-status span { font: 10.5px var(--font-mono); white-space: nowrap; overflow: hidden; min-width: 0; }
   .m-status span i { display: block; height: 2px; margin-top: 2px; background: var(--sunk); border-radius: 1px; overflow: hidden; }
   .m-status span i b { display: block; height: 100%; background: var(--accent); }
@@ -491,9 +493,10 @@ textarea { width: 100%; background: var(--sunk); color: var(--text); border: 1px
   }
   .tabs button[aria-selected="true"] { border-top-color: var(--accent); background: var(--panel); }
   .tab-ico { display: block; width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
-  .tl { font-size: 0; display: block; max-width: 100%; padding: 0 1px; overflow: hidden; }
-  .tl::after { content: attr(data-short); font-size: clamp(8px, 2.6vw, 10.5px); letter-spacing: 0; text-transform: none; display: block;
-    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .tl { display: block; max-width: 100%; padding: 0 1px; overflow: hidden; }
+  .tl-long { display: none; }
+  .tabs .tl-short { font-size: clamp(8px, 2.6vw, 10.5px); letter-spacing: 0; text-transform: none; display: block;
+    white-space: nowrap; overflow: hidden; }
   .tabs .badge { position: absolute; top: 3px; left: 54%; margin: 0; padding: 0 4px; font-size: 9px; }
 
   /* buy quantity just above Stroke/Surge, big enough for a thumb */
@@ -517,15 +520,17 @@ textarea { width: 100%; background: var(--sunk); color: var(--text); border: 1px
   .tech-col h4 { grid-column: 1 / -1; margin-top: 4px; }
   .tech { padding: 8px; }
   .tech.done .t-desc { display: none; }
+  .tech-col.complete .tech { display: none; }
+  /* flavor text introduces a new item; once you own some, the row keeps to the numbers */
+  .item.owned .item-flavor { display: none; }
+  /* an open department's card keeps to status and people; the description is in its sheet */
+  .dept:not(.closed):not(.production) .dept-role { display: none; }
+  .tech-col.complete h4 { margin: 0; }
 
   /* Company: the intro shrinks to its era line; the map sits beside the locations */
   .era-card p { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; cursor: pointer; }
   .era-card.open p { display: block; }
   .territory { grid-template-columns: 110px 1fr; gap: 8px; }
-  /* the Order Line (what you act on) comes before the territory overview */
-  .tab-body[data-body="company"] { display: flex; flex-direction: column; }
-  .tab-body[data-body="company"][hidden] { display: none; }
-  .tab-body[data-body="company"] > h3:has(+ .territory), .tab-body[data-body="company"] > .territory { order: 10; }
   .panel { padding: 10px; }
   .layout { padding: 8px 6px; }
   .territory-map { max-width: 110px; }
@@ -658,6 +663,16 @@ ul.plain b { color: var(--text); }
 .idc-quirk p { margin: 2px 0 0; color: var(--muted); }
 .idc h4 { margin-top: 12px; }
 .seg { display: flex; gap: 4px; }
+.team-seg { margin: 10px 0 2px; flex-wrap: wrap; }
+.tl-short { display: none; }
+.team-seg .btn { min-height: 34px; white-space: nowrap; }
+.team-seg .btn.locked:not(.on) { opacity: .5; }
+.t-all { display: none; font-weight: 400; text-transform: none; letter-spacing: 0; color: var(--ok); }
+.tech-col.complete .t-all { display: inline; }
+.tab-body[data-body="tech"].all-done:not([hidden]) { display: flex; flex-direction: column; }
+.tab-body[data-body="tech"].all-done > .hint, .tab-body[data-body="tech"].all-done > #tech-tree { order: 5; }
+.alerts:empty { min-height: 0; margin: 0; }
+.shake-report summary { cursor: pointer; font-size: 13px; margin: 6px 0; }
 .seg .btn { flex: 1; min-height: 38px; }
 .seg .btn.on { border-color: var(--accent); color: var(--accent); }
 

@@ -73,7 +73,9 @@
             const [x0, y0] = pt(f, r - (major ? 8 : 4)), [x1, y1] = pt(f, r);
             html += `<line class="tick${major ? ' major' : ''}" x1="${x0}" y1="${y0}" x2="${x1}" y2="${y1}"/>`;
             if (major) {
-              const [tx, ty] = pt(f, r - 15);
+              // The middle mark sits inside the dial; min and max go just outside the
+              // dial's open ends so they never touch the readout or the red zone.
+              const [tx, ty] = i === 5 ? pt(f, r - 15) : pt(f, r + 11);
               html += `<text class="scale" x="${tx}" y="${ty + 2}">${fmt(min + (max - min) * f, 0)}</text>`;
             }
           }
@@ -125,7 +127,7 @@
     cols.forEach((list, i) => {
       const col = document.createElement('div');
       col.className = 'tech-col';
-      col.innerHTML = `<h4>Stage ${i + 1}</h4>`;
+      col.innerHTML = `<h4>Stage ${i + 1}<span class="t-all"> · all researched</span></h4>`;
       for (const t of list) {
         const b = document.createElement('button');
         b.className = 'tech';
@@ -579,10 +581,9 @@
   function renderOrg(s) {
     const open = E.execOpen(s), org = $('org');
     setPart($('exec-hint'), open
-      ? 'Executives run whole divisions on their own: every few seconds they fix managers, hire toward a cushion, replace weak staff with better applicants and refresh poor applicant pools, spending a little cash. Promote from inside for free, or hire from outside.'
+      ? 'Executives run their divisions on their own: they fix managers, hire, and swap weak staff for better applicants. Tap a seat to see their log or appoint someone.'
       : 'Opens with Management ($1B earned or your first Overhaul). Executives run whole divisions for you.', true);
-    const last = s.execLog[0];
-    setPart($('exec-summary'), open ? `· ${E.execCount(s)}/4 seated${s.president ? ' · President' : ''}${last ? ` · latest: ${last.m}` : ''}` : '', true);
+    setPart($('exec-summary'), open ? `· ${E.execCount(s)}/4 seated${s.president ? ' · President' : ''}` : '', true);
     org.classList.toggle('closed', !open);
     const key = [open, s.president && s.president.n, ...E.DATA.EXECS.map((x) => s.execs[x.id] && s.execs[x.id].n), E.canAppointPresident(s)].join('|');
     if (org._key !== key) {
@@ -693,7 +694,7 @@
 
 
   // ---- Shake-up card --------------------------------------------------------------
-  const SHAKE_LABEL = { board: 'Board', cxo: 'Executives', mgr: 'Managers', staff: 'Employees' };
+  const SHAKE_LABEL = { board: 'Board', cxo: 'C-suite', mgr: 'Managers', staff: 'Staff' };
   const SHAKE_WHAT = {
     board: 'Anyone in the company may take a Board seat, if it raises output (each seat keeps its perk).',
     cxo: 'Executive seats and the President go to whoever, anywhere in the company, does the most for output.',
@@ -712,12 +713,11 @@
         <b>${SHAKE_LABEL[ph]}</b><span>${Math.round(C.shakePhaseS[ph])} s</span></li>`).join('');
       const moves = sh.moves.slice(-6).reverse().map((m) => `<li>${m}</li>`).join('');
       box.innerHTML = `<div class="shake-head"><h4>Company shake-up</h4><span class="muted small" data-k="sh-status"></span></div>
-        <ol class="shake-steps">${steps}</ol>
-        ${sh.phase ? `<div class="cov shake-prog"><div data-k="sh-prog"></div></div>
+        ${sh.phase ? `<ol class="shake-steps">${steps}</ol><div class="cov shake-prog"><div data-k="sh-prog"></div></div>
           <p class="small">${SHAKE_WHAT[sh.phase]} <span class="bad-text">While it runs: incidents ×${C.shakeIncidentMult}, Order Line at ${Math.round(C.shakeDisruption * 100)}%.</span></p>`
-          : `<p class="small muted">Reorganize the whole company for output: anyone can move to any seat, from the Board down. Each phase tests thousands of moves, keeps the ones that raise income (without hurting Know-how, safety, Controls or costs) and stops when nothing helps. It takes about ${Math.round(Object.values(C.shakePhaseS).reduce((a, b) => a + b, 0) / 60)} minutes, and while it runs incidents are ${C.shakeIncidentMult}× likelier and the Order Line works at ${Math.round(C.shakeDisruption * 100)}%.</p>`}
-        ${moves ? `<ul class="exec-log">${moves}</ul>` : ''}
-        ${!sh.phase && sh.report ? `<p class="small">Last ${sh.report.free ? 'reorg (free)' : 'shake-up'}: <b>${sh.report.moves}</b> move${sh.report.moves === 1 ? '' : 's'}, income <b>${sh.report.change >= 0 ? '+' : ''}${(sh.report.change * 100).toFixed(1)}%</b>.</p>` : ''}
+          : `<p class="small muted">Moves anyone, Board to shop floor, into the seat where they add the most output. About ${Math.round(Object.values(C.shakePhaseS).reduce((a, b) => a + b, 0) / 60)} min; meanwhile incidents ×${C.shakeIncidentMult} and the Order Line runs at ${Math.round(C.shakeDisruption * 100)}%.</p>`}
+        ${sh.phase ? (moves ? `<ul class="exec-log">${moves}</ul>` : '')
+          : sh.report ? `<details class="shake-report"><summary>Last ${sh.report.free ? 'reorg (free)' : 'shake-up'}: <b>${sh.report.moves}</b> move${sh.report.moves === 1 ? '' : 's'}, income <b>${sh.report.change >= 0 ? '+' : ''}${(sh.report.change * 100).toFixed(1)}%</b></summary>${moves ? `<ul class="exec-log">${moves}</ul>` : ''}</details>` : ''}
         ${sh.phase ? '' : `<div class="shake-btns">${E.canFreeShake(s) ? '<button class="btn primary" data-shake-free="1">Free instant reorg<small>one time · no cost, no disruption</small></button>' : ''}<button class="btn ${E.canFreeShake(s) ? 'ghost' : 'primary'}" data-shake="1"></button></div>`}`;
     }
     const k = (n) => box.querySelector(`[data-k="${n}"]`);
@@ -1148,6 +1148,9 @@
     renderPaks(s, dd);
     renderOrg(s);
     renderShake(s, dd);
+    // sections that haven't opened yet stay visible but dimmed
+    document.querySelector('[data-team="leaders"]').classList.toggle('locked', !E.execOpen(s) && !E.boardOpen(s));
+    document.querySelector('[data-team="paks"]').classList.toggle('locked', !E.pakOpen(s));
   }
 
   // ---- Init ---------------------------------------------------------------
@@ -1181,6 +1184,10 @@
       showTheme();
     }));
     showTheme();
+    document.querySelectorAll('[data-team]').forEach((b) => b.addEventListener('click', () => setTeam(b.dataset.team)));
+    let team = 'line';
+    try { team = localStorage.getItem('pw-team') || 'line'; } catch (e) { /* storage blocked */ }
+    setTeam(document.querySelector(`[data-team="${team}"]`) ? team : 'line');
     // Department focus sheet and ID badges
     document.addEventListener('click', (ev) => {
       const od = ev.target.closest('[data-open-dept]');
@@ -1232,7 +1239,17 @@
     document.body.dataset.view = tab;
     document.querySelectorAll('.tabs [data-tab]').forEach((b) => b.setAttribute('aria-selected', b.dataset.tab === tab));
     document.querySelectorAll('.tab-body').forEach((b) => (b.hidden = b.dataset.body !== tab));
-    $('buyqty').hidden = !['actuators', 'pumps', 'system', 'company'].includes(tab);
+    $('buyqty').hidden = !['actuators', 'pumps', 'system'].includes(tab) && !(tab === 'company' && ui.team === 'line');
+  }
+
+  // The Company tab is split into sections so a phone isn't scrolling through every
+  // department, executive, Pak and region at once. The choice is remembered.
+  function setTeam(group) {
+    ui.team = group;
+    document.querySelectorAll('[data-team]').forEach((b) => { b.classList.toggle('on', b.dataset.team === group); b.setAttribute('aria-selected', b.dataset.team === group); });
+    document.querySelectorAll('[data-team-group]').forEach((g) => (g.hidden = g.dataset.teamGroup !== group));
+    try { localStorage.setItem('pw-team', group); } catch (e) { /* storage blocked */ }
+    if (ui.tab === 'company') setTab('company');
   }
 
   // ---- Render (≈5×/s) ---------------------------------------------------------
@@ -1252,6 +1269,7 @@
       r.el.hidden = !unlocked && shownLocked && n === 0;
       if (!unlocked && n === 0) shownLocked = true;
       r.el.classList.toggle('locked', !unlocked);
+      r.el.classList.toggle('owned', n > 0);
       r.count.textContent = n ? `×${n}` : '';
       if (!unlocked) {
         r.stats.textContent = lockReason(s, kind, it);
@@ -1284,30 +1302,45 @@
     return 'Locked';
   }
 
-  // Phone top bar: shrink a resource (or status) line's font until the whole number fits its card
-  // (large system text on Android makes the default sizes overflow). Android scales any px
-  // size we set by the system text factor too, so it's measured and divided out. Refits only
-  // when the text or the card width changes.
+  // Phones: shrink a line's font until it fits its box, so numbers and labels are never
+  // cut off (Android's large system text makes the default sizes overflow). Android scales
+  // any px size we set by its text factor too, so that's measured and divided out. A line
+  // refits when its text or width changes, or if it overflows anyway. Tab labels share
+  // one size so the bar stays even.
   const phoneMq = typeof matchMedia === 'function' ? matchMedia('(max-width: 760px)') : null;
+  const FIT_SEL = '.res dt, .res dd, .res small, .m-status span, .big-btn-title, .big-btn-sub, .tl-short';
+  const fitRange = typeof document !== 'undefined' ? document.createRange() : null;
+  function textW(el) { fitRange.selectNodeContents(el); return fitRange.getBoundingClientRect().width; } // unclipped, sub-pixel
+  const over = (el) => textW(el) > el.clientWidth + 0.25;
+  function fitOne(el, phone) {
+    const key = phone ? el.textContent + '|' + el.clientWidth : '';
+    if (el._fit === key && !(phone && over(el))) return false;
+    el._fit = key;
+    el.style.fontSize = '';
+    if (!phone || !el.clientWidth || !over(el)) return true;
+    const cs = () => parseFloat(getComputedStyle(el).fontSize);
+    const want = cs() * (el.clientWidth / textW(el)) * 0.98;
+    el.style.fontSize = '10px';
+    const boost = cs() / 10 || 1;
+    let px = want / boost;
+    el.style.fontSize = px.toFixed(2) + 'px';
+    for (let i = 0; i < 6 && over(el) && px > 6; i++) {
+      px *= 0.93;
+      el.style.fontSize = px.toFixed(2) + 'px';
+    }
+    return true;
+  }
   function fitRes() {
     const phone = phoneMq && phoneMq.matches;
-    for (const el of document.querySelectorAll('.res dt, .res dd, .res small, .m-status span')) {
-      const key = phone ? el.textContent + '|' + el.clientWidth : '';
-      if (el._fit === key) continue;
-      el.style.fontSize = '';
-      if (phone && el.clientWidth > 0 && el.scrollWidth > el.clientWidth) {
-        const cs = () => parseFloat(getComputedStyle(el).fontSize);
-        const want = cs() * (el.clientWidth / el.scrollWidth);
-        el.style.fontSize = '10px';
-        const boost = cs() / 10 || 1;
-        let px = want / boost;
-        el.style.fontSize = px.toFixed(2) + 'px';
-        for (let i = 0; i < 6 && el.scrollWidth > el.clientWidth && px > 6; i++) {
-          px *= 0.93;
-          el.style.fontSize = px.toFixed(2) + 'px';
-        }
-      }
-      el._fit = phone ? el.textContent + '|' + el.clientWidth : '';
+    let tabsChanged = false;
+    for (const el of document.querySelectorAll(FIT_SEL)) {
+      if (el.offsetParent === null && !el.closest('.tabs, .actions')) continue;
+      if (fitOne(el, phone) && el.classList.contains('tl-short')) tabsChanged = true;
+    }
+    if (tabsChanged && phone) {
+      const tabs = [...document.querySelectorAll('.tl-short')].filter((e) => e.clientWidth);
+      const sizes = tabs.map((e) => e.style.fontSize).filter(Boolean).map(parseFloat);
+      if (sizes.length) for (const e of tabs) e.style.fontSize = Math.min(...sizes) + 'px';
     }
   }
 
@@ -1331,7 +1364,6 @@
     fitRes();
 
     // machine panel
-    $('tier-name').textContent = `${TIERS[s.tier].name} · ${fmt(d.psi)} psi`;
     $('m-flow-text').textContent = `${fmt(d.supply)} / ${fmt(d.demand)} GPM`;
     const flowMax = Math.max(d.supply, d.demand, 1) * 1.1;
     $('m-flow').style.width = `${(d.supply / flowMax) * 100}%`;
@@ -1523,6 +1555,10 @@
       setPart(costEl, done ? '✓ Researched' : avail ? price :
         `${price} · needs ${t.requires.filter((r) => !s.tech[r]).map((r) => TECH.find((x) => x.id === r).name).join(', ')}`);
     }
+    // Finished stages fold down on phones, and once everything is researched the
+    // Patent Office and Time Machine (what you can still act on) come first.
+    document.querySelectorAll('.tech-col').forEach((col) => col.classList.toggle('complete', !col.querySelector('.tech:not(.done)')));
+    document.querySelector('[data-body="tech"]').classList.toggle('all-done', !document.querySelector('.tech:not(.done)'));
   }
 
   function renderOverhaul(s) {
@@ -1630,6 +1666,7 @@
   function focusDept(id) {
     const r = deptEls[id];
     if (!r) return;
+    if (ui.team !== 'line') setTeam('line');
     if (staffed(id) && lastState && E.departmentOpen(lastState, DEPT_BY_ID[id])) return openDept(id);
     r.el.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
     r.el.classList.remove('flash'); void r.el.offsetWidth; r.el.classList.add('flash');
