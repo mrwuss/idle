@@ -61,7 +61,7 @@
 
   // Hiring buttons inside re-rendered department cards.
   document.addEventListener('click', (ev) => {
-    const b = ev.target.closest('[data-scada-buy], [data-warp], [data-scada-panel], [data-scada-auto], [data-scada-budget], [data-file], [data-shake], [data-shake-free], [data-hire], [data-hire-best], [data-reroll], [data-promote], [data-auto], [data-eng], [data-engteam], [data-pak-target], [data-exec-appoint], [data-exec-hire], [data-exec-dismiss], [data-exec-pres], [data-board-elect], [data-board-replace]');
+    const b = ev.target.closest('[data-scada-buy], [data-standard], [data-warp], [data-scada-panel], [data-scada-auto], [data-scada-budget], [data-file], [data-shake], [data-shake-free], [data-hire], [data-hire-best], [data-reroll], [data-promote], [data-auto], [data-eng], [data-engteam], [data-pak-target], [data-exec-appoint], [data-exec-hire], [data-exec-dismiss], [data-exec-pres], [data-board-elect], [data-board-replace]');
     if (!b || b.disabled) return;
     if (b.dataset.scadaBuy) {
       const ok = E.buyScada(state);
@@ -75,6 +75,13 @@
       const n = E.filePatents(state, b.dataset.file === 'max' ? Infinity : 1);
       SFX.play(n ? 'research' : 'cant');
       if (n) UI.toast(`Filed <b>${n}</b> patent${n === 1 ? '' : 's'}. You now hold <b>${state.patents}</b> (+${state.patents * 10}% income).`, 3500);
+      return render();
+    }
+    if (b.dataset.standard) {
+      const sd = E.DATA.STANDARDS.find((x) => x.id === b.dataset.standard);
+      const ok = E.adoptStandard(state, sd.id);
+      SFX.play(ok ? 'location' : 'cant');
+      if (ok) UI.toast(`<b>${sd.code} adopted.</b> ${sd.desc}`, 5000);
       return render();
     }
     if (b.dataset.warp) {

@@ -58,6 +58,7 @@
       pak: { target: 'valve', building: 'valve', work: 0, stock: { valve: 0, base: 0 }, built: { valve: 0, base: 0, sys: 0 }, earned: 0 },
       mgrClock: 0, mgrReviewClock: 0, presClock: 0,
       warp: null, warpJumps: 0, warpsDone: 0, lastWarp: null, // Time Machine (warpsDone kept)
+      standards: {},           // Standards Committee: adopted standards (kept forever)
       safety: { streak: 0, incident: null, seed: (Math.random() * 2 ** 32) >>> 0 },
       ach: {},                 // achievements earned (kept forever)
       tips: {},                // first-time tips already shown (kept forever)
@@ -89,6 +90,14 @@
       if (e.autoSurge) m.autoSurge = true;
       if (e.offlineRate) m.offlineRate = Math.max(m.offlineRate, e.offlineRate);
       if (e.offlineCapH) m.offlineCapH = Math.max(m.offlineCapH, e.offlineCapH);
+    }
+    for (const sd of DATA.STANDARDS) {
+      if (!(s.standards && s.standards[sd.id])) continue;
+      const e = sd.eff;
+      if (e.actMult) m.actMult *= e.actMult;
+      if (e.pumpMult) m.pumpMult *= e.pumpMult;
+      if (e.costMult) m.costMult *= e.costMult;
+      if (e.tempLimit) m.tempLimit += e.tempLimit;
     }
     m.patentMult = 1 + C.patentBonus * s.patents;
     m.costMult *= purchasingDiscount(s) * boardEff(s, 'costMult');
@@ -172,7 +181,7 @@
       * presidentMult(s) * boardEff(s, 'incomeMult') * scadaMult(s);
     const order = orderLine(s, production);
     const income = production * sMult * order.factor * order.bonus;
-    const khRate = C.khPerSqrtIncome * Math.sqrt(income) * engKhMult(s) * boardEff(s, 'khMult');
+    const khRate = C.khPerSqrtIncome * Math.sqrt(income) * engKhMult(s) * boardEff(s, 'khMult') * stdEff(s, 'khMult');
 
     return {
       m, psi: P, supply, demand, utilization, toAcc, overRelief, accCap: cap, production, order,
@@ -348,9 +357,13 @@
     const keep = {
       patents: s.patents + overhaulGain(s), lifetime: s.lifetime,
       overhauls: s.overhauls + 1, strokes: s.strokes, time: s.time, locations: s.locations, seed: s.seed,
-      ach: s.ach, tips: s.tips, warpsDone: s.warpsDone || 0, shakeDone: s.shake && s.shake.done, freeUsed: !!(s.shake && s.shake.freeUsed), board: s.board, boardPool: s.boardPool, patentsSpent: s.patentsSpent, patentsFiled: s.patentsFiled, scadaPrefs: s.scadaPrefs,
+      ach: s.ach, tips: s.tips, standards: s.standards || {}, warpsDone: s.warpsDone || 0, shakeDone: s.shake && s.shake.done, freeUsed: !!(s.shake && s.shake.freeUsed), board: s.board, boardPool: s.boardPool, patentsSpent: s.patentsSpent, patentsFiled: s.patentsFiled, scadaPrefs: s.scadaPrefs,
     };
+    const scada = s.scada;
     Object.assign(s, newState(), keep);
+    // Standards that change how a run starts.
+    if (hasStandard(s, 'opc') && scada && scada.owned) s.scada = { ...newState().scada, owned: true, panel: { ...(scada.panel || {}) } };
+    if (hasStandard(s, 'layout')) { s.tier = Math.max(s.tier, 1); s.actuators.jack = 25; s.pumps.gear = 25; }
     s.shake.done = keep.shakeDone || 0;
     s.shake.freeUsed = keep.freeUsed;
     delete s.shakeDone; delete s.freeUsed;
@@ -413,7 +426,7 @@
     if (d.psi < C.incidentMinPsi || d.demand === 0) return 0;
     const heat = Math.max(0.5, s.temp / d.tempLimit);
     const shaking = s.shake && s.shake.phase ? C.shakeIncidentMult : 1;
-    return (C.incidentPerMin / 60) * (d.psi / 3000) * heat * shaking * boardEff(s, 'incidentMult') * panelEff(s, 'incidentMult')
+    return (C.incidentPerMin / 60) * (d.psi / 3000) * heat * shaking * boardEff(s, 'incidentMult') * panelEff(s, 'incidentMult') * stdEff(s, 'incidentMult')
       / (1 + C.safetyPer * openStrength(s, 'safety'));
   }
   function safetyRand(s) {
@@ -766,6 +779,8 @@
       case 'filed': return s.patentsFiled || 0;
       case 'shakes': return (s.shake && s.shake.done) || 0;
       case 'warps': return s.warpsDone || 0;
+      case 'standards': return Object.keys(s.standards || {}).length;
+      case 'isostatic': return psi(s) >= 15000 ? 1 : 0;
       default: return 0;
     }
   }
@@ -1260,7 +1275,7 @@
   }
 
   // ---- Patent Office: Know-how → Patents once the tree is done --------------------
-  const officeOpen = (s) => TECH.every((t) => s.tech[t.id]);
+  const officeOpen = (s) => TECH.filter((t) => !t.era).every((t) => s.tech[t.id]); // Era VI research isn't required
   const fileCost = (s, n = 0) => C.patentFileKH * C.patentFileGrowth ** ((s.patentsFiled || 0) + n);
   /** How many filings `kh` Know-how buys right now, and what they cost in total. */
   function fileQuote(s, max = Infinity) {
@@ -1276,6 +1291,29 @@
     s.patents += q.n;
     s.patentsFiled = (s.patentsFiled || 0) + q.n;
     return q.n;
+  }
+
+  // ---- Standards Committee: the second prestige layer -----------------------------
+  // Spend Patents (gone for good, like Board seats) on standards that change the
+  // rules forever. They survive every Overhaul.
+  const STD = byId(DATA.STANDARDS);
+  const hasStandard = (s, id) => !!(s.standards && s.standards[id]);
+  /** Standards' perks multiply across what's adopted (or, for flags, are simply on). */
+  function stdEff(s, key) {
+    let v = 1;
+    for (const sd of DATA.STANDARDS) if (hasStandard(s, sd.id) && sd.eff[key] != null) v *= sd.eff[key];
+    return v;
+  }
+  const standardsOpen = (s) => boardOpen(s);
+  const standardCost = (s) => Math.round(C.standardBase * C.standardGrowth ** Object.keys(s.standards || {}).length);
+  const canAdopt = (s, id) => standardsOpen(s) && !!STD[id] && !hasStandard(s, id) && s.patents >= standardCost(s);
+  function adoptStandard(s, id) {
+    if (!canAdopt(s, id)) return false;
+    const cost = standardCost(s);
+    s.patents -= cost;
+    s.patentsSpent = (s.patentsSpent || 0) + cost;
+    s.standards = { ...(s.standards || {}), [id]: true };
+    return true;
   }
 
   // ---- Time Machine: jump ahead and play the time out ---------------------------
@@ -1616,6 +1654,7 @@
     scadaReady, canBuyScada, buyScada, scadaMult, scadaScan, scadaTick, bestGrowth, sustained, fmtDur, panelEff, hasPanel, nextPanel, canBuyPanel, buyPanel,
     officeOpen, fileCost, fileQuote, filePatents,
     warpOpen, warpCost, canWarp, startWarp, warpStep,
+    standardsOpen, standardCost, canAdopt, adoptStandard, hasStandard, stdEff,
     SHAKE_PHASES, shakeOpen, shakeCost, canShake, startShake, shakeTick, canFreeShake, freeShake, companyStrength, shakeScore,
     pakOpen, sysReady, pakTarget, pakNext, pakHoursRate, pakGrade, pakPrice, pakChainHours, pakIncome, setPakTarget, pakTick,
     serialize, deserialize,
