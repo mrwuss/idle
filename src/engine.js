@@ -466,8 +466,9 @@
   }
 
   const LEAD = STAT_INDEX.leadership;
-  /** Leadership (people hired before the stat existed get one from their look). */
-  const leadership = (p) => p.s[LEAD] ?? 1 + (p.a % 10);
+  /** Leadership (people saved before the stat existed, including early Board
+   * directors who had no stats at all, get one from their look). */
+  const leadership = (p) => (p.s && p.s[LEAD]) ?? 1 + ((p.a || 0) % 10);
   const mgrBonus = (st) => (st.mgr ? 1 + C.mgrTeamPerPoint * leadership(st.mgr) : 1);
   const poolSize = (st, s) => C.poolSize + (st.mgr ? Math.floor(leadership(st.mgr) / C.mgrPoolPer) : 0) + (s ? mgmtPool(s) + boardEff(s, 'poolPlus', true) : 0);
 

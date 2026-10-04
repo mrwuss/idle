@@ -402,3 +402,13 @@ test('directors with more Leadership make stronger perks', () => {
   s.board[0].s[7] = 10;
   assert.ok(E.boardEff(s, 'incomeMult') > weak);
 });
+
+test('directors saved before they had stats still load and count', () => {
+  const s = lateGame();
+  s.board = [{ n: 'Old Director', a: 7, perk: 'founder' }]; // the v0.2.6 shape: no stats
+  const m = E.deserialize(E.serialize(s));
+  assert.ok(Number.isFinite(E.derive(m).income));
+  assert.ok(E.boardEff(m, 'incomeMult') > 1);
+  E.startShake(m); for (let i = 0; i < 400; i++) E.shakeTick(m, 1);
+  assert.ok(m.shake.report);
+});
