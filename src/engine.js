@@ -57,6 +57,7 @@
       shake: { phase: null, left: 0, cooldown: 0, moves: [], before: 0, report: null, done: 0, freeUsed: false },
       pak: { target: 'valve', building: 'valve', work: 0, stock: { valve: 0, base: 0 }, built: { valve: 0, base: 0, sys: 0 }, earned: 0 },
       mgrClock: 0, mgrReviewClock: 0, presClock: 0,
+      hrAuto: true, hrClock: 0, hrLog: [], // HR Director autopilot (after the first Overhaul); the switch is kept
       warp: null, warpJumps: 0, warpsDone: 0, lastWarp: null, // Time Machine (warpsDone kept)
       standards: {},           // Standards Committee: adopted standards (kept forever)
       contracts: { offers: [], active: null, clock: 0, log: [], n: 0 }, contractsDone: 0, // Pak contracts (done count kept)
@@ -203,6 +204,8 @@
     if (s.mgrClock >= C.mgrEvery) { s.mgrClock = 0; managersTick(s, d); }
     s.mgrReviewClock += dt;
     if (s.mgrReviewClock >= C.mgrReviewEvery) { s.mgrReviewClock = 0; managersReview(s); }
+    s.hrClock += dt;
+    if (s.hrClock >= C.hrEvery) { s.hrClock = 0; hrTick(s, d); }
     pakTick(s, d, dt);
     contractsTick(s, d, dt);
     signaturesTick(s, d, dt);
@@ -364,6 +367,9 @@
       patents: s.patents + overhaulGain(s), lifetime: s.lifetime,
       overhauls: s.overhauls + 1, strokes: s.strokes, time: s.time, locations: s.locations, seed: s.seed,
       ach: s.ach, tips: s.tips, standards: s.standards || {}, contractsDone: s.contractsDone || 0, warpsDone: s.warpsDone || 0, shakeDone: s.shake && s.shake.done, freeUsed: !!(s.shake && s.shake.freeUsed), board: s.board, boardPool: s.boardPool, patentsSpent: s.patentsSpent, patentsFiled: s.patentsFiled, scadaPrefs: s.scadaPrefs,
+      hrAuto: s.hrAuto !== false,
+      // Leadership carries over: executives, the President, and each department's core team.
+      execs: s.execs, president: s.president, execLog: s.execLog, depts: coreTeams(s),
     };
     const scada = s.scada;
     Object.assign(s, newState(), keep);
@@ -374,6 +380,72 @@
     s.shake.freeUsed = keep.freeUsed;
     delete s.shakeDone; delete s.freeUsed;
     return true;
+  }
+
+  /**
+   * What each department keeps through an Overhaul: its manager and its best
+   * `keepPerDept` people (Engineering keeps its best per team). Applicants and the
+   * production baseline start fresh, so hiring costs restart from the new run.
+   */
+  function coreTeams(s) {
+    const out = freshDepts();
+    for (const dept of HIREABLE) {
+      const st = s.depts[dept.id];
+      if (!st) continue;
+      const byEff = [...st.team].sort((a, b) => effectiveness(b, dept.id) - effectiveness(a, dept.id));
+      let team;
+      if (dept.id === 'engineering') {
+        team = [];
+        for (const g of ENG_TEAMS) team.push(...byEff.filter((p) => engTeamOf(p) === g).slice(0, C.keepPerDept));
+      } else team = byEff.slice(0, C.keepPerDept);
+      out[dept.id] = { ...freshDept(), mgr: st.mgr, team, auto: st.auto };
+    }
+    return out;
+  }
+
+  /**
+   * The HR Director (from the second run on) runs staffing on autopilot, so a reset
+   * doesn't mean rebuilding every team by hand. Each check, in every open department:
+   * the best leader runs the team, the Order Line is hired to 100% (+ a cushion) while
+   * hires are cheap, support teams grow while very cheap, and the weakest person is
+   * swapped for a clearly better applicant. Returns the number of actions taken.
+   */
+  const hrOpen = (s) => s.overhauls >= 1;
+  function hrLog(s, msg) {
+    s.hrLog = [{ t: s.time, m: msg }, ...(s.hrLog || [])].slice(0, 20);
+  }
+  function hrTick(s, d) {
+    if (!hrOpen(s) || s.hrAuto === false) return 0;
+    let n = 0;
+    const lineIds = new Set(STAFFED.map((x) => x.id));
+    for (const dept of HIREABLE) {
+      const st = s.depts[dept.id];
+      if (!st || !st.p0 || !departmentOpen(s, dept)) continue;
+      const name = dept.name;
+      // 1. Leadership: the best leader on the team manages it.
+      if (st.team.length) {
+        const bi = st.team.reduce((b, p, i, a) => (leadership(p) > leadership(a[b]) ? i : b), 0);
+        if (!st.mgr || leadership(st.team[bi]) >= leadership(st.mgr) + C.hrLeadGap) {
+          const who = st.team[bi].n;
+          promote(s, dept.id, bi);
+          hrLog(s, `${name}: ${who} now manages the team`);
+          n++;
+        }
+      }
+      // 2. Headcount.
+      if (lineIds.has(dept.id)) {
+        const o = d.order.depts[dept.id];
+        for (let k = 0; k < C.hrPerCheck && o && o.coverage < 1 + C.hrCushion; k++) {
+          if (hireQuote(s, dept.id, 1).cost > s.cash * C.hrBudget || !hire(s, dept.id, 1)) break;
+          n++;
+          if (orderLine(s, d.production).depts[dept.id].coverage >= 1 + C.hrCushion) break;
+        }
+      } else if (hireQuote(s, dept.id, 1).cost <= s.cash * C.hrSupportBudget && hire(s, dept.id, 1)) n++;
+      // 3. Quality: swap the weakest for a clearly better applicant.
+      const r = upgradeWeakest(s, dept.id, C.hrSwapGap, s.cash * C.hrSwapBudget);
+      if (r) { hrLog(s, `${name}: ${r.best.n} (×${effectiveness(r.best, dept.id).toFixed(2)}) replaced ${r.weak.n} (×${effectiveness(r.weak, dept.id).toFixed(2)})`); n++; }
+    }
+    return n;
   }
 
   // ---- Departments (scaffold: read-only queries, no effect on income) -------
@@ -1780,7 +1852,7 @@
     DATA, newState, derive, tick, applyOffline, mods, milestoneMult, nextMilestone,
     bulkCost, maxAffordable, isUnlocked, quote, buy,
     nextTier, canUpgradeTier, upgradeTier, accCapacity, accUpgradeCost, upgradeAccumulator,
-    techAvailable, research, click, canSurge, surge,
+    techAvailable, research, click, canSurge, surge, hrOpen, hrTick, coreTeams,
     patentsTotal, overhaulGain, canOverhaul, overhaul, opensMet, departmentOpen, regionOpen, checkLocations, customerBase, currentEra,
     orderLine, snapshotDepts, hireQuote, hire, hirePerson, rerollPool, rerollCost, staffLineQuote, staffLine,
     effectiveness, headcount, strength, strokeGal, STAFFED, HIREABLE,

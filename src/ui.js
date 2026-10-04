@@ -1115,6 +1115,18 @@
     for (const o of K.offers) { const el = k(`ct-b-${o.id}`); if (el) setPart(el, `$${fmt(E.contractBonus(s, dd, o))}`, true); }
   }
 
+  // HR Director: staffing on autopilot from the second run on.
+  function renderHr(s) {
+    const box = $('hr-card'), on = s.hrAuto !== false;
+    box.hidden = !E.hrOpen(s);
+    if (box.hidden) return;
+    const log = (s.hrLog || []).slice(0, 3).map((l) => `<li><span class="muted">${fmtTime(Math.max(0, s.time - l.t))} ago</span> ${l.m}</li>`).join('');
+    setPart(box, `<div class="hr-head"><div><h4>HR Director</h4>
+        <p class="small muted">${on ? 'Autopilot: keeps every team led by its best leader, the Order Line staffed to 110%, support teams growing while hires are cheap, and swaps in better applicants.' : 'Autopilot is off: you hire, promote and swap.'}</p></div>
+        <button class="btn mini ${on ? 'primary' : ''}" data-hr-toggle="1" aria-pressed="${on}">${on ? 'On' : 'Off'}</button></div>
+      ${on && log ? `<ul class="exec-log">${log}</ul>` : ''}`);
+  }
+
   function renderCompany(s, dd) {
     renderTerritory(s);
     const era = E.currentEra(s);
@@ -1130,6 +1142,7 @@
     sb.hidden = !sq.hires;
     sb.disabled = sq.cost > s.cash;
     sb.innerHTML = `Staff the line to 100%<small>${sq.hires} hire${sq.hires === 1 ? '' : 's'} · $${fmt(sq.cost)}</small>`;
+    renderHr(s);
     for (const d of DEPARTMENTS) {
       const r = deptEls[d.id], open = E.departmentOpen(s, d);
       r.el.classList.toggle('closed', !open);

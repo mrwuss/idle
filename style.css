@@ -674,6 +674,11 @@ ul.plain b { color: var(--text); }
 .tl-short { display: none; }
 .team-seg .btn { min-height: 34px; white-space: nowrap; }
 .team-seg .btn.locked:not(.on) { opacity: .5; }
+.hr-card { margin: 6px 0 10px; border-left: 4px solid var(--accent); }
+.hr-head { display: flex; gap: 10px; align-items: flex-start; justify-content: space-between; }
+.hr-head h4 { margin: 0; font: 800 13px var(--font-head); text-transform: uppercase; letter-spacing: .06em; }
+.hr-head p { margin: 2px 0 0; }
+.hr-head .btn { min-width: 64px; min-height: 36px; flex-shrink: 0; }
 .t-all { display: none; font-weight: 400; text-transform: none; letter-spacing: 0; color: var(--ok); }
 .tech-col.complete .t-all { display: inline; }
 .tab-body[data-body="tech"].all-done:not([hidden]) { display: flex; flex-direction: column; }

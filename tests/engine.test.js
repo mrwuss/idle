@@ -728,6 +728,43 @@ test('Era VI research waits for the first adopted Standard', () => {
   assert.ok(E.research(s, 'isostatic'));
 });
 
+test('Overhaul keeps executives, managers and each department\'s best people', () => {
+  const s = lateGame();
+  for (const d of E.HIREABLE) if (s.depts[d.id].p0) E.hire(s, d.id, 3);
+  E.promote(s, 'outside_sales', 0);
+  const c = E.execCandidates(s, 'cro')[0];
+  E.appointExec(s, 'cro', c);
+  const mgr = s.depts.outside_sales.mgr.n;
+  const best = [...s.depts.purchasing.team].sort((a, b) => E.effectiveness(b, 'purchasing') - E.effectiveness(a, 'purchasing'))
+    .slice(0, E.DATA.CONSTANTS.keepPerDept).map((p) => p.n);
+  s.lifetime = 1e13;
+  assert.ok(E.overhaul(s));
+  assert.equal(s.depts.outside_sales.mgr.n, mgr);
+  assert.deepEqual(s.depts.purchasing.team.map((p) => p.n), best);
+  assert.ok(s.execs.cro, 'executives stay');
+  assert.equal(s.depts.purchasing.p0, 0, 'the department reopens fresh this run');
+});
+
+test('HR Director runs staffing on autopilot after the first Overhaul, and can be switched off', () => {
+  const s = lateGame();
+  // the shop has grown far past where the departments opened, and nobody is hired yet
+  for (const d of E.DATA.DEPARTMENTS) if (s.depts[d.id] && s.depts[d.id].p0) Object.assign(s.depts[d.id], { team: [], mgr: null, p0: 1 });
+  const heads = () => E.HIREABLE.reduce((a, d) => a + s.depts[d.id].team.length + (s.depts[d.id].mgr ? 1 : 0), 0);
+  assert.equal(E.hrTick(s, E.derive(s)), 0, 'no HR Director in the first run');
+  s.overhauls = 1; s.hrAuto = false;
+  assert.equal(E.hrTick(s, E.derive(s)), 0, 'switched off');
+  s.hrAuto = true;
+  for (let i = 0; i < 5; i++) E.hrTick(s, E.derive(s));
+  const o = E.orderLine(s, E.derive(s).production);
+  for (const d of E.STAFFED) if (o.depts[d.id].open) assert.ok(o.depts[d.id].coverage >= 1, d.id + ' staffed');
+  for (const d of E.HIREABLE) if (s.depts[d.id].p0 && s.depts[d.id].team.length) assert.ok(s.depts[d.id].mgr, d.id + ' has a manager');
+  assert.ok(s.hrLog.length > 0);
+  const before = heads();
+  s.cash = 1;
+  E.hrTick(s, E.derive(s));
+  assert.equal(heads(), before, 'no hires it can\'t afford');
+});
+
 test('Pak contracts: offers from open locations, timed delivery, bonus on time', () => {
   const s = withEngineers(6);
   s.safety.incident = null;

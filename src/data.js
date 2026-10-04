@@ -570,6 +570,16 @@
     presidentSkillDiv: 3,   // …and every executive +1 skill per 3 President skill
     mgrPoolPer: 3,          // …and reviews 1 more applicant per 3 Leadership points
     mgrEvery: 2,            // seconds between a manager's staffing checks
+    keepPerDept: 3,         // Overhaul: each department keeps its manager and this many of its best people
+    // HR Director (after the first Overhaul): runs staffing on autopilot
+    hrEvery: 2,             // seconds between the HR Director's checks
+    hrBudget: 0.25,         // Order Line hires when one costs at most this share of cash…
+    hrCushion: 0.1,         // …up to 100% + this much coverage
+    hrPerCheck: 3,          // most hires per department per check
+    hrSupportBudget: 0.02,  // support teams (Engineering, IT, Safety, Management) grow while a hire is under 2% of cash
+    hrSwapGap: 0.2,         // swaps someone out when an applicant is this much more effective…
+    hrSwapBudget: 0.02,     // …and the fee (half a hire) is under 2% of cash
+    hrLeadGap: 2,           // makes someone manager when they out-lead the current one by this much
     mgrReviewEvery: 15,     // seconds between a manager's team reviews
     mgrReplaceGap: 0.6,     // a manager replaces someone when an applicant is this much better…
     mgrReplaceGapPer: 0.04, // …minus 0.04 per Leadership point…
