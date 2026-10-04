@@ -337,6 +337,29 @@ Hires are people, not head counts.
   R&D tree around 2h instead of 3.5h, and end-of-run income is unchanged.
 - **Overhaul** resets projects, staff and the Pak line, like everything else in a run.
 
+### SCADA (implemented, v0.2.9)
+
+Controls' high-level system. Install it with **2M Know-how** once Telematics is
+researched and the Controls team has strength 2+ (the SCADA button on the control
+panel opens the screen either way and shows what's missing). Overhaul uninstalls
+it, but your automation switches are remembered.
+
+- **Cockpit:** a full-screen control-room view (always dark) with live tiles and
+  5-minute trends: income (and its % change per minute), production and the Order
+  Line, pressure, oil temperature (°F/min, equilibrium, limit, thermal penalty),
+  flow supply vs demand (utilization, relief dumping, accumulator charging), the
+  accumulator, the heat balance (pump losses, relief heat, cooling capacity),
+  Know-how, the Pak line and safety; plus the alarm list.
+- **Loop tuning:** all income **+0.5% per Controls strength**, up to +20%.
+- **Autonomous control** (each switch off until you turn it on), scanning every
+  2 s with `1 + Controls strength ÷ 3` actions per scan, each spending at most 1%,
+  5% or 20% of cash (your choice):
+  - *Auto-cooling* buys the best cooler per $ while equilibrium temperature is
+    within 5°F of the limit;
+  - *Auto-pumps* buys the most GPM per $ whenever demand exceeds supply (5% margin);
+  - *Auto-lines* buys the best-paying actuator per $ that fits in the spare flow.
+  Every automated purchase is logged on the screen.
+
 ### Pak lines (implemented, v0.2.5)
 
 - **Hours:** the Project team adds `√(Project strength)` engineering hours per

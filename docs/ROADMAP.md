@@ -30,6 +30,8 @@ Design: [DEPARTMENTS.md](DEPARTMENTS.md)
 - [x] Engineering teams (Design / Controls / Project) and the Pak lines: Valve-Pak → Base-Pak → Sys-Pak
 - [x] People UI: compact department cards, department focus sheet, ID badges with explained stats
 - [ ] Named Sys-Pak contracts with deadlines
+- [x] SCADA: Controls' cockpit (live tiles, trends, rates of change, alarms), loop tuning and autonomous control
+- [ ] IT auto-balance (folded into SCADA automation; departments still hire via managers/executives)
 - [x] Patent Office: after the full R&D tree, Know-how files patents (escalating cost)
 - [x] Shake-up: timed top-down reorganization (Board → executives → managers → employees) with higher incident risk while it runs
 - [x] Executive track: CRO / COO / CFO / CTO run their divisions, a President, a Board of Directors bought with Patents

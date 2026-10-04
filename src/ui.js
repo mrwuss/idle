@@ -674,6 +674,144 @@
     }
   }
 
+
+  // ---- SCADA cockpit ----------------------------------------------------------------
+  // A control-room screen: live tiles with trends and rates of change, the heat and
+  // flow balance, alarms, and Controls' autonomous control switches.
+
+  const HIST_N = 300;            // 5 minutes at one sample per second
+  const hist = { t: [], income: [], production: [], psi: [], temp: [], supply: [], demand: [], acc: [], kh: [], pak: [] };
+  let lastSample = 0;
+  function sample(s, d) {
+    if (s.time - lastSample < 1 && hist.t.length) return;
+    lastSample = s.time;
+    const push = (k, v) => { hist[k].push(v); if (hist[k].length > HIST_N) hist[k].shift(); };
+    push('t', s.time); push('income', d.income); push('production', d.production); push('psi', d.psi);
+    push('temp', s.temp); push('supply', d.supply); push('demand', d.demand);
+    push('acc', s.accCharge / d.accCap); push('kh', d.khRate); push('pak', E.pakIncome(s, d));
+  }
+  /** Change per minute over (up to) the last minute of history; null until there's 10 s of it. */
+  function rocWin(key) {
+    const a = hist[key], t = hist.t;
+    if (a.length < 2) return null;
+    const i = t.length - 1;
+    let j = i;
+    while (j > 0 && t[i] - t[j] < 60) j--;
+    const dt = (t[i] - t[j]) / 60;
+    return dt >= 10 / 60 ? { per: (a[i] - a[j]) / dt, from: a[j], dt } : null;
+  }
+  const roc = (key) => { const r = rocWin(key); return r && r.per; };
+  /** Percent change per minute, against the value a minute ago (null when that was ~0). */
+  function pctRoc(key) {
+    const r = rocWin(key);
+    if (!r || !(r.from > 0)) return null;
+    return Math.max(-999, Math.min(999, (r.per / r.from) * 100));
+  }
+  function spark(cv, keys, colors) {
+    if (!cv) return;
+    const dpr = Math.min(2, root.devicePixelRatio || 1), w = cv.clientWidth, h = cv.clientHeight;
+    if (!w || !h) return;
+    if (cv.width !== Math.round(w * dpr)) { cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr); }
+    const g = cv.getContext('2d');
+    g.setTransform(dpr, 0, 0, dpr, 0, 0);
+    g.clearRect(0, 0, w, h);
+    const all = keys.flatMap((k) => hist[k]);
+    if (all.length < 2) return;
+    let lo = Math.min(...all), hi = Math.max(...all);
+    if (hi - lo < 1e-9) { hi += 1; lo -= 1; }
+    keys.forEach((k, n) => {
+      const a = hist[k];
+      g.beginPath();
+      const span = Math.max(60, a.length) - 1; // stretch to what we have (at least a minute)
+      a.forEach((v, i) => { const x = (i / span) * w, y = h - 2 - ((v - lo) / (hi - lo)) * (h - 4); i ? g.lineTo(x, y) : g.moveTo(x, y); });
+      g.strokeStyle = colors[n]; g.lineWidth = 1.6; g.stroke();
+    });
+  }
+
+  const SCADA_TILES = [
+    { id: 'income', label: 'Income', keys: ['income'], color: '#46c37b' },
+    { id: 'production', label: 'Production · Order Line', keys: ['production'], color: '#9aa7b4' },
+    { id: 'psi', label: 'System pressure', keys: ['psi'], color: '#e5484d' },
+    { id: 'temp', label: 'Oil temperature', keys: ['temp'], color: '#f2a900' },
+    { id: 'flow', label: 'Flow · supply vs demand', keys: ['supply', 'demand'], colors: ['#3aa0ff', '#f4603e'] },
+    { id: 'acc', label: 'Accumulator', keys: ['acc'], color: '#8fd0ff' },
+    { id: 'heat', label: 'Heat balance', keys: ['temp'], color: '#f2a900' },
+    { id: 'kh', label: 'Know-how', keys: ['kh'], color: '#b48ead' },
+    { id: 'pak', label: 'Pak line', keys: ['pak'], color: '#f4603e' },
+    { id: 'safety', label: 'Safety', keys: [], color: '' },
+  ];
+  const sign = (v, unit, dp = 1) => (v == null ? '— ' + unit.trim() : `${v >= 0 ? '▲ +' : '▼ −'}${Math.abs(v) < 1000 ? Math.abs(v).toFixed(dp) : fmt(Math.abs(v))}${unit}`);
+
+  function openScada() { ui.scada = true; $('scada').hidden = false; document.body.classList.add('modal-open'); $('scada-body')._key = null; render(lastState); }
+  function closeScada() { ui.scada = false; $('scada').hidden = true; if (!ui.sheet && !ui.person) document.body.classList.remove('modal-open'); }
+
+  function renderScada(s, d) {
+    const body = $('scada-body'), C = E.DATA.CONSTANTS, P = s.scadaPrefs, owned = s.scada.owned;
+    setPart($('scada-meta'), `T+${fmtTime(s.time)} · ${owned ? `scan ${C.scadaEvery}s × ${E.scadaScan(s)} · tuning +${Math.round((E.scadaMult(s) - 1) * 1000) / 10}%` : 'NOT INSTALLED'}`, true);
+    const key = [owned, E.scadaReady(s), P.cool, P.pumps, P.lines, P.budget].join('|');
+    if (body._key !== key) {
+      body._key = key;
+      if (!owned) {
+        const cs = E.teamStrength(s, 'controls');
+        body.innerHTML = `<div class="scada-install"><h3>SCADA · supervisory control</h3>
+          <p>Your Controls engineers can tie every pump, valve, cooler and line into one supervisory system: live trends and alarms, <b>loop tuning</b> (+${C.scadaTunePer * 100}% income per Controls strength, up to +${C.scadaTuneMax * 100}%) and <b>autonomous control</b> that keeps the plant cool, balanced and growing on its own.</p>
+          <ul class="plain"><li>${s.tech.telematics ? '✓' : '✗'} Telematics researched</li>
+            <li>${cs >= C.scadaControls ? '✓' : '✗'} Controls team strength ${C.scadaControls}+ (now ${cs.toFixed(1)}; move engineers to Controls on their ID badge)</li>
+            <li data-k="kh-req"></li></ul>
+          <button class="btn primary" data-scada-buy="1">Install SCADA<small>${fmt(C.scadaKH)} Know-how</small></button></div>`;
+      } else {
+        body.innerHTML = `<div class="scada-grid">${SCADA_TILES.map((x) => `<div class="tile-s" data-tile="${x.id}">
+            <div class="ts-label">${x.label}</div><div class="ts-val" data-k="v-${x.id}"></div><div class="ts-sub" data-k="s-${x.id}"></div>
+            ${x.keys.length ? `<canvas class="ts-spark" data-c="${x.id}"></canvas>` : '<div class="ts-spark" data-k="x-safety"></div>'}</div>`).join('')}</div>
+          <div class="scada-row">
+            <section class="scada-panel"><h4>Alarms</h4><ul class="scada-alarms" data-k="alarms"></ul></section>
+            <section class="scada-panel"><h4>Autonomous control</h4>
+              ${[['cool', 'Auto-cooling', 'buys the best cooler per $ while the oil runs toward its limit'],
+                 ['pumps', 'Auto-pumps', 'buys pumps whenever actuators would be starved'],
+                 ['lines', 'Auto-lines', 'puts spare flow to work on the best-paying actuator that fits']].map(([k, n, w]) =>
+                `<button class="auto-row${P[k] ? ' on' : ''}" data-scada-auto="${k}"><b>${n}</b><span>${w}</span><i>${P[k] ? 'ON' : 'OFF'}</i></button>`).join('')}
+              <div class="seg scada-budget">${C.scadaBudgets.map((b, i) => `<button class="btn mini${P.budget === i ? ' on' : ' ghost'}" data-scada-budget="${i}">≤ ${b * 100}% cash / action</button>`).join('')}</div>
+              <p class="muted small" data-k="scan"></p>
+              <ul class="exec-log scada-log" data-k="log"></ul></section>
+          </div>`;
+      }
+    }
+    const k = (n) => body.querySelector(`[data-k="${n}"]`);
+    if (!owned) {
+      setPart(k('kh-req'), `${s.kh >= C.scadaKH ? '✓' : '✗'} ${fmt(C.scadaKH)} Know-how (you have ${fmt(s.kh)})`, true);
+      const b = body.querySelector('[data-scada-buy]');
+      if (b) b.disabled = !E.canBuyScada(s);
+      return;
+    }
+    const o = d.order, lim = d.tempLimit, tRoc = roc('temp');
+    const v = {
+      income: [`$${fmt(d.income)}/s`, `${sign(pctRoc('income'), '%/min')} · surge ${d.surging ? 'ON ×' + d.m.surgeMult : 'off'}`],
+      production: [`$${fmt(d.production)}/s`, `Order Line ${Math.round(o.factor * 100)}%${o.bottleneck && o.factor < 0.999 ? ' · neck: ' + DEPT_BY_ID[o.bottleneck].name : ''} · surplus +${Math.round((o.bonus - 1) * 100)}%`],
+      psi: [`${fmt(d.psi)} psi`, `${TIERS[s.tier].name} · ${sign(roc('psi'), ' psi/min', 0)}`],
+      temp: [`${Math.round(s.temp)}°F`, `${sign(tRoc, '°F/min')} · eq ${Math.round(Math.min(d.tempEq, 9999))}°F · limit ${lim}°F${s.temp > lim ? ' · income ×' + d.thermalMult.toFixed(2) : ''}`],
+      flow: [`${fmt(d.supply)} / ${fmt(d.demand)}`, `GPM supply / demand · utilization ${Math.round(d.utilization * 100)}% · relief ${fmt(d.overRelief)} GPM · to acc ${fmt(d.toAcc)} GPM`],
+      acc: [`${Math.round(100 * s.accCharge / d.accCap)}%`, `${fmt(s.accCharge)} / ${fmt(d.accCap)} gal · ${E.canSurge(s) ? 'READY' : d.surging ? `surging ${Math.ceil(s.surgeLeft)}s` : 'charging'}${d.m.autoSurge ? ' · PLC auto' : ''}`],
+      heat: [`${fmt(d.heatHP)} HP`, `pumps ${fmt(d.pumpLossHP)} + relief ${fmt(d.reliefHP)} HP · cooling k ${fmt(d.k)}`],
+      kh: [`${fmt(d.khRate)}/s`, `${sign(pctRoc('kh'), '%/min')} · bank ${fmt(s.kh)}`],
+      pak: [`$${fmt(E.pakIncome(s, d))}/s`, E.pakOpen(s) ? `${fmt(E.pakHoursRate(s))} hrs/s · building ${E.pakNext(s)}` : 'no Engineering yet'],
+      safety: [`${E.safeDays(s)} days safe`, (() => { const r = E.incidentRate(s, d) * 3600; return r > 0 ? `≈ ${r.toFixed(1)} incidents/hour${s.shake && s.shake.phase ? ' (shake-up ×3)' : ''}` : 'no incident risk'; })()],
+    };
+    for (const x of SCADA_TILES) {
+      setPart(k(`v-${x.id}`), v[x.id][0], true);
+      setPart(k(`s-${x.id}`), v[x.id][1], true);
+      if (x.keys.length) spark(body.querySelector(`[data-c="${x.id}"]`), x.keys, x.colors || [x.color]);
+    }
+    const tile = (id) => body.querySelector(`[data-tile="${id}"]`);
+    tile('temp').classList.toggle('alarm', s.temp > lim);
+    tile('temp').classList.toggle('warn', s.temp <= lim && d.tempEq > lim);
+    tile('flow').classList.toggle('alarm', d.utilization < 0.999);
+    tile('production').classList.toggle('warn', o.factor < 0.999);
+    setPart(k('x-safety'), s.safety && s.safety.incident ? `<span class="bad-text">LINE DOWN · ${Math.ceil(s.safety.incident.left)}s</span>` : '<span class="ok-text">All lines running</span>');
+    setPart(k('alarms'), $('alerts').innerHTML || '<li class="good">No active alarms</li>');
+    setPart(k('scan'), `Scan every ${C.scadaEvery}s, up to ${E.scadaScan(s)} action${E.scadaScan(s) === 1 ? '' : 's'} per scan (1 + Controls strength ÷ 3).`, true);
+    setPart(k('log'), s.scada.log.slice(0, 6).map((l) => `<li><span class="muted">${fmtTime(Math.max(0, s.time - l.t))} ago</span> ${l.m}</li>`).join('') || '<li class="muted">No automated actions yet.</li>');
+  }
+
   function renderPaks(s, dd) {
     const open = E.pakOpen(s), rate = E.pakHoursRate(s), target = E.pakTarget(s), next = E.pakNext(s);
     setPart($('pak-summary'), open ? `· ${fmt(rate)} engineering hrs/s · ≈ +$${fmt(E.pakIncome(s, dd))}/s` : '', true);
@@ -748,6 +886,8 @@
     $('btn-works-full').addEventListener('click', () => setFull(true));
     $('btn-works-close').addEventListener('click', () => setFull(false));
     $('m-status').addEventListener('click', () => setTab('works'));
+    $('btn-scada').addEventListener('click', openScada);
+    $('scada-close').addEventListener('click', closeScada);
     // Brand: the iFP mark in the header and the tab icon; Light (IFP) / Dark theme switch.
     const B = root.PW.brand;
     if (B) {
@@ -779,7 +919,7 @@
     document.querySelector('.era-card').addEventListener('click', (ev) => ev.currentTarget.classList.toggle('open'));
     document.addEventListener('keydown', (ev) => {
       if (ev.key !== 'Escape') return;
-      if (ui.person) closePerson(); else if (ui.sheet) closeSheet(); else setFull(false);
+      if (ui.person) closePerson(); else if (ui.sheet) closeSheet(); else if (ui.scada) closeScada(); else setFull(false);
     });
     phone.addEventListener('change', () => { if (!phone.matches) { setFull(false); if (ui.tab === 'works') setTab('actuators'); } });
     setTab(ui.tab);
@@ -926,6 +1066,8 @@
     if (ui.tab === 'system') renderSystem(s, d);
     if (ui.tab === 'tech') renderTech(s);
     if (ui.tab === 'company') renderCompany(s, d);
+    sample(s, d);
+    if (ui.scada) renderScada(s, d);
     if (ui.sheet) renderSheet(s, d);
     if (ui.person) renderPerson(s, d);
     $('company-badge').hidden = d.order.factor >= 0.95;
@@ -1131,5 +1273,5 @@
     r.el.classList.remove('flash'); void r.el.offsetWidth; r.el.classList.add('flash');
   }
 
-  root.PW.ui = { init, render, animate, toast, floater, setTab, focusItem, focusDept, look, openDept, closeSheet, get qty() { return ui.qty; } };
+  root.PW.ui = { init, render, animate, toast, floater, setTab, focusItem, focusDept, look, openDept, closeSheet, openScada, closeScada, get qty() { return ui.qty; } };
 })(window);
