@@ -51,6 +51,7 @@
       execPool: { cro: [], coo: [], cfo: [], cto: [] },       // outside candidates per seat
       president: null, execClock: 0, execLog: [],
       board: [], boardPool: [], patentsSpent: 0,               // directors survive Overhaul
+      shake: { phase: null, left: 0, cooldown: 0, moves: [], before: 0, report: null, done: 0 },
       pak: { target: 'valve', building: 'valve', work: 0, stock: { valve: 0, base: 0 }, built: { valve: 0, base: 0, sys: 0 }, earned: 0 },
       mgrClock: 0,
       safety: { streak: 0, incident: null, seed: (Math.random() * 2 ** 32) >>> 0 },
@@ -186,6 +187,7 @@
     s.mgrClock += dt;
     if (s.mgrClock >= C.mgrEvery) { s.mgrClock = 0; managersTick(s, d); }
     pakTick(s, d, dt);
+    shakeTick(s, dt);
     s.execClock += dt;
     if (s.execClock >= C.execEvery) { s.execClock = 0; execTick(s, d); }
     const earned = d.income * dt;
@@ -335,9 +337,11 @@
     const keep = {
       patents: s.patents + overhaulGain(s), lifetime: s.lifetime,
       overhauls: s.overhauls + 1, strokes: s.strokes, time: s.time, locations: s.locations, seed: s.seed,
-      ach: s.ach, tips: s.tips, board: s.board, boardPool: s.boardPool, patentsSpent: s.patentsSpent,
+      ach: s.ach, tips: s.tips, shakeDone: s.shake && s.shake.done, board: s.board, boardPool: s.boardPool, patentsSpent: s.patentsSpent,
     };
     Object.assign(s, newState(), keep);
+    s.shake.done = keep.shakeDone || 0;
+    delete s.shakeDone;
     return true;
   }
 
@@ -396,7 +400,8 @@
   function incidentRate(s, d) {
     if (d.psi < C.incidentMinPsi || d.demand === 0) return 0;
     const heat = Math.max(0.5, s.temp / d.tempLimit);
-    return (C.incidentPerMin / 60) * (d.psi / 3000) * heat * boardEff(s, 'incidentMult') / (1 + C.safetyPer * openStrength(s, 'safety'));
+    const shaking = s.shake && s.shake.phase ? C.shakeIncidentMult : 1;
+    return (C.incidentPerMin / 60) * (d.psi / 3000) * heat * shaking * boardEff(s, 'incidentMult') / (1 + C.safetyPer * openStrength(s, 'safety'));
   }
   function safetyRand(s) {
     let t = (s.safety.seed = (s.safety.seed + 0x6d2b79f5) >>> 0);
@@ -573,6 +578,7 @@
     const out = { depts: {}, factor: 1, bottleneck: null, bonus: 1 };
     const reach = Math.sqrt(customerBase(s) / Math.max(1, customerBase(null, 'hq'))) * boardEff(s, 'reachMult');
     const it = itMult(s), mg = mgmtMult(s);
+    const disrupt = s.shake && s.shake.phase ? C.shakeDisruption : 1;
     for (const dept of STAFFED) {
       const st = s.depts[dept.id];
       const open = departmentOpen(s, dept);
@@ -580,7 +586,7 @@
       const growth = Math.max(0, Math.log10(Math.max(production, 1) / st.p0));
       const required = (1 + C.deptPerDecade * growth) * boardEff(s, 'needMult');
       const r = dept.id === 'outside_sales' ? reach : 1;
-      const effective = (1 + strength(st, dept.id) * it * mg * execMult(s, dept.id)) * r;
+      const effective = (1 + strength(st, dept.id) * it * mg * execMult(s, dept.id)) * r * disrupt;
       const load = effective / required, coverage = Math.min(1, load);
       // Staffing past 100% isn't wasted: surplus pays an efficiency bonus that keeps
       // growing with diminishing returns (+5% at 150%, +7.5% at 200%, toward +15%).
@@ -704,6 +710,7 @@
       case 'execs': return execCount(s);
       case 'president': return s.president ? 1 : 0;
       case 'board': return (s.board || []).length;
+      case 'shakes': return (s.shake && s.shake.done) || 0;
       default: return 0;
     }
   }
@@ -806,11 +813,14 @@
   const execCount = (s) => (s.execs ? DATA.EXECS.filter((x) => s.execs[x.id]).length : 0);
 
   /** Board perks multiply (or, with `add`, sum) across directors. */
+  /** A director's perk strength, from their Leadership (×1.0 at 5, ×1.4 at 10). */
+  const directorQuality = (m) => C.directorQBase + C.directorQPer * leadership(m);
   function boardEff(s, key, add = false) {
     let v = add ? 0 : 1;
     for (const m of s.board || []) {
       const e = PERK[m.perk] && PERK[m.perk].eff[key];
-      if (e != null) v = add ? v + e : v * e;
+      if (e == null) continue;
+      v = add ? v + e : v * (1 + (e - 1) * directorQuality(m));
     }
     return v;
   }
@@ -953,7 +963,7 @@
     while (s.boardPool.length < Math.min(3, perks.length)) {
       const k = perks.splice(Math.floor(rand(s) * perks.length), 1)[0];
       const p = newPerson(s);
-      s.boardPool.push({ n: p.n, a: p.a, perk: k.id });
+      s.boardPool.push({ ...p, perk: k.id });
     }
   }
   function electDirector(s, i) {
@@ -966,6 +976,130 @@
     s.boardPool = [];
     fillBoardPool(s);
     return true;
+  }
+
+
+  // ---- Shake-up: a timed, top-down reorganization ------------------------------
+  // Board → executives → managers → employees. Each phase takes time and applies
+  // when it ends; while it runs, incidents are likelier and the Order Line slows.
+
+  const SHAKE_PHASES = ['board', 'cxo', 'mgr', 'staff'];
+  const shakeOpen = (s) => execOpen(s);
+  const shakeCost = (s, d = derive(s)) => C.shakeCostS * Math.max(1, d.production) * mods(s).costMult;
+  const canShake = (s) => shakeOpen(s) && !s.shake.phase && s.shake.cooldown <= 0 && s.cash >= shakeCost(s);
+  /** Everyone on a team (and managers) in the hireable departments, with where they sit. */
+  function insiders(s, withMgr = true) {
+    const out = [];
+    for (const dept of HIREABLE) {
+      const st = s.depts[dept.id];
+      if (!st || !st.p0) continue;
+      if (withMgr && st.mgr) out.push({ dept: dept.id, kind: 'mgr', p: st.mgr });
+      st.team.forEach((p) => out.push({ dept: dept.id, kind: 'team', p }));
+    }
+    return out;
+  }
+  function takeOut(s, ref) {
+    const st = s.depts[ref.dept];
+    if (ref.kind === 'mgr') st.mgr = null;
+    else st.team.splice(st.team.indexOf(ref.p), 1);
+  }
+  /** Total team strength across the company (for the before/after report). */
+  const companyStrength = (s) => HIREABLE.reduce((a, d) => a + (s.depts[d.id].p0 ? strength(s.depts[d.id], d.id) * execMult(s, d.id) : 0), 0);
+
+  function startShake(s) {
+    if (!canShake(s)) return false;
+    s.cash -= shakeCost(s);
+    Object.assign(s.shake, { phase: 'board', left: C.shakePhaseS.board, moves: [], before: companyStrength(s), report: null });
+    return true;
+  }
+  const move = (s, msg) => { s.shake.moves.push(msg); logExec(s, 'shake', msg); };
+
+  const SHAKE_STEP = {
+    // Board: the company's strongest leaders replace weaker directors (the seat keeps its perk).
+    board(s) {
+      const pool = insiders(s).sort((a, b) => leadership(b.p) - leadership(a.p));
+      const seats = s.board.map((m, i) => i).sort((a, b) => leadership(s.board[a]) - leadership(s.board[b]));
+      for (const i of seats) {
+        const c = pool[0], m = s.board[i];
+        if (!c || leadership(c.p) <= leadership(m)) break;
+        pool.shift();
+        takeOut(s, c);
+        s.board[i] = { ...c.p, perk: m.perk };
+        move(s, `Board: ${c.p.n} (LEA ${leadership(c.p)}) replaces ${m.n} (LEA ${leadership(m)})`);
+      }
+    },
+    // Executives: the best person anywhere takes each seat; then the best President.
+    cxo(s) {
+      for (const x of DATA.EXECS) {
+        const cur = s.execs[x.id];
+        const best = insiders(s).map((c) => ({ ...c, skill: execSkill(s, x.id, c.p) })).sort((a, b) => b.skill - a.skill)[0];
+        if (!best || best.skill < (cur ? execSkill(s, x.id) + 1 : 4)) continue;
+        takeOut(s, best);
+        s.execs[x.id] = best.p;
+        if (cur) s.depts[x.depts[0]].team.push(cur);
+        move(s, `${x.short}: ${best.p.n} (skill ${best.skill})${cur ? ` replaces ${cur.n}, who returns to ${DEPT[x.depts[0]].name}` : ' takes the empty seat'}`);
+      }
+      const pskill = (p) => Math.round((2 * leadership(p) + STAT_OF(p, DATA.PRESIDENT.stat)) / 3);
+      const top = DATA.EXECS.filter((x) => s.execs[x.id]).sort((a, b) => pskill(s.execs[b.id]) - pskill(s.execs[a.id]))[0];
+      if (top && canAppointPresident(s) && (!s.president || pskill(s.execs[top.id]) > pskill(s.president))) {
+        const old = s.president;
+        s.president = s.execs[top.id];
+        s.execs[top.id] = old;
+        move(s, `President: ${s.president.n}${old ? ` replaces ${old.n}, who takes the ${EXEC[top.id].short} seat` : ' is named President'}`);
+      }
+    },
+    // Managers: every team is led by its best leader.
+    mgr(s) {
+      for (const dept of HIREABLE) {
+        const st = s.depts[dept.id];
+        if (!st.p0 || !st.team.length) continue;
+        const i = st.team.reduce((b, p, k, a) => (leadership(p) > leadership(a[b]) ? k : b), 0);
+        if (st.mgr && leadership(st.team[i]) <= leadership(st.mgr)) continue;
+        const was = st.mgr;
+        promote(s, dept.id, i);
+        move(s, `${dept.name}: ${st.mgr.n} (LEA ${leadership(st.mgr)}) ${was ? `takes over from ${was.n}` : 'becomes manager'}`);
+      }
+    },
+    // Employees: everyone moves to where they fit best; each department keeps its head count.
+    staff(s) {
+      const depts = HIREABLE.filter((d) => s.depts[d.id].p0);
+      const slots = Object.fromEntries(depts.map((d) => [d.id, s.depts[d.id].team.length]));
+      const people = depts.flatMap((d) => s.depts[d.id].team.map((p) => ({ p, from: d.id })));
+      const pairs = [];
+      for (const x of people) for (const d of depts) pairs.push({ x, d: d.id, e: effectiveness(x.p, d.id) });
+      pairs.sort((a, b) => b.e - a.e);
+      const placed = new Map();
+      for (const pr of pairs) {
+        if (placed.has(pr.x) || slots[pr.d] <= 0) continue;
+        placed.set(pr.x, pr.d);
+        slots[pr.d]--;
+      }
+      for (const d of depts) s.depts[d.id].team = [];
+      let moved = 0;
+      for (const [x, to] of placed) {
+        if (to !== x.from) { moved++; if (to === 'engineering' || x.from === 'engineering') delete x.p.g; }
+        if (to === 'engineering' && !x.p.g) x.p.g = leastEngTeam(s.depts.engineering);
+        s.depts[to].team.push(x.p);
+      }
+      if (moved) move(s, `Employees: ${moved} people moved to jobs that suit them better`);
+    },
+  };
+
+  function shakeTick(s, dt) {
+    const sh = s.shake;
+    if (sh.cooldown > 0) sh.cooldown = Math.max(0, sh.cooldown - dt);
+    if (!sh.phase) return null;
+    sh.left -= dt;
+    if (sh.left > 0) return null;
+    SHAKE_STEP[sh.phase](s);
+    const next = SHAKE_PHASES[SHAKE_PHASES.indexOf(sh.phase) + 1];
+    if (next) { sh.phase = next; sh.left = C.shakePhaseS[next]; return null; }
+    const after = companyStrength(s);
+    sh.report = { moves: sh.moves.length, change: sh.before > 0 ? after / sh.before - 1 : 0, at: Math.round(s.time) };
+    sh.phase = null;
+    sh.cooldown = C.shakeCooldownS;
+    sh.done = (sh.done || 0) + 1;
+    return sh.report;
   }
 
   // ---- Save / load ---------------------------------------------------------
@@ -990,6 +1124,7 @@
     const ns = newState();
     s.execs = { ...ns.execs, ...(raw.execs || {}) };
     s.execPool = { ...ns.execPool, ...(raw.execPool || {}) };
+    s.shake = { ...ns.shake, ...(raw.shake || {}) };
     const fresh = ns.pak, rp = raw.pak || {};
     s.pak = { ...fresh, ...rp, stock: { ...fresh.stock, ...(rp.stock || {}) }, built: { ...fresh.built, ...(rp.built || {}) } };
     return s;
@@ -1009,7 +1144,8 @@
     ENG_TEAMS, engTeamOf, teamStrength, setEngTeam, techCost,
     EXEC, execOpen, execOf, execSkill, presidentSkill, execMult, presidentMult, execCount, boardEff, execCandidates, fillExecPool,
     execHireCost, appointExec, dismissExec, canAppointPresident, appointPresident, execTick,
-    boardOpen, boardSeatCost, fillBoardPool, electDirector,
+    boardOpen, boardSeatCost, fillBoardPool, electDirector, directorQuality,
+    SHAKE_PHASES, shakeOpen, shakeCost, canShake, startShake, shakeTick, companyStrength,
     pakOpen, sysReady, pakTarget, pakNext, pakHoursRate, pakGrade, pakPrice, pakChainHours, pakIncome, setPakTarget, pakTick,
     serialize, deserialize,
   };

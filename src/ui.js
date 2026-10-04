@@ -553,13 +553,14 @@
     if (bopen) E.fillBoardPool(s);
     const cost = E.boardSeatCost(s);
     setPart($('board-summary'), bopen ? `· ${s.board.length}/${E.DATA.BOARD_COSTS.length} seats · directors stay through Overhaul` : '· opens after 2 Overhauls or $1T earned', true);
-    const bkey = [bopen, s.board.map((m) => m.perk).join(), s.boardPool.map((m) => m.perk).join()].join('|');
+    const bkey = [bopen, s.board.map((m) => m.perk + m.n).join(), s.boardPool.map((m) => m.perk).join()].join('|');
     if (board._key !== bkey) {
       board._key = bkey;
       const perk = (id) => E.DATA.BOARD_PERKS.find((k) => k.id === id);
-      board.innerHTML = s.board.map((m) => `<div class="director"><span class="face-img">${avatar(m.a)}</span><div><b>${m.n}</b><span>${perk(m.perk).name}</span><em>${perk(m.perk).desc}</em></div></div>`).join('')
+      const q = (m) => `LEA ${E.leadership(m)} · perk strength ×${E.directorQuality(m).toFixed(2)}`;
+      board.innerHTML = s.board.map((m) => `<div class="director"><span class="face-img">${avatar(m.a)}</span><div><b>${m.n}</b><span>${perk(m.perk).name}</span><em>${perk(m.perk).desc} · ${q(m)}</em></div></div>`).join('')
         + (bopen && cost != null ? `<div class="board-cands"><div class="app-head">Candidates for seat ${s.board.length + 1} · ${cost} patents</div>${s.boardPool.map((m, i) =>
-          `<div class="director cand"><span class="face-img">${avatar(m.a)}</span><div><b>${m.n}</b><span>${perk(m.perk).name}</span><em>${perk(m.perk).desc}</em></div>
+          `<div class="director cand"><span class="face-img">${avatar(m.a)}</span><div><b>${m.n}</b><span>${perk(m.perk).name}</span><em>${perk(m.perk).desc} · ${q(m)}</em></div>
             <button class="btn mini" data-board-elect="${i}">${cost} patents<small>elect</small></button></div>`).join('')}
           <p class="muted small">Patents spent on the Board are gone for good (each was worth +10% income), so pick perks that beat that.</p></div>` : '')
         + (!bopen ? '' : !s.board.length && cost == null ? '' : '');
@@ -627,6 +628,52 @@
     body.querySelectorAll('[data-exec-hire]').forEach((b) => setBtn(b, cost, 'hire', s.cash));
   }
 
+
+  // ---- Shake-up card --------------------------------------------------------------
+  const SHAKE_LABEL = { board: 'Board', cxo: 'Executives', mgr: 'Managers', staff: 'Employees' };
+  const SHAKE_WHAT = {
+    board: 'The strongest leaders in the company take Board seats from weaker directors.',
+    cxo: 'The best person anywhere takes each executive seat; the President is re-picked.',
+    mgr: 'Every team gets its best leader as manager.',
+    staff: 'Everyone moves to the department that suits them best (head counts stay the same).',
+  };
+  function renderShake(s, dd) {
+    const box = $('shake'), sh = s.shake, C = E.DATA.CONSTANTS;
+    box.hidden = !E.shakeOpen(s);
+    if (box.hidden) return;
+    const key = [sh.phase, sh.moves.length, sh.report && sh.report.at, sh.cooldown > 0].join('|');
+    if (box._key !== key) {
+      box._key = key;
+      const idx = E.SHAKE_PHASES.indexOf(sh.phase);
+      const steps = E.SHAKE_PHASES.map((ph, i) => `<li class="${sh.phase ? (i < idx ? 'done' : i === idx ? 'now' : '') : ''}">
+        <b>${SHAKE_LABEL[ph]}</b><span>${Math.round(C.shakePhaseS[ph])} s</span></li>`).join('');
+      const moves = sh.moves.slice(-6).reverse().map((m) => `<li>${m}</li>`).join('');
+      box.innerHTML = `<div class="shake-head"><h4>Company shake-up</h4><span class="muted small" data-k="sh-status"></span></div>
+        <ol class="shake-steps">${steps}</ol>
+        ${sh.phase ? `<div class="cov shake-prog"><div data-k="sh-prog"></div></div>
+          <p class="small">${SHAKE_WHAT[sh.phase]} <span class="bad-text">While it runs: incidents ×${C.shakeIncidentMult}, Order Line at ${Math.round(C.shakeDisruption * 100)}%.</span></p>`
+          : `<p class="small muted">Reorganize the whole company from the top down: Board, then executives, then managers, then employees. It takes about ${Math.round(Object.values(C.shakePhaseS).reduce((a, b) => a + b, 0) / 60)} minutes, and while it runs incidents are ${C.shakeIncidentMult}× likelier and the Order Line works at ${Math.round(C.shakeDisruption * 100)}%.</p>`}
+        ${moves ? `<ul class="exec-log">${moves}</ul>` : ''}
+        ${!sh.phase && sh.report ? `<p class="small">Last shake-up: <b>${sh.report.moves}</b> move${sh.report.moves === 1 ? '' : 's'}, team strength <b>${sh.report.change >= 0 ? '+' : ''}${(sh.report.change * 100).toFixed(1)}%</b>.</p>` : ''}
+        ${sh.phase ? '' : '<button class="btn primary" data-shake="1"></button>'}`;
+    }
+    const k = (n) => box.querySelector(`[data-k="${n}"]`);
+    if (sh.phase) {
+      const total = C.shakePhaseS[sh.phase];
+      k('sh-prog').style.width = `${Math.min(100, (1 - sh.left / total) * 100)}%`;
+      setPart(k('sh-status'), `${SHAKE_LABEL[sh.phase]} · ${Math.ceil(sh.left)} s left`, true);
+    } else {
+      setPart(k('sh-status'), sh.cooldown > 0 ? `ready again in ${fmtTime(sh.cooldown)}` : 'ready', true);
+      const b = box.querySelector('[data-shake]');
+      if (b) {
+        const cost = E.shakeCost(s, dd);
+        const html = sh.cooldown > 0 ? `Cooling down<small>${fmtTime(sh.cooldown)}</small>` : `Start shake-up<small>$${fmt(cost)}</small>`;
+        if (b._html !== html) { b._html = html; b.innerHTML = html; }
+        b.disabled = !E.canShake(s);
+      }
+    }
+  }
+
   function renderPaks(s, dd) {
     const open = E.pakOpen(s), rate = E.pakHoursRate(s), target = E.pakTarget(s), next = E.pakNext(s);
     setPart($('pak-summary'), open ? `· ${fmt(rate)} engineering hrs/s · ≈ +$${fmt(E.pakIncome(s, dd))}/s` : '', true);
@@ -684,6 +731,7 @@
     }
     renderPaks(s, dd);
     renderOrg(s);
+    renderShake(s, dd);
   }
 
   // ---- Init ---------------------------------------------------------------
@@ -921,6 +969,7 @@
       const neck = DEPARTMENTS.find((x) => x.id === d.order.bottleneck).name;
       out.push([d.order.factor < 0.8 ? 'bad' : 'warn', `Order Line at ${Math.round(d.order.factor * 100)}%: ${neck} is short-staffed. Hire on the Company tab.`]);
     }
+    if (s.shake && s.shake.phase) out.push(['warn', `Shake-up in progress (${({ board: 'Board', cxo: 'executives', mgr: 'managers', staff: 'employees' })[s.shake.phase]}, ${Math.ceil(s.shake.left)} s): incidents ×${E.DATA.CONSTANTS.shakeIncidentMult}, Order Line at ${Math.round(E.DATA.CONSTANTS.shakeDisruption * 100)}%.`]);
     if (d.surging) out.push(['good', `SURGE: accumulator dumping, income ×${d.m.surgeMult}.`]);
     const html = out.map(([c, t]) => `<li class="${c}">${t}</li>`).join('');
     const box = $('alerts');

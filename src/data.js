@@ -382,6 +382,7 @@
     { id: 'exec1',     name: 'C-Suite',               stat: 'execs',     goal: 1,     desc: 'Appoint your first executive.' },
     { id: 'execAll',   name: 'Full Leadership Team',  stat: 'execs',     goal: 4,     desc: 'Seat all four executives.' },
     { id: 'president', name: 'Mr. or Madam President', stat: 'president', goal: 1,    desc: 'Appoint a President.' },
+    { id: 'shake',     name: 'Shake It Up',           stat: 'shakes',    goal: 1,     desc: 'Finish a company shake-up.' },
     { id: 'board',     name: 'Boardroom',             stat: 'board',     goal: 1,     desc: 'Seat your first director.' },
     { id: 'overhaul1', name: 'Tear It Down',          stat: 'overhauls', goal: 1,     desc: 'Overhaul the shop once.' },
     { id: 'overhaul5', name: 'Serial Rebuilder',      stat: 'overhauls', goal: 5,     desc: 'Overhaul the shop five times.' },
@@ -439,6 +440,14 @@
     execReplaceGapPer: 0.03,// …minus 0.03 per skill point (better executives are pickier)
     execHireS: 600,         // an outside executive hire costs 10 min of production
     execPoolBoost: 2,       // outside candidates: Leadership and key stat +2
+    // Shake-up: a top-down reorganization (Board → executives → managers → employees)
+    shakePhaseS: { board: 45, cxo: 60, mgr: 60, staff: 120 },
+    shakeCostS: 120,        // costs 2 min of production
+    shakeCooldownS: 1800,   // and can't be repeated for 30 min
+    shakeIncidentMult: 3,   // incidents ×3 while it runs
+    shakeDisruption: 0.9,   // Order Line teams work at 90% while it runs
+    directorQBase: 0.6,     // a director's perk strength: 0.6 + 0.08 × Leadership (×1.0 at LEA 5)
+    directorQPer: 0.08,
     presidentIncomePer: 0.02, // President: all income +2% per skill point
     presidentSkillDiv: 3,   // …and every executive +1 skill per 3 President skill
     mgrPoolPer: 3,          // …and reviews 1 more applicant per 3 Leadership points

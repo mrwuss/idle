@@ -36,7 +36,8 @@ update the tables here.
 | Total income | `production × surge × Order Line factor × surplus bonus` |
 | Patents (total) | `floor(2 × ∛(lifetime $ / 1,000,000))` (was √; the cube root stops the late-run snowball) |
 | Executives | skill `(2 × LEA + key stat) ÷ 3`; division strength × `(1 + 0.03 × skill)`; President income × `(1 + 0.02 × skill)` |
-| Board seats | 3 / 8 / 20 / 50 / 120 Patents (spent, not refunded); perks multiply |
+| Board seats | 3 / 8 / 20 / 50 / 120 Patents (spent, not refunded); perk strength `0.6 + 0.08 × LEA` |
+| Shake-up | costs 120 s of production, 5 min long, 30 min cooldown; incidents ×3 and Order Line ×0.9 while it runs |
 | Achievements | +1% income each (23 in all, kept through Overhaul) |
 | Safety streak | +1% income per 10 min without an incident, max +25% |
 | IT / Management | Order Line strength × (1 + 4% × IT strength, max ×2) × (1 + 2% × Management strength, max ×1.5) |
@@ -130,7 +131,9 @@ Executives open with Management at ~$1B; the bot seats all four (skill 9–10 by
 the end) and a President, which lifts end-of-run income from ~66M/s to ~160M/s
 (surplus +57%, President +14%) and lifetime from $1.1T to $2.1T. With
 `--overhaul` the bot fills all five Board seats and does 11 Overhauls in 6h44m
-(999 patents earned, 271 spent on the Board). Runs vary
+(999 patents earned, 271 spent on the Board). The bot also runs a shake-up
+whenever one is off cooldown and costs under 5% of cash (5 in run 1, from ~3 h);
+lifetime stays about the same (~$1.9T) and the Overhaul rhythm is unchanged. Runs vary
 by a minute or two because applicants come from a random seed.
 
 **Research is too fast:** the bot finishes the tree at ~1h40m against a 3–5 h

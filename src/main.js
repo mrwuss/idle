@@ -61,8 +61,14 @@
 
   // Hiring buttons inside re-rendered department cards.
   document.addEventListener('click', (ev) => {
-    const b = ev.target.closest('[data-hire], [data-hire-best], [data-reroll], [data-promote], [data-auto], [data-eng], [data-engteam], [data-pak-target], [data-exec-appoint], [data-exec-hire], [data-exec-dismiss], [data-exec-pres], [data-board-elect]');
+    const b = ev.target.closest('[data-shake], [data-hire], [data-hire-best], [data-reroll], [data-promote], [data-auto], [data-eng], [data-engteam], [data-pak-target], [data-exec-appoint], [data-exec-hire], [data-exec-dismiss], [data-exec-pres], [data-board-elect]');
     if (!b || b.disabled) return;
+    if (b.dataset.shake) {
+      const ok = E.startShake(state);
+      SFX.play(ok ? 'upgrade' : 'cant');
+      if (ok) UI.toast('<b>Shake-up started.</b> Board first, then executives, managers and employees. Expect a rough few minutes.', 5000);
+      return render();
+    }
     const X = E.DATA.EXECS.find((x) => x.id === (b.dataset.execAppoint || b.dataset.execHire || b.dataset.execDismiss || b.dataset.execPres));
     if (b.dataset.execAppoint || b.dataset.execHire) {
       const src = b.dataset.execHire ? { pool: Number(b.dataset.idx) } : { dept: b.dataset.dept, kind: b.dataset.kind, idx: Number(b.dataset.idx) };
@@ -256,6 +262,17 @@
     }
   }
   setInterval(announceDepts, 1000);
+
+  // Shake-up finished: report it once.
+  let shakesSeen = state.shake ? state.shake.done : 0;
+  setInterval(() => {
+    if (!state.shake || state.shake.done === shakesSeen) return;
+    shakesSeen = state.shake.done;
+    const r = state.shake.report;
+    SFX.play('location');
+    // Achievements announce on the same tick; show the report just after them.
+    setTimeout(() => UI.toast(`<b>Shake-up complete:</b> ${r.moves} move${r.moves === 1 ? '' : 's'}, team strength ${r.change >= 0 ? '+' : ''}${(r.change * 100).toFixed(1)}%.`, 6000), 1500);
+  }, 1000);
 
   // Achievements: checked once a second, each announced once (+1% income).
   E.checkAchievements(state); // award silently after load or offline progress
