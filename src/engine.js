@@ -60,6 +60,7 @@
       warp: null, warpJumps: 0, warpsDone: 0, lastWarp: null, // Time Machine (warpsDone kept)
       standards: {},           // Standards Committee: adopted standards (kept forever)
       contracts: { offers: [], active: null, clock: 0, log: [], n: 0 }, contractsDone: 0, // Pak contracts (done count kept)
+      rush: 0, focus: { id: null, left: 0, cooldown: 0 }, interestEarned: 0, // department signatures
       safety: { streak: 0, incident: null, seed: (Math.random() * 2 ** 32) >>> 0 },
       ach: {},                 // achievements earned (kept forever)
       tips: {},                // first-time tips already shown (kept forever)
@@ -204,6 +205,7 @@
     if (s.mgrReviewClock >= C.mgrReviewEvery) { s.mgrReviewClock = 0; managersReview(s); }
     pakTick(s, d, dt);
     contractsTick(s, d, dt);
+    signaturesTick(s, d, dt);
     shakeTick(s, dt);
     s.scada.clock += dt;
     if (s.scada.clock >= C.scadaEvery) { s.scada.clock = 0; scadaTick(s, d); }
@@ -413,7 +415,7 @@
 
   const openStrength = (s, id) => {
     const st = s.depts && s.depts[id];
-    return st && st.p0 && departmentOpen(s, DEPT[id]) ? strength(st, id) * execMult(s, id) : 0;
+    return st && st.p0 && departmentOpen(s, DEPT[id]) ? strength(st, id) * execMult(s, id) * focusMult(s, id) : 0;
   };
   /** IT: every Order Line department works harder (ERP, networks, the help desk). */
   const itMult = (s) => 1 + Math.min(C.itMax, C.itPerStrength * openStrength(s, 'it'));
@@ -653,7 +655,7 @@
       const growth = Math.max(0, Math.log10(Math.max(production, 1) / st.p0));
       const required = (1 + C.deptPerDecade * growth) * boardEff(s, 'needMult');
       const r = dept.id === 'outside_sales' ? reach : 1;
-      const effective = (1 + strength(st, dept.id) * it * mg * execMult(s, dept.id)) * r * disrupt;
+      const effective = (1 + strength(st, dept.id) * it * mg * execMult(s, dept.id) * focusMult(s, dept.id)) * r * disrupt;
       const load = effective / required, coverage = Math.min(1, load);
       // Staffing past 100% isn't wasted: surplus pays an efficiency bonus that keeps
       // growing with diminishing returns (+5% at 150%, +7.5% at 200%, toward +15%).
@@ -827,7 +829,7 @@
     PUMPS.forEach((p, i) => { if (s.pumps[p.id] > 0) best = i; });
     return 1 + C.pakGradePer * best;
   }
-  const pakPrice = (s, d, id) => PAK[id].value * pakGrade(s, id) * C.pakSeconds * d.production * d.order.factor * boardEff(s, 'pakMult');
+  const pakPrice = (s, d, id) => PAK[id].value * pakGrade(s, id) * C.pakSeconds * d.production * d.order.factor * boardEff(s, 'pakMult') * qualityPakMult(s);
   /** Hours to build one target from scratch (inputs included). */
   const pakChainHours = (id) => PAK[id].hours + Object.entries(PAK[id].needs).reduce((a, [k, n]) => a + n * pakChainHours(k), 0);
   /** Average Pak income per second at the current target and staffing. */
@@ -868,6 +870,46 @@
   }
 
 
+  // ---- Department signatures ------------------------------------------------------
+  // Accounting earns interest, Quality certifies Paks, Warehouse fills a Rush Ship
+  // buffer and buys contract time, Inside Sales brings more contract offers, and
+  // Management can Focus one department.
+
+  const deptS = (s, id) => openStrength(s, id);
+  const qualityPakMult = (s) => 1 + Math.min(C.qualityPakMax, C.qualityPakPer * deptS(s, 'quality'));
+  const warehouseTimeMult = (s) => 1 + Math.min(C.warehouseTimeMax, C.warehouseTimePer * deptS(s, 'warehouse'));
+  const insideSpeed = (s) => 1 + C.insideSpeedPer * deptS(s, 'inside_sales');
+  const offerSlots = (s) => Math.min(6, C.contractOffers + Math.floor(deptS(s, 'inside_sales') / C.insideOfferPer));
+  /** Accounting: interest per second on cash, capped at a share of income. */
+  const interestRate = (s, d) => Math.min(s.cash * C.interestPer * deptS(s, 'accounting'), d.income * C.interestCapIncome);
+  const rushFillS = (s) => C.rushFillS / (1 + C.rushFillPer * deptS(s, 'warehouse'));
+  const rushOpen = (s) => departmentOpen(s, DEPT.warehouse) && !!s.depts.warehouse.p0;
+  const rushValue = (s, d = derive(s)) => C.rushSeconds * d.production * d.order.factor;
+  const canRush = (s) => rushOpen(s) && s.rush >= 1;
+  function rushShip(s) {
+    if (!canRush(s)) return 0;
+    const v = rushValue(s);
+    s.cash += v; s.runEarnings += v; s.lifetime += v;
+    s.rush = 0;
+    return v;
+  }
+  const focusOpen = (s) => deptS(s, 'management') >= C.focusMinMgmt;
+  const focusMult = (s, id) => (s.focus && s.focus.id === id && s.focus.left > 0 ? 2 : 1);
+  const canFocus = (s, id) => focusOpen(s) && !!DEPT[id] && departmentOpen(s, DEPT[id]) && !(s.focus.left > 0) && !(s.focus.cooldown > 0);
+  function setFocus(s, id) {
+    if (!canFocus(s, id)) return false;
+    s.focus = { id, left: C.focusS, cooldown: 0 };
+    return true;
+  }
+  function signaturesTick(s, d, dt) {
+    const i = interestRate(s, d) * dt;
+    if (i > 0) { s.cash += i; s.runEarnings += i; s.lifetime += i; s.interestEarned = (s.interestEarned || 0) + i; }
+    if (rushOpen(s)) s.rush = Math.min(1, (s.rush || 0) + dt / rushFillS(s));
+    const f = s.focus;
+    if (f.left > 0) { f.left -= dt; if (f.left <= 0) { f.left = 0; f.cooldown = C.focusCooldownS; } }
+    else if (f.cooldown > 0) { f.cooldown = Math.max(0, f.cooldown - dt); if (!f.cooldown) f.id = null; }
+  }
+
   // ---- Sys-Pak contracts --------------------------------------------------------
   // Clients in your open locations offer timed Pak orders. Accept one: the line
   // builds that Pak, each one still sells as usual, and delivering the lot on time
@@ -885,7 +927,7 @@
     const paks = sysReady(s) ? ['valve', 'base', 'sys', 'sys'] : ['valve', 'base', 'base'];
     const pak = paks[Math.floor(rand(s) * paks.length)];
     const [t0, t1] = C.contractTimeS;
-    const time = Math.round((t0 + rand(s) * (t1 - t0)) / 60) * 60;
+    const time = Math.round((t0 + rand(s) * (t1 - t0)) * warehouseTimeMult(s) / 60) * 60;
     const unitS = pakChainHours(pak) / rate;
     const qty = Math.max(1, Math.min(999, Math.round((time * C.contractLoad) / unitS)));
     if (qty * unitS > time * 0.9) return null; // can't be done in time even with one
@@ -898,10 +940,10 @@
     const K = s.contracts;
     if (!pakOpen(s)) return;
     K.clock += dt;
-    if (K.clock >= C.contractEvery || (!K.offers.length && pakHoursRate(s) > 0)) {
+    if (K.clock >= C.contractEvery / insideSpeed(s) || (!K.offers.length && pakHoursRate(s) > 0)) {
       K.clock = 0;
       const o = newOffer(s);
-      if (o) { K.offers.push(o); if (K.offers.length > C.contractOffers) K.offers.shift(); }
+      if (o) { K.offers.push(o); while (K.offers.length > offerSlots(s)) K.offers.shift(); }
     }
     const c = K.active;
     if (c) {
@@ -1731,6 +1773,8 @@
     scadaReady, canBuyScada, buyScada, scadaMult, scadaScan, scadaTick, bestGrowth, sustained, fmtDur, panelEff, hasPanel, nextPanel, canBuyPanel, buyPanel,
     officeOpen, fileCost, fileQuote, filePatents,
     warpOpen, warpCost, canWarp, startWarp, warpStep,
+    qualityPakMult, warehouseTimeMult, insideSpeed, offerSlots, interestRate, rushFillS, rushOpen, rushValue, canRush, rushShip,
+    focusOpen, focusMult, canFocus, setFocus,
     acceptContract, abandonContract, contractBonus, contractsTick, newOffer,
     standardsOpen, standardCost, canAdopt, adoptStandard, hasStandard, stdEff,
     SHAKE_PHASES, shakeOpen, shakeCost, canShake, startShake, shakeTick, canFreeShake, freeShake, companyStrength, shakeScore,
