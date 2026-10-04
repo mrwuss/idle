@@ -489,7 +489,7 @@ textarea { width: 100%; background: var(--sunk); color: var(--text); border: 1px
   .tabs button[aria-selected="true"] { border-top-color: var(--accent); background: var(--panel); }
   .tab-ico { display: block; width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
   .tl { font-size: 0; display: block; max-width: 100%; padding: 0 1px; overflow: hidden; }
-  .tl::after { content: attr(data-short); font-size: clamp(8px, 2.25vw, 10px); letter-spacing: 0; display: block;
+  .tl::after { content: attr(data-short); font-size: clamp(8px, 2.6vw, 10.5px); letter-spacing: 0; text-transform: none; display: block;
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .tabs .badge { position: absolute; top: 3px; left: 54%; margin: 0; padding: 0 4px; font-size: 9px; }
 
@@ -756,6 +756,11 @@ ul.plain b { color: var(--text); }
 .patent-office { margin-top: 12px; border-color: var(--accent-dim); }
 .patent-office p { margin: 4px 0; font-size: 13px; }
 .patent-office .btn { min-height: 44px; }
+.time-machine { margin-top: 12px; border-color: var(--accent-dim); }
+.time-machine p { margin: 4px 0; font-size: 13px; }
+.warp-btns { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.warp-btns .btn { min-height: 44px; }
+.warp-prog { margin: 6px 0; }
 
 /* ---- SCADA cockpit (always dark, like a control room) ---- */
 .title-right { display: flex; gap: 6px; align-items: center; }

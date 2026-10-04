@@ -397,6 +397,7 @@
     { id: 'shake',     name: 'Shake It Up',           stat: 'shakes',    goal: 1,     desc: 'Finish a company shake-up.' },
     { id: 'scada',     name: 'Control Room',          stat: 'scada',     goal: 1,     desc: 'Install a SCADA system.' },
     { id: 'file1',     name: 'Patent Pending',        stat: 'filed',     goal: 1,     desc: 'File a patent with Know-how.' },
+    { id: 'warp',      name: 'Time Traveler',         stat: 'warps',     goal: 1,     desc: 'Jump ahead with the Time Machine.' },
     { id: 'file10',    name: 'Prolific Inventor',     stat: 'filed',     goal: 10,    desc: 'File 10 patents with Know-how.' },
     { id: 'board',     name: 'Boardroom',             stat: 'board',     goal: 1,     desc: 'Seat your first director.' },
     { id: 'overhaul1', name: 'Tear It Down',          stat: 'overhauls', goal: 1,     desc: 'Overhaul the shop once.' },
@@ -468,6 +469,12 @@
     scadaTuneMax: 0.2,      // …up to +20%
     scadaBudgets: [0.01, 0.05, 0.2], // share of cash one automated action may spend
     scadaMaxPaybackS: 1800, // automation skips any buy that wouldn't pay for itself within 30 min
+    // Time Machine: jump ahead and play the time out (managers, executives, SCADA, Paks, incidents).
+    warpHours: [1, 8, 24],     // the jumps on offer
+    warpKhPerHourMin: 2e6,     // each hour skipped costs at least this much Know-how…
+    warpKhRateS: 60,           // …or 60 s of your current Know-how output, whichever is more
+    warpGrowth: 1.3,           // each jump this run costs ×1.3 more (resets on Overhaul)
+    warpMaxTicks: 5760,        // simulation steps per jump (24 h runs in 15 s steps)
     // Patent Office: once every technology is researched, Know-how files patents
     patentFileKH: 1e6,      // the first filing costs 1M Know-how…
     patentFileGrowth: 1.6,  // …and each one after costs 1.6× more (counted across Overhauls)
