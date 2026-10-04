@@ -253,20 +253,100 @@
   });
 
   $('btn-save').addEventListener('click', () => { save(); UI.toast('Saved.'); });
-  $('btn-export').addEventListener('click', () => {
-    $('save-text').value = btoa(unescape(encodeURIComponent(E.serialize(state))));
+  // ---- Moving a save between browsers (and between the artifact and GitHub Pages) ----
+  // Codes are "PW2:" + base64url(gzip(json)) where CompressionStream exists (about 4×
+  // smaller, short enough to ride in a link), else the old plain base64 of the JSON.
+  // Import accepts both.
+  const PAGES_URL = 'https://mrwuss.github.io/idle/';
+  const b64url = (bytes) => { let s = ''; for (let i = 0; i < bytes.length; i += 0x8000) s += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000)); return btoa(s).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, ''); };
+  const unb64url = (str) => { const s = atob(str.replace(/-/g, '+').replace(/_/g, '/')); const b = new Uint8Array(s.length); for (let i = 0; i < s.length; i++) b[i] = s.charCodeAt(i); return b; };
+  async function pipe(bytes, stream) { return new Uint8Array(await new Response(new Blob([bytes]).stream().pipeThrough(stream)).arrayBuffer()); }
+  async function encodeSave() {
+    const json = E.serialize(state);
+    if (root.CompressionStream) {
+      try { return 'PW2:' + b64url(await pipe(new TextEncoder().encode(json), new CompressionStream('gzip'))); } catch (err) { /* fall through */ }
+    }
+    return btoa(unescape(encodeURIComponent(json)));
+  }
+  async function decodeSave(code) {
+    code = String(code || '').trim().replace(/^.*#save=/, '');
+    if (code.startsWith('PW2:')) {
+      if (!root.DecompressionStream) throw new Error('This browser cannot read compressed saves.');
+      return new TextDecoder().decode(await pipe(unb64url(code.slice(4)), new DecompressionStream('gzip')));
+    }
+    return decodeURIComponent(escape(atob(code)));
+  }
+  /** Load a save code, then play out the time since it was made (like coming back from away). */
+  async function importCode(code, where = 'Save') {
+    try {
+      const next = E.deserialize(await decodeSave(code));
+      state = next;
+      const away = (Date.now() - (state.lastSeen || Date.now())) / 1000;
+      save();
+      UI.toast(`${where} imported.${away > 60 && E.startCatchUp(state, away) ? ` Catching up on ${fmtTime(away)} since it was saved…` : ''}`, 4000);
+      render();
+      return true;
+    } catch (err) {
+      UI.toast('That does not look like a Pressure Works save.');
+      return false;
+    }
+  }
+  const onPages = /github\.io$/.test(location.hostname);
+  if (onPages) $('btn-open-pages').hidden = true;
+  $('save-move-note').textContent = onPages
+    ? 'You are on the web version. To bring a save from the Claude artifact, open the artifact\'s Logbook and tap "Open in GitHub Pages".'
+    : 'Open in GitHub Pages carries this save in the link; the web version asks before importing it. If that tab is blocked, copy the code (or download the file) and import it there.';
+  // Keep the link's save fresh so a plain tap carries the current game.
+  async function refreshPagesLink() {
+    if (onPages) return;
+    try { $('btn-open-pages').href = `${PAGES_URL}#save=${await encodeSave()}`; } catch (err) { /* leave the plain link */ }
+  }
+  $('btn-open-pages').addEventListener('pointerdown', () => { save(); refreshPagesLink(); });
+  $('btn-open-pages').addEventListener('focus', refreshPagesLink);
+  setInterval(() => { if (document.querySelector('[data-body="settings"]:not([hidden])')) refreshPagesLink(); }, 5000);
+  refreshPagesLink();
+
+  $('btn-export').addEventListener('click', async () => {
+    $('save-text').value = await encodeSave();
     $('save-text').select();
   });
-  $('btn-import').addEventListener('click', () => {
-    try {
-      state = E.deserialize(decodeURIComponent(escape(atob($('save-text').value.trim()))));
-      save();
-      UI.toast('Save imported.');
-      render();
-    } catch (err) {
-      UI.toast('That does not look like an IFP MSI save.');
-    }
+  $('btn-copy-save').addEventListener('click', async () => {
+    const code = await encodeSave();
+    $('save-text').value = code;
+    try { await navigator.clipboard.writeText(code); UI.toast('Save code copied. Paste it into Import on the other copy.'); }
+    catch (err) { $('save-text').select(); UI.toast('Copying is blocked here: the code is selected in the box below, copy it from there.'); }
   });
+  $('btn-download-save').addEventListener('click', async () => {
+    const code = await encodeSave();
+    try {
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(new Blob([code], { type: 'text/plain' }));
+      a.download = `pressure-works-${new Date().toISOString().slice(0, 10)}.txt`;
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+    } catch (err) { $('save-text').value = code; UI.toast('Downloads are blocked here: copy the code from the box below instead.'); }
+  });
+  $('btn-import').addEventListener('click', () => importCode($('save-text').value));
+  $('btn-paste').addEventListener('click', async () => {
+    try { const code = await navigator.clipboard.readText(); $('save-text').value = code; importCode(code); }
+    catch (err) { UI.toast('Pasting is blocked here: paste into the box, then press Import.'); $('save-text').focus(); }
+  });
+  $('file-save').addEventListener('change', async (ev) => {
+    const f = ev.target.files && ev.target.files[0];
+    if (f) importCode(await f.text(), 'Save file');
+    ev.target.value = '';
+  });
+  // A save sent in the link (#save=…): ask before replacing this browser's game.
+  if (/^#save=/.test(location.hash)) {
+    const code = location.hash.slice(6), box = $('import-offer');
+    try { history.replaceState(null, '', location.pathname + location.search); } catch (err) { /* ignore */ }
+    box.hidden = false;
+    box.innerHTML = `<h3>Import this save?</h3><p>The link you opened carries a Pressure Works save. Importing replaces the game saved in this browser${state.lifetime > 0 ? ` (lifetime $${fmt(state.lifetime)})` : ''}.</p>
+      <div class="row-btns"><button class="btn primary" id="btn-offer-yes">Import it</button><button class="btn" id="btn-offer-no">Keep this browser's game</button></div>`;
+    UI.setTab && UI.setTab('settings');
+    $('btn-offer-yes').addEventListener('click', async () => { if (await importCode(code, 'Linked save')) box.hidden = true; });
+    $('btn-offer-no').addEventListener('click', () => { box.hidden = true; });
+  }
   $('btn-reset').addEventListener('click', (ev) => {
     if (!armed(ev.currentTarget, 'Click again to erase everything')) return;
     state = E.newState();

@@ -199,17 +199,30 @@
             <button class="btn mini" data-theme-set="dark">Dark · shop floor</button>
           </div>
         </div>
-        <div class="card">
+        <div class="card save-card">
           <h3>Save data</h3>
-          <p class="muted">Autosaves every 10 seconds to this browser.</p>
+          <p class="muted">Autosaves every 10 seconds to this browser. Saves don't travel between browsers or between the Claude artifact and the web version on their own: move one with the buttons below.</p>
+          <div class="save-move" id="save-move">
+            <a id="btn-open-pages" class="btn primary" href="https://mrwuss.github.io/idle/" target="_blank" rel="noopener">Open in GitHub Pages<small>with this save</small></a>
+            <button id="btn-copy-save" class="btn">Copy save code</button>
+            <button id="btn-download-save" class="btn">Download save file</button>
+          </div>
+          <p class="muted small" id="save-move-note"></p>
+          <h4>Load a save</h4>
+          <textarea id="save-text" rows="4" spellcheck="false" placeholder="Paste a save code here and press Import."></textarea>
+          <div class="row-btns">
+            <button id="btn-import" class="btn primary">Import</button>
+            <button id="btn-paste" class="btn">Paste &amp; import</button>
+            <label class="btn file-btn">Load save file<input type="file" id="file-save" accept=".txt,.pwsave,text/plain" hidden></label>
+          </div>
+          <h4>This browser</h4>
           <div class="row-btns">
             <button id="btn-save" class="btn">Save now</button>
-            <button id="btn-export" class="btn">Export</button>
-            <button id="btn-import" class="btn">Import</button>
+            <button id="btn-export" class="btn">Show save code</button>
             <button id="btn-reset" class="btn danger">Hard reset</button>
           </div>
-          <textarea id="save-text" rows="4" spellcheck="false" placeholder="Exported save appears here; paste a save and press Import."></textarea>
         </div>
+        <div class="card import-offer" id="import-offer" hidden></div>
       </div>
     </section>
   </main>

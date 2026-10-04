@@ -780,6 +780,12 @@ ul.plain b { color: var(--text); }
 .std-txt span { font-weight: 700; }
 .std-txt em { font-style: normal; color: var(--muted); }
 .std-ok { font: 700 10px var(--font-mono); color: var(--ok); text-transform: uppercase; }
+.save-card h4 { margin: 12px 0 6px; }
+.save-move { display: flex; flex-wrap: wrap; gap: 8px; }
+.save-move .btn { text-decoration: none; }
+.file-btn { cursor: pointer; }
+.import-offer { border-color: var(--accent); }
+.import-offer p { margin: 4px 0 8px; }
 .time-machine p { margin: 4px 0; font-size: 13px; }
 .warp-btns { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
 .warp-btns .btn { min-height: 44px; }
