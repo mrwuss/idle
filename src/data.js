@@ -467,6 +467,7 @@
     scadaTunePer: 0.005,    // loop tuning: income +0.5% per Controls strength…
     scadaTuneMax: 0.2,      // …up to +20%
     scadaBudgets: [0.01, 0.05, 0.2], // share of cash one automated action may spend
+    scadaMaxPaybackS: 1800, // automation skips any buy that wouldn't pay for itself within 30 min
     // Patent Office: once every technology is researched, Know-how files patents
     patentFileKH: 1e6,      // the first filing costs 1M Know-how…
     patentFileGrowth: 1.6,  // …and each one after costs 1.6× more (counted across Overhauls)
