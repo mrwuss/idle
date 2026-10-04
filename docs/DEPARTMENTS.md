@@ -470,16 +470,26 @@ Overhaul) and appear as an org chart under **Leadership** on the Company tab.
 A shake-up is a timed, top-down reorganization you start from the Leadership
 section. It costs 2 minutes of production and then cools down for 30 minutes.
 
-| Phase | Time | What happens when it ends |
-|---|---:|---|
-| Board | 45 s | The company's strongest leaders take Board seats from weaker directors (each seat keeps its perk; the old director retires) |
-| Executives | 60 s | The best person anywhere takes each C-suite seat if they beat the incumbent by 1+ skill (the incumbent returns to the division); the best executive becomes President |
-| Managers | 60 s | Every team's best leader becomes its manager |
-| Employees | 120 s | Everyone moves to the department where they fit best; each department keeps its head count |
+**Goal seek (v0.3.4).** Every seat in the company is a slot: Board seats, the four
+executive seats, the President, each department's manager seat and every team
+position. Each phase hill-climbs: it tries moving the most promising people from
+**anywhere in the company** into its slots (swapping the current holder into the
+mover's old place, or filling an empty seat), measures the result with the real
+economy (`shakeScore()`: steady income plus Pak sales, Know-how rate, incident risk,
+Controls strength and the equipment cost multiplier) and keeps the move with the
+biggest gain. A move is kept only if **no measure gets worse** and at least one gets
+better (income counts most); it repeats until nothing helps.
+
+| Phase | Time | Slots it fills | Candidates tried |
+|---|---:|---|---|
+| Board | 45 s | Board seats (each keeps its perk; a replaced director takes the newcomer's old job) | 10 best leaders anywhere |
+| Executives | 60 s | C-suite seats and the President | 10 best by projected skill anywhere |
+| Managers | 60 s | Every manager seat; any seat still empty then goes to its team's best leader if nothing gets worse (managers also hire and review) | 12 best leaders anywhere |
+| Employees | 120 s | Team positions: pairwise swaps between departments, the most promising 60 tested each step, up to 400 swaps | everyone on a team |
 
 While it runs, **incidents are 3× likelier** and Order Line teams work at **90%**.
-At the end you get a report (moves made, change in company team strength), and
-every move is listed in the shake-up card.
+At the end you get a report (moves made and the change in income), and every move
+is listed in the shake-up card with its gain.
 
 ## Support departments and Purchasing (implemented, v0.2.3)
 

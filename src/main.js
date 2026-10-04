@@ -299,7 +299,7 @@
     const r = state.shake.report;
     SFX.play('location');
     // Achievements announce on the same tick; show the report just after them.
-    setTimeout(() => UI.toast(`<b>Shake-up complete:</b> ${r.moves} move${r.moves === 1 ? '' : 's'}, team strength ${r.change >= 0 ? '+' : ''}${(r.change * 100).toFixed(1)}%.`, 6000), 1500);
+    setTimeout(() => UI.toast(`<b>Shake-up complete:</b> ${r.moves} move${r.moves === 1 ? '' : 's'}, income ${r.change >= 0 ? '+' : ''}${(r.change * 100).toFixed(1)}%.`, 6000), 1500);
   }, 1000);
 
   // Achievements: checked once a second, each announced once (+1% income).

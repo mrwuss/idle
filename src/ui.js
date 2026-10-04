@@ -649,10 +649,10 @@
   // ---- Shake-up card --------------------------------------------------------------
   const SHAKE_LABEL = { board: 'Board', cxo: 'Executives', mgr: 'Managers', staff: 'Employees' };
   const SHAKE_WHAT = {
-    board: 'The strongest leaders in the company take Board seats from weaker directors.',
-    cxo: 'The best person anywhere takes each executive seat; the President is re-picked.',
-    mgr: 'Every team gets its best leader as manager.',
-    staff: 'Everyone moves to the department that suits them best (head counts stay the same).',
+    board: 'Anyone in the company may take a Board seat, if it raises output (each seat keeps its perk).',
+    cxo: 'Executive seats and the President go to whoever, anywhere in the company, does the most for output.',
+    mgr: 'Any leader may take any team; every team ends up with a manager.',
+    staff: 'People swap between departments, the most promising swaps first, until no swap raises output.',
   };
   function renderShake(s, dd) {
     const box = $('shake'), sh = s.shake, C = E.DATA.CONSTANTS;
@@ -669,9 +669,9 @@
         <ol class="shake-steps">${steps}</ol>
         ${sh.phase ? `<div class="cov shake-prog"><div data-k="sh-prog"></div></div>
           <p class="small">${SHAKE_WHAT[sh.phase]} <span class="bad-text">While it runs: incidents ×${C.shakeIncidentMult}, Order Line at ${Math.round(C.shakeDisruption * 100)}%.</span></p>`
-          : `<p class="small muted">Reorganize the whole company from the top down: Board, then executives, then managers, then employees. It takes about ${Math.round(Object.values(C.shakePhaseS).reduce((a, b) => a + b, 0) / 60)} minutes, and while it runs incidents are ${C.shakeIncidentMult}× likelier and the Order Line works at ${Math.round(C.shakeDisruption * 100)}%.</p>`}
+          : `<p class="small muted">Reorganize the whole company for output: anyone can move to any seat, from the Board down. Each phase tests thousands of moves, keeps the ones that raise income (without hurting Know-how, safety, Controls or costs) and stops when nothing helps. It takes about ${Math.round(Object.values(C.shakePhaseS).reduce((a, b) => a + b, 0) / 60)} minutes, and while it runs incidents are ${C.shakeIncidentMult}× likelier and the Order Line works at ${Math.round(C.shakeDisruption * 100)}%.</p>`}
         ${moves ? `<ul class="exec-log">${moves}</ul>` : ''}
-        ${!sh.phase && sh.report ? `<p class="small">Last shake-up: <b>${sh.report.moves}</b> move${sh.report.moves === 1 ? '' : 's'}, team strength <b>${sh.report.change >= 0 ? '+' : ''}${(sh.report.change * 100).toFixed(1)}%</b>.</p>` : ''}
+        ${!sh.phase && sh.report ? `<p class="small">Last shake-up: <b>${sh.report.moves}</b> move${sh.report.moves === 1 ? '' : 's'}, income <b>${sh.report.change >= 0 ? '+' : ''}${(sh.report.change * 100).toFixed(1)}%</b>.</p>` : ''}
         ${sh.phase ? '' : '<button class="btn primary" data-shake="1"></button>'}`;
     }
     const k = (n) => box.querySelector(`[data-k="${n}"]`);
