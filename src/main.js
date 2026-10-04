@@ -100,6 +100,7 @@
       const u = E.nextPanel(state), ok = E.buyPanel(state, b.dataset.scadaPanel);
       SFX.play(ok ? 'research' : 'cant');
       if (ok) UI.toast(`<b>${u.name}</b> is online in the control room.`, 3500);
+      else if (u) UI.toast(`<b>${u.name}</b> needs ${fmt(u.kh)} Know-how (you have ${fmt(state.kh)}).`, 3000);
       return render();
     }
     if (b.dataset.boardReplace != null) {
