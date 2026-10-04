@@ -668,7 +668,9 @@ ul.plain b { color: var(--text); }
   :root { --act-h: 66px; }
   .actions { padding: 6px 10px 8px; }
   .big-btn { height: 100%; min-height: 0; overflow: hidden; }
-  .big-btn-sub { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+  /* overflow:hidden (for the ellipsis) clips to the line box, so give descenders (the g in gal) room */
+  .big-btn-sub { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; line-height: 1.45; padding-bottom: 1px; }
+  .big-btn-title { line-height: 1.25; }
 }
 
 /* ---- executive track ---- */
