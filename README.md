@@ -1,6 +1,6 @@
 # Pressure Works
 
-**Play:** https://mrwuss.github.io/idle/ (deployed from `main` by `.github/workflows/pages.yml`)
+**Play:** https://mrwuss.github.io/idle/ (on every push to `main`, `.github/workflows/pages.yml` runs the tests and publishes the site to the `gh-pages` branch)
 
 Moving a save (for example from the Claude artifact to the web version): Logbook → **Open in GitHub Pages** carries the save in the link, and the web version asks before importing it. **Copy save code** / **Download save file** and **Import** / **Load save file** work too.
 
