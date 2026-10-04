@@ -820,7 +820,7 @@
     const X = (tt) => ((tt - t0) / (span + fw)) * (W - 4);
     const Y = (v) => T + h - ((tf(v) - a) / (b - a)) * h;
     // faint grid
-    g.strokeStyle = 'rgba(255,255,255,.05)'; g.lineWidth = 1;
+    g.strokeStyle = col('--sc-track'); g.lineWidth = 1;
     for (let k = 1; k < 4; k++) { const yy = Math.round(T + (h * k) / 4) + 0.5; g.beginPath(); g.moveTo(0, yy); g.lineTo(W, yy); g.stroke(); }
     if (fw) { const xn = Math.round(X(now)) + 0.5; g.setLineDash([2, 3]); g.beginPath(); g.moveTo(xn, 0); g.lineTo(xn, H); g.stroke(); g.setLineDash([]); }
     for (const m of marks) {
