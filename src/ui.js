@@ -676,19 +676,21 @@
 
 
   // ---- SCADA cockpit ----------------------------------------------------------------
-  // A control-room screen: live tiles with trends and rates of change, the heat and
-  // flow balance, alarms, and Controls' autonomous control switches.
+  // A control-room screen built from the game's own instruments: the same pressure and
+  // temperature dials and flow/accumulator meters as the control panel, plus trend charts
+  // with labelled axes. Numbers in this game get enormous, so money and Know-how trends
+  // switch to a log scale when they span orders of magnitude, and every label uses fmt().
 
   const HIST_N = 300;            // 5 minutes at one sample per second
-  const hist = { t: [], income: [], production: [], psi: [], temp: [], supply: [], demand: [], acc: [], kh: [], pak: [] };
+  const hist = { t: [], income: [], production: [], psi: [], temp: [], tempEq: [], supply: [], demand: [], kh: [], pak: [] };
   let lastSample = 0;
   function sample(s, d) {
     if (s.time - lastSample < 1 && hist.t.length) return;
     lastSample = s.time;
-    const push = (k, v) => { hist[k].push(v); if (hist[k].length > HIST_N) hist[k].shift(); };
+    const push = (k, v) => { hist[k].push(Number.isFinite(v) ? v : 0); if (hist[k].length > HIST_N) hist[k].shift(); };
     push('t', s.time); push('income', d.income); push('production', d.production); push('psi', d.psi);
-    push('temp', s.temp); push('supply', d.supply); push('demand', d.demand);
-    push('acc', s.accCharge / d.accCap); push('kh', d.khRate); push('pak', E.pakIncome(s, d));
+    push('temp', s.temp); push('tempEq', Math.min(d.tempEq, 9999)); push('supply', d.supply); push('demand', d.demand);
+    push('kh', d.khRate); push('pak', E.pakIncome(s, d));
   }
   /** Change per minute over (up to) the last minute of history; null until there's 10 s of it. */
   function rocWin(key) {
@@ -701,46 +703,83 @@
     return dt >= 10 / 60 ? { per: (a[i] - a[j]) / dt, from: a[j], dt } : null;
   }
   const roc = (key) => { const r = rocWin(key); return r && r.per; };
-  /** Percent change per minute, against the value a minute ago (null when that was ~0). */
+  /** Percent change per minute against the value a minute ago (null when that was ~0). */
   function pctRoc(key) {
     const r = rocWin(key);
     if (!r || !(r.from > 0)) return null;
     return Math.max(-999, Math.min(999, (r.per / r.from) * 100));
   }
-  function spark(cv, keys, colors) {
+  // Rates: small ones with decimals, big ones through fmt() so 1e30/min reads as "1.00No".
+  const sign = (v, unit, dp = 1) => (v == null ? '— ' + unit.trim()
+    : `${v >= 0 ? '▲ +' : '▼ −'}${Math.abs(v) < 1000 ? Math.abs(v).toFixed(dp) : fmt(Math.abs(v))}${unit}`);
+
+  /**
+   * A trend chart in the game's style: gridlines, y-axis labels through fmt(), "−5m … now",
+   * the latest value marked. `log` switches to log10 when the data spans more than 100×.
+   */
+  function trend(cv, series, { log = false, unit = '', marks = [] } = {}) {
     if (!cv) return;
-    const dpr = Math.min(2, root.devicePixelRatio || 1), w = cv.clientWidth, h = cv.clientHeight;
-    if (!w || !h) return;
-    if (cv.width !== Math.round(w * dpr)) { cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr); }
-    const g = cv.getContext('2d');
+    const dpr = Math.min(2, root.devicePixelRatio || 1), W = cv.clientWidth, H = cv.clientHeight;
+    if (!W || !H) return;
+    if (cv.width !== Math.round(W * dpr) || cv.height !== Math.round(H * dpr)) { cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr); }
+    const g = cv.getContext('2d'), cs = getComputedStyle($('scada'));
+    const col = (n) => cs.getPropertyValue(n).trim();
     g.setTransform(dpr, 0, 0, dpr, 0, 0);
-    g.clearRect(0, 0, w, h);
-    const all = keys.flatMap((k) => hist[k]);
-    if (all.length < 2) return;
-    let lo = Math.min(...all), hi = Math.max(...all);
-    if (hi - lo < 1e-9) { hi += 1; lo -= 1; }
-    keys.forEach((k, n) => {
-      const a = hist[k];
-      g.beginPath();
-      const span = Math.max(60, a.length) - 1; // stretch to what we have (at least a minute)
-      a.forEach((v, i) => { const x = (i / span) * w, y = h - 2 - ((v - lo) / (hi - lo)) * (h - 4); i ? g.lineTo(x, y) : g.moveTo(x, y); });
-      g.strokeStyle = colors[n]; g.lineWidth = 1.6; g.stroke();
-    });
+    g.clearRect(0, 0, W, H);
+    const L = 46, R = 8, T = 8, B = 16, w = W - L - R, h = H - T - B;
+    const vals = series.flatMap((x) => hist[x.key]).concat(marks.map((m) => m.v)).filter(Number.isFinite);
+    if (vals.length < 2) { g.fillStyle = col('--muted'); g.font = `11px ${col('--font-mono')}`; g.fillText('collecting data…', L, T + h / 2); return; }
+    // Log scale looks at positive values only (a 0 before the first sale mustn't disable it);
+    // zeros and negatives then sit on the bottom edge.
+    const pos = vals.filter((v) => v > 0);
+    let lo = Math.min(...vals), hi = Math.max(...vals);
+    const useLog = log && pos.length > 1 && Math.max(...pos) / Math.min(...pos) > 100;
+    if (useLog) { lo = Math.min(...pos); hi = Math.max(...pos); }
+    const tf = (v) => (useLog ? Math.log10(Math.max(v, lo)) : v);
+    let a = tf(lo), b = tf(hi);
+    if (b - a < 1e-9) { const pad = useLog ? 0.5 : Math.max(1, Math.abs(a) * 0.05); a -= pad; b += pad; }
+    else { const pad = (b - a) * 0.08; a -= pad; b += pad; }
+    if (!useLog && lo >= 0 && a < 0) a = 0;   // nothing here goes negative: keep the axis at 0
+    const y = (v) => T + h - ((tf(v) - a) / (b - a)) * h;
+    const inv = (yy) => { const f = a + (1 - (yy - T) / h) * (b - a); return useLog ? 10 ** f : f; };
+    // grid + y labels
+    g.font = `10px ${col('--font-mono')}`; g.textAlign = 'right'; g.textBaseline = 'middle';
+    for (let k = 0; k <= 3; k++) {
+      const yy = T + (h * k) / 3;
+      g.strokeStyle = col('--edge'); g.lineWidth = 1; g.beginPath(); g.moveTo(L, yy + 0.5); g.lineTo(L + w, yy + 0.5); g.stroke();
+      g.fillStyle = col('--muted'); g.fillText(fmt(inv(yy)) + unit, L - 4, yy);
+    }
+    // x axis
+    g.textAlign = 'left'; g.textBaseline = 'alphabetic'; g.fillText('−5m', L, H - 3);
+    g.textAlign = 'right'; g.fillText(useLog ? 'now · log' : 'now', L + w, H - 3);
+    // reference lines (limits, setpoints)
+    for (const m of marks) {
+      const yy = y(m.v);
+      if (yy < T || yy > T + h) continue;
+      g.setLineDash([4, 3]); g.strokeStyle = m.color; g.beginPath(); g.moveTo(L, yy); g.lineTo(L + w, yy); g.stroke(); g.setLineDash([]);
+      g.fillStyle = m.color; g.textAlign = 'left'; g.fillText(m.label, L + 4, yy - 3);
+    }
+    // series
+    for (const x of series) {
+      const arr = hist[x.key], n = arr.length, x0 = L + w * (1 - (n - 1) / (HIST_N - 1));
+      g.strokeStyle = col(x.color); g.lineWidth = 2; g.beginPath();
+      arr.forEach((v, i) => { const xx = x0 + (w * i) / (HIST_N - 1), yy = y(v); i ? g.lineTo(xx, yy) : g.moveTo(xx, yy); });
+      g.stroke();
+      const last = arr[n - 1];
+      g.fillStyle = col(x.color); g.beginPath(); g.arc(L + w, y(last), 3, 0, Math.PI * 2); g.fill();
+    }
   }
 
-  const SCADA_TILES = [
-    { id: 'income', label: 'Income', keys: ['income'], color: '#46c37b' },
-    { id: 'production', label: 'Production · Order Line', keys: ['production'], color: '#9aa7b4' },
-    { id: 'psi', label: 'System pressure', keys: ['psi'], color: '#e5484d' },
-    { id: 'temp', label: 'Oil temperature', keys: ['temp'], color: '#f2a900' },
-    { id: 'flow', label: 'Flow · supply vs demand', keys: ['supply', 'demand'], colors: ['#3aa0ff', '#f4603e'] },
-    { id: 'acc', label: 'Accumulator', keys: ['acc'], color: '#8fd0ff' },
-    { id: 'heat', label: 'Heat balance', keys: ['temp'], color: '#f2a900' },
-    { id: 'kh', label: 'Know-how', keys: ['kh'], color: '#b48ead' },
-    { id: 'pak', label: 'Pak line', keys: ['pak'], color: '#f4603e' },
-    { id: 'safety', label: 'Safety', keys: [], color: '' },
+  const SCADA_TILES = ['income', 'production', 'psi', 'temp', 'flow', 'acc', 'heat', 'kh', 'pak', 'safety'];
+  const TILE_LABEL = { income: 'Income', production: 'Production · Order Line', psi: 'System pressure', temp: 'Oil temperature',
+    flow: 'Flow', acc: 'Accumulator', heat: 'Heat balance', kh: 'Know-how', pak: 'Pak line', safety: 'Safety' };
+  const CHARTS = [
+    { id: 'money', title: 'Income & production · $/s', series: [{ key: 'income', color: '--ok' }, { key: 'production', color: '--steel' }], log: true },
+    { id: 'temp', title: 'Oil temperature · °F', series: [{ key: 'temp', color: '--oil' }, { key: 'tempEq', color: '--muted' }] },
+    { id: 'flow', title: 'Flow · GPM supply vs demand', series: [{ key: 'supply', color: '--cool' }, { key: 'demand', color: '--accent' }], log: true },
+    { id: 'kh', title: 'Know-how · per second', series: [{ key: 'kh', color: '--steel' }], log: true },
   ];
-  const sign = (v, unit, dp = 1) => (v == null ? '— ' + unit.trim() : `${v >= 0 ? '▲ +' : '▼ −'}${Math.abs(v) < 1000 ? Math.abs(v).toFixed(dp) : fmt(Math.abs(v))}${unit}`);
+  let scG = null;
 
   function openScada() { ui.scada = true; $('scada').hidden = false; document.body.classList.add('modal-open'); $('scada-body')._key = null; render(lastState); }
   function closeScada() { ui.scada = false; $('scada').hidden = true; if (!ui.sheet && !ui.person) document.body.classList.remove('modal-open'); }
@@ -751,18 +790,29 @@
     const key = [owned, E.scadaReady(s), P.cool, P.pumps, P.lines, P.budget].join('|');
     if (body._key !== key) {
       body._key = key;
+      scG = null;
       if (!owned) {
         const cs = E.teamStrength(s, 'controls');
         body.innerHTML = `<div class="scada-install"><h3>SCADA · supervisory control</h3>
-          <p>Your Controls engineers can tie every pump, valve, cooler and line into one supervisory system: live trends and alarms, <b>loop tuning</b> (+${C.scadaTunePer * 100}% income per Controls strength, up to +${C.scadaTuneMax * 100}%) and <b>autonomous control</b> that keeps the plant cool, balanced and growing on its own.</p>
+          <p>Your Controls engineers can tie every pump, valve, cooler and line into one supervisory system: live instruments, trends and alarms, <b>loop tuning</b> (+${C.scadaTunePer * 100}% income per Controls strength, up to +${C.scadaTuneMax * 100}%) and <b>autonomous control</b> that keeps the plant cool, balanced and growing on its own.</p>
           <ul class="plain"><li>${s.tech.telematics ? '✓' : '✗'} Telematics researched</li>
             <li>${cs >= C.scadaControls ? '✓' : '✗'} Controls team strength ${C.scadaControls}+ (now ${cs.toFixed(1)}; move engineers to Controls on their ID badge)</li>
             <li data-k="kh-req"></li></ul>
           <button class="btn primary" data-scada-buy="1">Install SCADA<small>${fmt(C.scadaKH)} Know-how</small></button></div>`;
       } else {
-        body.innerHTML = `<div class="scada-grid">${SCADA_TILES.map((x) => `<div class="tile-s" data-tile="${x.id}">
-            <div class="ts-label">${x.label}</div><div class="ts-val" data-k="v-${x.id}"></div><div class="ts-sub" data-k="s-${x.id}"></div>
-            ${x.keys.length ? `<canvas class="ts-spark" data-c="${x.id}"></canvas>` : '<div class="ts-spark" data-k="x-safety"></div>'}</div>`).join('')}</div>
+        body.innerHTML = `<div class="scada-instruments">
+            <figure class="gauge" id="sc-g-psi"><figcaption>Pressure</figcaption></figure>
+            <figure class="gauge" id="sc-g-temp"><figcaption>Oil temp</figcaption></figure>
+            <div class="meters scada-meters">
+              <div class="meter"><div class="meter-head"><span>Flow</span><span data-k="m-flow"></span></div>
+                <div class="bar"><div class="bar-mark" data-k="m-flow-mark"></div><div class="bar-fill flow" data-k="m-flow-fill"></div></div></div>
+              <div class="meter"><div class="meter-head"><span>Accumulator</span><span data-k="m-acc"></span></div>
+                <div class="bar"><div class="bar-fill acc" data-k="m-acc-fill"></div></div></div>
+            </div>
+          </div>
+          <div class="scada-grid">${SCADA_TILES.map((id) => `<div class="tile-s" data-tile="${id}">
+            <div class="ts-label">${TILE_LABEL[id]}</div><div class="ts-val" data-k="v-${id}"></div><div class="ts-sub" data-k="s-${id}"></div></div>`).join('')}</div>
+          <div class="scada-charts">${CHARTS.map((c) => `<section class="scada-panel"><h4>${c.title}</h4><canvas class="trend" data-c="${c.id}"></canvas></section>`).join('')}</div>
           <div class="scada-row">
             <section class="scada-panel"><h4>Alarms</h4><ul class="scada-alarms" data-k="alarms"></ul></section>
             <section class="scada-panel"><h4>Autonomous control</h4>
@@ -774,6 +824,7 @@
               <p class="muted small" data-k="scan"></p>
               <ul class="exec-log scada-log" data-k="log"></ul></section>
           </div>`;
+        scG = { psi: makeGauge($('sc-g-psi'), 'PSI'), temp: makeGauge($('sc-g-temp'), '°F') };
       }
     }
     const k = (n) => body.querySelector(`[data-k="${n}"]`);
@@ -783,30 +834,43 @@
       if (b) b.disabled = !E.canBuyScada(s);
       return;
     }
-    const o = d.order, lim = d.tempLimit, tRoc = roc('temp');
+    // Instruments: the control panel's own dials and meters, on the true (unwobbled) values.
+    const lim = d.tempLimit;
+    scG.psi.set(d.psi, 0, niceMax(d.psi * 1.25), d.psi, fmt(d.psi, 0));
+    scG.temp.set(s.temp, 60, Math.max(260, lim + 80), lim, `${Math.round(s.temp)}°`);
+    const flowMax = Math.max(d.supply, d.demand, 1) * 1.1;
+    k('m-flow-fill').style.width = `${(d.supply / flowMax) * 100}%`;
+    k('m-flow-fill').classList.toggle('starved', d.utilization < 1);
+    k('m-flow-mark').style.left = `${(d.demand / flowMax) * 100}%`;
+    setPart(k('m-flow'), `${fmt(d.supply)} / ${fmt(d.demand)} GPM`, true);
+    const accF = s.accCharge / d.accCap;
+    k('m-acc-fill').style.width = `${accF * 100}%`;
+    setPart(k('m-acc'), `${fmt(s.accCharge)} / ${fmt(d.accCap)} gal`, true);
+
+    const o = d.order, tRoc = roc('temp');
     const v = {
       income: [`$${fmt(d.income)}/s`, `${sign(pctRoc('income'), '%/min')} · surge ${d.surging ? 'ON ×' + d.m.surgeMult : 'off'}`],
-      production: [`$${fmt(d.production)}/s`, `Order Line ${Math.round(o.factor * 100)}%${o.bottleneck && o.factor < 0.999 ? ' · neck: ' + DEPT_BY_ID[o.bottleneck].name : ''} · surplus +${Math.round((o.bonus - 1) * 100)}%`],
+      production: [`$${fmt(d.production)}/s`, `Order Line ${Math.round(o.factor * 100)}%${o.bottleneck && o.factor < 0.999 ? ' · neck: ' + DEPT_BY_ID[o.bottleneck].name : ''} · surplus +${fmt((o.bonus - 1) * 100, 1)}%`],
       psi: [`${fmt(d.psi)} psi`, `${TIERS[s.tier].name} · ${sign(roc('psi'), ' psi/min', 0)}`],
-      temp: [`${Math.round(s.temp)}°F`, `${sign(tRoc, '°F/min')} · eq ${Math.round(Math.min(d.tempEq, 9999))}°F · limit ${lim}°F${s.temp > lim ? ' · income ×' + d.thermalMult.toFixed(2) : ''}`],
-      flow: [`${fmt(d.supply)} / ${fmt(d.demand)}`, `GPM supply / demand · utilization ${Math.round(d.utilization * 100)}% · relief ${fmt(d.overRelief)} GPM · to acc ${fmt(d.toAcc)} GPM`],
-      acc: [`${Math.round(100 * s.accCharge / d.accCap)}%`, `${fmt(s.accCharge)} / ${fmt(d.accCap)} gal · ${E.canSurge(s) ? 'READY' : d.surging ? `surging ${Math.ceil(s.surgeLeft)}s` : 'charging'}${d.m.autoSurge ? ' · PLC auto' : ''}`],
+      temp: [`${Math.round(s.temp)}°F`, `${sign(tRoc, '°F/min')} · heading for ${fmt(Math.min(d.tempEq, 9999), 0)}°F · limit ${lim}°F${s.temp > lim ? ' · income ×' + d.thermalMult.toFixed(2) : ''}`],
+      flow: [`${Math.round(d.utilization * 100)}% used`, `supply ${fmt(d.supply)} · demand ${fmt(d.demand)} GPM · relief ${fmt(d.overRelief)} · to acc ${fmt(d.toAcc)}`],
+      acc: [`${Math.round(100 * accF)}%`, `${E.canSurge(s) ? 'READY' : d.surging ? `surging ${Math.ceil(s.surgeLeft)}s` : 'charging'}${d.m.autoSurge ? ' · PLC auto' : ''}`],
       heat: [`${fmt(d.heatHP)} HP`, `pumps ${fmt(d.pumpLossHP)} + relief ${fmt(d.reliefHP)} HP · cooling k ${fmt(d.k)}`],
       kh: [`${fmt(d.khRate)}/s`, `${sign(pctRoc('kh'), '%/min')} · bank ${fmt(s.kh)}`],
       pak: [`$${fmt(E.pakIncome(s, d))}/s`, E.pakOpen(s) ? `${fmt(E.pakHoursRate(s))} hrs/s · building ${E.pakNext(s)}` : 'no Engineering yet'],
-      safety: [`${E.safeDays(s)} days safe`, (() => { const r = E.incidentRate(s, d) * 3600; return r > 0 ? `≈ ${r.toFixed(1)} incidents/hour${s.shake && s.shake.phase ? ' (shake-up ×3)' : ''}` : 'no incident risk'; })()],
+      safety: [`${fmt(E.safeDays(s))} days safe`, (() => { const r = E.incidentRate(s, d) * 3600; return s.safety && s.safety.incident ? `LINE DOWN · ${Math.ceil(s.safety.incident.left)}s` : r > 0 ? `≈ ${fmt(r, 1)} incidents/hour${s.shake && s.shake.phase ? ' (shake-up ×3)' : ''}` : 'no incident risk'; })()],
     };
-    for (const x of SCADA_TILES) {
-      setPart(k(`v-${x.id}`), v[x.id][0], true);
-      setPart(k(`s-${x.id}`), v[x.id][1], true);
-      if (x.keys.length) spark(body.querySelector(`[data-c="${x.id}"]`), x.keys, x.colors || [x.color]);
-    }
+    for (const id of SCADA_TILES) { setPart(k(`v-${id}`), v[id][0], true); setPart(k(`s-${id}`), v[id][1], true); }
     const tile = (id) => body.querySelector(`[data-tile="${id}"]`);
     tile('temp').classList.toggle('alarm', s.temp > lim);
     tile('temp').classList.toggle('warn', s.temp <= lim && d.tempEq > lim);
     tile('flow').classList.toggle('alarm', d.utilization < 0.999);
     tile('production').classList.toggle('warn', o.factor < 0.999);
-    setPart(k('x-safety'), s.safety && s.safety.incident ? `<span class="bad-text">LINE DOWN · ${Math.ceil(s.safety.incident.left)}s</span>` : '<span class="ok-text">All lines running</span>');
+    tile('safety').classList.toggle('alarm', !!(s.safety && s.safety.incident));
+    for (const c of CHARTS) {
+      const marks = c.id === 'temp' ? [{ v: lim, label: `limit ${lim}°F`, color: getComputedStyle($('scada')).getPropertyValue('--pressure').trim() }] : [];
+      trend(body.querySelector(`[data-c="${c.id}"]`), c.series, { log: c.log, marks });
+    }
     setPart(k('alarms'), $('alerts').innerHTML || '<li class="good">No active alarms</li>');
     setPart(k('scan'), `Scan every ${C.scadaEvery}s, up to ${E.scadaScan(s)} action${E.scadaScan(s) === 1 ? '' : 's'} per scan (1 + Controls strength ÷ 3).`, true);
     setPart(k('log'), s.scada.log.slice(0, 6).map((l) => `<li><span class="muted">${fmtTime(Math.max(0, s.time - l.t))} ago</span> ${l.m}</li>`).join('') || '<li class="muted">No automated actions yet.</li>');
