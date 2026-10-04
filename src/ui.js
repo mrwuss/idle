@@ -1284,6 +1284,33 @@
     return 'Locked';
   }
 
+  // Phone top bar: shrink a resource (or status) line's font until the whole number fits its card
+  // (large system text on Android makes the default sizes overflow). Android scales any px
+  // size we set by the system text factor too, so it's measured and divided out. Refits only
+  // when the text or the card width changes.
+  const phoneMq = typeof matchMedia === 'function' ? matchMedia('(max-width: 760px)') : null;
+  function fitRes() {
+    const phone = phoneMq && phoneMq.matches;
+    for (const el of document.querySelectorAll('.res dt, .res dd, .res small, .m-status span')) {
+      const key = phone ? el.textContent + '|' + el.clientWidth : '';
+      if (el._fit === key) continue;
+      el.style.fontSize = '';
+      if (phone && el.clientWidth > 0 && el.scrollWidth > el.clientWidth) {
+        const cs = () => parseFloat(getComputedStyle(el).fontSize);
+        const want = cs() * (el.clientWidth / el.scrollWidth);
+        el.style.fontSize = '10px';
+        const boost = cs() / 10 || 1;
+        let px = want / boost;
+        el.style.fontSize = px.toFixed(2) + 'px';
+        for (let i = 0; i < 6 && el.scrollWidth > el.clientWidth && px > 6; i++) {
+          px *= 0.93;
+          el.style.fontSize = px.toFixed(2) + 'px';
+        }
+      }
+      el._fit = phone ? el.textContent + '|' + el.clientWidth : '';
+    }
+  }
+
   let lastState = null, lastKhRate = 0;
   function render(s) {
     lastState = s;
@@ -1300,7 +1327,8 @@
     $('r-khrate').textContent = `+${fmt(d.khRate)}/s`;
     $('r-patents-wrap').hidden = s.patents === 0 && !E.canOverhaul(s);
     $('r-patents').textContent = fmt(s.patents);
-    $('r-patentbonus').textContent = `+${fmt((m.patentMult - 1) * 100)}% income`;
+    $('r-patentbonus').textContent = `+${fmt((m.patentMult - 1) * 100)}%`;
+    fitRes();
 
     // machine panel
     $('tier-name').textContent = `${TIERS[s.tier].name} · ${fmt(d.psi)} psi`;
@@ -1370,6 +1398,7 @@
       + `<span class="${hot}">${Math.round(s.temp)}°F${bar((s.temp - 60) / Math.max(1, d.tempLimit - 60))}</span>`
       + `<span class="${d.utilization < 1 ? 'bad' : ''}">flow ${Math.round(flow * 100)}%${bar(flow)}</span>`
       + `<span class="acc">acc ${Math.round(100 * s.accCharge / d.accCap)}%${bar(s.accCharge / d.accCap)}</span>`);
+    fitRes();
     const n = $('alerts').querySelectorAll('.bad').length;
     $('works-badge').hidden = !n;
     $('works-badge').textContent = n;

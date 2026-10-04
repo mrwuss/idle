@@ -431,17 +431,20 @@ textarea { width: 100%; background: var(--sunk); color: var(--text); border: 1px
   .brand h1, .tagline { display: none; }
   .brand-gauge { width: 26px; height: 26px; }
   .topbar .resources { flex: 1; gap: 4px; flex-wrap: nowrap; min-width: 0; }
-  .res { padding: 2px 6px; min-width: 0; flex: 1; border-radius: 4px; }
-  .res dt { font-size: 8.5px; letter-spacing: .06em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .res dd, .res small { overflow: hidden; text-overflow: ellipsis; }
-  .res dd { font-size: 14px; line-height: 1.15; white-space: nowrap; }
-  .res small { font-size: 9.5px; white-space: nowrap; }
+  /* values never truncate: fitRes() in ui.js shrinks a line's font until it fits its card */
+  .res { padding: 2px 5px; min-width: 0; flex: 1 1 0; border-radius: 4px; overflow: hidden; }
+  .res:first-child { flex-grow: 1.35; }
+  .res dt { font-size: 8.5px; letter-spacing: .04em; white-space: nowrap; overflow: hidden; }
+  .res dd, .res small { display: block; white-space: nowrap; overflow: hidden; }
+  .res dd { font-size: 14px; line-height: 1.15; }
+  .res small { font-size: 9.5px; line-height: 1.2; }
+  .d-only { display: none; }
   .icon-btn { width: 34px; height: 34px; padding: 6px; }
   .m-status {
-    display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; width: 100%; order: 5;
+    display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; width: 100%; order: 5;
     background: none; border: 0; padding: 2px 0 0; color: var(--text); cursor: pointer; text-align: left;
   }
-  .m-status span { font: 10.5px var(--font-mono); white-space: nowrap; overflow: hidden; }
+  .m-status span { font: 10.5px var(--font-mono); white-space: nowrap; overflow: hidden; min-width: 0; }
   .m-status span i { display: block; height: 2px; margin-top: 2px; background: var(--sunk); border-radius: 1px; overflow: hidden; }
   .m-status span i b { display: block; height: 100%; background: var(--accent); }
   .m-status .acc i b { background: var(--cool); }
