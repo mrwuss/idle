@@ -758,6 +758,15 @@ ul.plain b { color: var(--text); }
 .patent-office .btn { min-height: 44px; }
 .time-machine { margin-top: 12px; border-color: var(--accent-dim); }
 .standards { margin-top: 12px; border-color: var(--accent-dim); }
+.contracts { margin-top: 10px; display: grid; gap: 6px; }
+.contracts h4 { margin: 4px 0 0; }
+.ct-offers { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 6px; }
+.contract { display: flex; gap: 8px; align-items: center; padding: 8px; border: 1px solid var(--edge); border-radius: var(--radius); background: var(--panel-2); min-width: 0; }
+.contract.active { border-color: var(--accent); }
+.ct-main { flex: 1; display: grid; gap: 2px; min-width: 0; font-size: 12px; }
+.ct-main span { color: var(--muted); font-size: 11px; }
+.ct-main em { font-style: normal; }
+.ct-main .cov { margin-top: 4px; }
 .standards p { font-size: 13px; margin: 4px 0 8px; }
 .std-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 6px; }
 .std { display: flex; gap: 8px; align-items: center; padding: 8px; border: 1px solid var(--edge); border-radius: var(--radius); background: var(--panel-2); min-width: 0; }

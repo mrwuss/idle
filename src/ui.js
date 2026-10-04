@@ -1042,6 +1042,35 @@
       r.btn.hidden = !open || s.pak.target === p.id;
       r.btn.disabled = sysBlocked;
     }
+    renderContracts(s, dd);
+  }
+
+  // Pak contracts: offers from your locations, the one you're working on, and recent results.
+  function renderContracts(s, dd) {
+    const box = $('contracts'), K = s.contracts, open = E.pakOpen(s) && E.pakHoursRate(s) > 0;
+    box.hidden = !open && !K.active;
+    if (box.hidden) return;
+    const c = K.active, R = (id) => E.DATA.REGIONS.find((r) => r.id === id);
+    const pakName = (id) => PAKS.find((p) => p.id === id).name;
+    const key = [c && c.id, K.offers.map((o) => o.id).join(','), K.log.length && K.log[0].t].join('|');
+    if (box._key !== key) {
+      box._key = key;
+      box.innerHTML = `<h4>Contracts <span class="muted small">· ${fmt(s.contractsDone || 0, 0)} delivered on time</span></h4>
+        <p class="hint">Clients near your locations order Paks against a deadline. Accept one and the line builds that Pak; each still sells as usual, and delivering them all in time pays a bonus. Bigger regions pay more.</p>
+        ${c ? `<div class="contract active"><div class="ct-main"><b>${c.client}</b><span>${c.market} · ${R(c.region).name}</span>
+            <em data-k="ct-prog"></em><div class="cov"><div data-k="ct-bar"></div></div></div>
+            <button class="btn mini ghost" data-contract-drop="1">Walk away</button></div>` : ''}
+        <div class="ct-offers">${K.offers.map((o) => `<div class="contract"><div class="ct-main"><b>${o.client}</b><span>${o.market} · ${R(o.region).name}</span>
+            <em>${fmt(o.qty, 0)} ${pakName(o.pak)}${o.qty > 1 ? 's' : ''} in ${Math.round(o.time / 60)} min · bonus <b data-k="ct-b-${o.id}"></b></em></div>
+            <button class="btn mini" data-contract="${o.id}"${c ? ' disabled' : ''}>Accept</button></div>`).join('') || '<p class="muted small">New offers arrive every few minutes.</p>'}</div>
+        ${K.log.length ? `<ul class="exec-log">${K.log.slice(0, 3).map((l) => `<li><span class="muted">${fmtTime(Math.max(0, s.time - l.t))} ago</span> ${l.m}</li>`).join('')}</ul>` : ''}`;
+    }
+    const k = (n) => box.querySelector(`[data-k="${n}"]`);
+    if (c) {
+      setPart(k('ct-prog'), `${fmt(c.delivered, 0)} / ${fmt(c.qty, 0)} ${pakName(c.pak)}s · ${fmtTime(Math.max(0, c.left))} left · bonus $${fmt(E.contractBonus(s, dd, c))}`, true);
+      k('ct-bar').style.width = `${Math.min(100, (c.delivered / c.qty) * 100)}%`;
+    }
+    for (const o of K.offers) { const el = k(`ct-b-${o.id}`); if (el) setPart(el, `$${fmt(E.contractBonus(s, dd, o))}`, true); }
   }
 
   function renderCompany(s, dd) {

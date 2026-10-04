@@ -590,3 +590,16 @@ of 2M Know-how and 60 s of your current Know-how output, ×1.3 for every jump
 already made this run (the multiplier resets on Overhaul). Overhaul is blocked
 while a jump runs. The "Time Traveler" achievement marks the first jump.
 
+## Pak contracts (implemented, v0.3.7)
+
+Clients in your open locations (fictional firms from each region's markets) offer
+timed orders for Valve-, Base- or Sys-Paks; a new offer arrives every 4 minutes and
+the board holds three. Each is sized to take about 55% of its 15–40 minute deadline
+at your current Project speed. Accept one and the Pak line builds that Pak (it
+overrides your chosen target); every Pak still sells as usual, and delivering the
+whole order before the deadline pays a bonus of
+`2 × qty × Pak price × (1 + region customer base ÷ 400)`, so Houston's oil and
+offshore clients pay over twice what HQ's do. Missing the deadline (or walking
+away) loses only the bonus. Deliveries count toward two achievements and are kept
+through Overhaul; offers and the active contract belong to the run.
+

@@ -29,7 +29,7 @@ Design: [DEPARTMENTS.md](DEPARTMENTS.md)
 - [ ] Department signature mechanics: markets, conversion, supplier discount, inventory + Rush Ship, yield + certifications, DSO + interest, incident streak, span of control
 - [x] Engineering teams (Design / Controls / Project) and the Pak lines: Valve-Pak → Base-Pak → Sys-Pak
 - [x] People UI: compact department cards, department focus sheet, ID badges with explained stats
-- [ ] Named Sys-Pak contracts with deadlines
+- [x] Named Pak contracts with deadlines (v0.3.7)
 - [x] SCADA: Controls' cockpit (live tiles, trends, rates of change, alarms), loop tuning and autonomous control
 - [x] SCADA operator panel: digital gauges with sparklines, and four Know-how upgrades (historian, alarms, predictive, APC)
 - [ ] IT auto-balance (folded into SCADA automation; departments still hire via managers/executives)
@@ -53,7 +53,7 @@ Design: [TERRITORY.md](TERRITORY.md)
 
 - [x] Locations widen Outside Sales reach (√ customer base)
 - [ ] Markets (Outside Sales purchases) and a "customers maxed out" alert
-- [ ] Location-tagged Sys-Pak projects and per-state industry markets
+- [x] Location-tagged Pak contracts (clients from each open location's markets); per-state markets still open
 
 ## v0.3 — Make it feel good
 
@@ -69,7 +69,7 @@ Design: [TERRITORY.md](TERRITORY.md)
 
 ## v0.4 — Depth
 
-- [ ] Sys-Pak projects (named, timed contracts)
+- [x] Pak projects (named, timed contracts)
 - [ ] Contamination and filtration (owned by Quality)
 - [x] Incidents (owned by Safety)
 - [ ] Wear
