@@ -62,7 +62,7 @@
   <main class="layout">
     <!-- Left: controls and instruments -->
     <section class="panel machine" aria-label="Control panel">
-      <h2 class="panel-title">Control panel <span class="title-right"><button id="btn-scada" class="btn mini scada-btn" title="SCADA: supervisory control">SCADA</button><span id="tier-name" class="chip">Rubber Hose · 750 psi</span></span></h2>
+      <h2 class="panel-title">Control panel <span class="title-right"><button id="btn-scada" class="btn mini scada-btn" title="SCADA: supervisory control">SCADA</button></span></h2>
 
 
       <div class="gauges">
@@ -98,14 +98,14 @@
     <!-- Right: the shop -->
     <section class="panel shop" aria-label="Workshop">
       <nav class="tabs" role="tablist">
-        <button role="tab" data-tab="works" class="m-only"><svg class="tab-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 21V11l5 3v-3l5 3v-3l5 3V5h3v16Z"/></svg><span class="tl" data-short="Works">Works</span> <span class="badge" id="works-badge" hidden></span></button>
-        <button role="tab" data-tab="actuators" aria-selected="true"><svg class="tab-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M2 9h12v6H2z M14 12h7 M21 8v8"/></svg><span class="tl" data-short="Lines">Actuators</span></button>
-        <button role="tab" data-tab="pumps"><svg class="tab-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5a7 7 0 1 0 .01 0 M12 2v3 M12 19v3 M2 12h3 M19 12h3 M12 9v6 M9 12h6"/></svg><span class="tl" data-short="Pumps">Pumps</span></button>
-        <button role="tab" data-tab="system"><svg class="tab-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 17a9 9 0 1 1 18 0 M12 17l5-6 M3 17h18"/></svg><span class="tl" data-short="System">System</span></button>
-        <button role="tab" data-tab="tech"><svg class="tab-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 3h6 M10 3v6l-5 11h14l-5-11V3 M7.5 15h9"/></svg><span class="tl" data-short="R&amp;D">R&amp;D</span> <span class="badge" id="tech-badge" hidden></span></button>
-        <button role="tab" data-tab="company"><svg class="tab-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 11a3 3 0 1 0 0-6 3 3 0 0 0 0 6 M2 20c0-4 3-6 6-6s6 2 6 6 M16 5a3 3 0 0 1 0 6 M18 14c2.5 1 4 3 4 6"/></svg><span class="tl" data-short="Team">Company</span> <span class="badge" id="company-badge" hidden>!</span></button>
-        <button role="tab" data-tab="overhaul" id="tab-overhaul"><svg class="tab-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 12a8 8 0 1 1-2.6-5.9 M20 3v5h-5"/></svg><span class="tl" data-short="Overhaul">Overhaul</span></button>
-        <button role="tab" data-tab="settings"><svg class="tab-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h11a3 3 0 0 1 3 3v13H8a3 3 0 0 1-3-3Z M5 17a3 3 0 0 1 3-3h11"/></svg><span class="tl" data-short="Log">Logbook</span></button>
+        <button role="tab" data-tab="works" class="m-only"><svg class="tab-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 21V11l5 3v-3l5 3v-3l5 3V5h3v16Z"/></svg><span class="tl"><span class="tl-long">Works</span><span class="tl-short">Works</span></span> <span class="badge" id="works-badge" hidden></span></button>
+        <button role="tab" data-tab="actuators" aria-selected="true"><svg class="tab-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M2 9h12v6H2z M14 12h7 M21 8v8"/></svg><span class="tl"><span class="tl-long">Actuators</span><span class="tl-short">Lines</span></span></button>
+        <button role="tab" data-tab="pumps"><svg class="tab-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5a7 7 0 1 0 .01 0 M12 2v3 M12 19v3 M2 12h3 M19 12h3 M12 9v6 M9 12h6"/></svg><span class="tl"><span class="tl-long">Pumps</span><span class="tl-short">Pumps</span></span></button>
+        <button role="tab" data-tab="system"><svg class="tab-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 17a9 9 0 1 1 18 0 M12 17l5-6 M3 17h18"/></svg><span class="tl"><span class="tl-long">System</span><span class="tl-short">System</span></span></button>
+        <button role="tab" data-tab="tech"><svg class="tab-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 3h6 M10 3v6l-5 11h14l-5-11V3 M7.5 15h9"/></svg><span class="tl"><span class="tl-long">R&amp;D</span><span class="tl-short">R&amp;D</span></span> <span class="badge" id="tech-badge" hidden></span></button>
+        <button role="tab" data-tab="company"><svg class="tab-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 11a3 3 0 1 0 0-6 3 3 0 0 0 0 6 M2 20c0-4 3-6 6-6s6 2 6 6 M16 5a3 3 0 0 1 0 6 M18 14c2.5 1 4 3 4 6"/></svg><span class="tl"><span class="tl-long">Company</span><span class="tl-short">Team</span></span> <span class="badge" id="company-badge" hidden>!</span></button>
+        <button role="tab" data-tab="overhaul" id="tab-overhaul"><svg class="tab-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 12a8 8 0 1 1-2.6-5.9 M20 3v5h-5"/></svg><span class="tl"><span class="tl-long">Overhaul</span><span class="tl-short">Overhaul</span></span></button>
+        <button role="tab" data-tab="settings"><svg class="tab-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h11a3 3 0 0 1 3 3v13H8a3 3 0 0 1-3-3Z M5 17a3 3 0 0 1 3-3h11"/></svg><span class="tl"><span class="tl-long">Logbook</span><span class="tl-short">Log</span></span></button>
       </nav>
 
       <div class="buyqty" id="buyqty" role="radiogroup" aria-label="Buy quantity">
@@ -147,30 +147,44 @@
             <b>Order Line</b> like oil through a circuit, and the narrowest department sets the pace.
             Departments open as the shop grows. You cover each one yourself at first; as production grows, each needs more people, and the line runs at its least-covered department. Opening new locations lets each Outside Sales rep reach more customers.</p>
         </div>
-        <h3>Leadership <span class="muted" id="exec-summary"></span></h3>
-        <p class="hint" id="exec-hint"></p>
-        <div id="org" class="org"></div>
-        <div id="shake" class="shake" hidden></div>
-        <div id="board-wrap">
-          <h3>Board of Directors <span class="muted" id="board-summary"></span></h3>
-          <div id="board" class="board"></div>
+        <div class="seg team-seg" role="tablist" aria-label="Company sections">
+          <button class="btn mini" data-team="line">Order Line</button>
+          <button class="btn mini" data-team="leaders">Leadership</button>
+          <button class="btn mini" data-team="paks">Paks</button>
+          <button class="btn mini" data-team="map">Territory</button>
         </div>
-        <h3>Territory <span class="muted">· 4 locations · 13 states + Gulf · <span id="customer-base"></span></span></h3>
-        <div class="territory">
-          <svg id="territory-map" class="territory-map" viewBox="0 0 188 368" role="img" aria-label="Territory map"></svg>
-          <div id="region-list" class="region-list"></div>
-        </div>
-        <div class="order-head">
-          <h3>Order Line <span class="muted">· leads in → cash out <span id="order-summary"></span></span></h3>
-          <button id="btn-staff-line" class="btn" hidden></button>
-        </div>
-        <div id="order-line" class="order-line"></div>
-        <h3>Support</h3>
-        <div id="support-depts" class="dept-grid"></div>
-        <h3>Project Engineering · Pak lines <span class="muted" id="pak-summary"></span></h3>
-        <p class="hint" id="pak-hint"></p>
-        <div id="pak-chain" class="pak-chain"></div>
-        <div id="contracts" class="contracts" hidden></div>
+        <section class="team-group" data-team-group="line">
+          <div class="order-head">
+            <h3>Order Line <span class="muted">· leads in → cash out <span id="order-summary"></span></span></h3>
+            <button id="btn-staff-line" class="btn" hidden></button>
+          </div>
+          <div id="order-line" class="order-line"></div>
+          <h3>Support</h3>
+          <div id="support-depts" class="dept-grid"></div>
+        </section>
+        <section class="team-group" data-team-group="leaders" hidden>
+          <h3>Leadership <span class="muted" id="exec-summary"></span></h3>
+          <p class="hint" id="exec-hint"></p>
+          <div id="org" class="org"></div>
+          <div id="shake" class="shake" hidden></div>
+          <div id="board-wrap">
+            <h3>Board of Directors <span class="muted" id="board-summary"></span></h3>
+            <div id="board" class="board"></div>
+          </div>
+        </section>
+        <section class="team-group" data-team-group="paks" hidden>
+          <h3>Project Engineering · Pak lines <span class="muted" id="pak-summary"></span></h3>
+          <p class="hint" id="pak-hint"></p>
+          <div id="pak-chain" class="pak-chain"></div>
+          <div id="contracts" class="contracts" hidden></div>
+        </section>
+        <section class="team-group" data-team-group="map" hidden>
+          <h3>Territory <span class="muted">· 4 locations · 13 states + Gulf · <span id="customer-base"></span></span></h3>
+          <div class="territory">
+            <svg id="territory-map" class="territory-map" viewBox="0 0 188 368" role="img" aria-label="Territory map"></svg>
+            <div id="region-list" class="region-list"></div>
+          </div>
+        </section>
       </div>
       <div class="tab-body" data-body="overhaul" hidden>
         <div class="card overhaul-card">
@@ -184,6 +198,13 @@
       </div>
       <div class="tab-body" data-body="settings" hidden>
         <div class="card">
+          <h3>Display</h3>
+          <div class="seg theme-seg" role="radiogroup" aria-label="Theme">
+            <button class="btn mini" data-theme-set="light">Light · IFP</button>
+            <button class="btn mini" data-theme-set="dark">Dark · shop floor</button>
+          </div>
+        </div>
+        <div class="card">
           <h3>Logbook</h3>
           <dl id="stats" class="stats"></dl>
         </div>
@@ -191,13 +212,6 @@
           <h3>Achievements <span class="muted" id="ach-count"></span></h3>
           <p class="muted">Each one adds +1% to all income, and they survive Overhaul.</p>
           <div id="ach" class="ach-grid"></div>
-        </div>
-        <div class="card">
-          <h3>Display</h3>
-          <div class="seg theme-seg" role="radiogroup" aria-label="Theme">
-            <button class="btn mini" data-theme-set="light">Light · IFP</button>
-            <button class="btn mini" data-theme-set="dark">Dark · shop floor</button>
-          </div>
         </div>
         <div class="card save-card">
           <h3>Save data</h3>

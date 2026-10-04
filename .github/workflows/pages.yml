@@ -37,6 +37,9 @@ jobs:
           mkdir _site
           cp -r index.html style.css src assets _site/
           touch _site/.nojekyll
+          # Version the stylesheet and scripts so a phone that cached the old ones
+          # (Pages serves max-age=600) can't mix them with a new index.html.
+          sed -i -E "s#(href=\"style\.css|src=\"src/[a-z]+\.js)\"#\1?v=${GITHUB_SHA::7}\"#" _site/index.html
           cd _site
           git init -q -b gh-pages
           git config user.name "github-actions[bot]"

@@ -2,7 +2,7 @@
 /*
  * Headless balance simulator.
  *
- *   node tools/simulate.js [hours=6] [--overhaul] [--quiet]
+ *   node tools/simulate.js [hours=6] [--overhaul] [--quiet] [--save=file.json]
  *
  * A greedy bot plays the real engine: every simulated second it buys whatever
  * gets it the most income soonest ("time to afford + payback time"),
@@ -203,6 +203,9 @@ while (s.time < end) {
   for (const a of E.checkAchievements(s)) log(`ACH   ${a.name}`);
   E.checkLocations(s);
 }
+
+const savePath = (args.find((a) => a.startsWith('--save=')) || '').slice(7);
+if (savePath) require('fs').writeFileSync(savePath, E.serialize(s)); // load in the browser for UI checks
 
 const d = E.derive(s);
 console.log('\nFinal:', {
