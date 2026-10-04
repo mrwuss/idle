@@ -26,7 +26,8 @@ Design: [DEPARTMENTS.md](DEPARTMENTS.md)
 - [x] Purchasing twist: supplier discounts
 - [x] Patent formula tamed (cube root)
 - [ ] Move R&D under Engineering → Design; move PLC/Servo/Proportional/LS/DD/Telematics to Controls
-- [ ] Department signature mechanics: markets, conversion, supplier discount, inventory + Rush Ship, yield + certifications, DSO + interest, incident streak, span of control
+- [x] Department signatures, first set: Accounting interest, Quality-certified Paks, Warehouse Rush Ship, Inside Sales contract offers, Management Focus (v0.3.8)
+- [ ] Remaining department mechanics: markets, conversion and lost leads, yield + RMAs, DSO, span of control
 - [x] Engineering teams (Design / Controls / Project) and the Pak lines: Valve-Pak → Base-Pak → Sys-Pak
 - [x] People UI: compact department cards, department focus sheet, ID badges with explained stats
 - [x] Named Pak contracts with deadlines (v0.3.7)

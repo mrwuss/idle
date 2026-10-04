@@ -742,3 +742,34 @@ test('Pak contracts: offers from open locations, timed delivery, bonus on time',
   s.lifetime = 1e13; E.overhaul(s);
   assert.equal(s.contractsDone, 1, 'kept through Overhaul');
 });
+
+test('department signatures: interest, certified Paks, Rush Ship, more offers, Focus', () => {
+  const s = lateGame();
+  s.safety.incident = null;
+  const d = E.derive(s);
+  // Accounting interest, capped at a share of income.
+  assert.ok(E.interestRate(s, d) > 0 && E.interestRate(s, d) <= d.income * E.DATA.CONSTANTS.interestCapIncome + 1e-9);
+  // Quality certifies Paks.
+  assert.ok(E.qualityPakMult(s) > 1);
+  // Warehouse: contract time and the Rush Ship buffer.
+  assert.ok(E.warehouseTimeMult(s) > 1);
+  assert.ok(E.rushOpen(s));
+  s.rush = 0; assert.equal(E.rushShip(s), 0, 'buffer empty');
+  for (let i = 0; i < 700; i++) E.tick(s, 1);
+  assert.ok(E.canRush(s), 'buffer filled');
+  const cash = s.cash, v = E.rushValue(s);
+  assert.ok(Math.abs(E.rushShip(s) - v) < 1e-6 * v && s.cash > cash && s.rush === 0);
+  // Inside Sales: more offers, faster.
+  assert.ok(E.insideSpeed(s) > 1 && E.offerSlots(s) >= 3);
+  // Management Focus doubles a department, then recharges.
+  assert.ok(E.focusOpen(s));
+  const before = E.orderLine(s, E.derive(s).production).depts.warehouse.effective;
+  assert.ok(E.setFocus(s, 'warehouse'));
+  assert.ok(E.orderLine(s, E.derive(s).production).depts.warehouse.effective > before * 1.5);
+  assert.equal(E.setFocus(s, 'quality'), false, 'one at a time');
+  for (let i = 0; i < 301; i++) E.tick(s, 1);
+  assert.equal(E.focusMult(s, 'warehouse'), 1, 'wears off');
+  assert.equal(E.canFocus(s, 'quality'), false, 'recharging');
+  for (let i = 0; i < 901; i++) E.tick(s, 1);
+  assert.ok(E.canFocus(s, 'quality'), 'ready again');
+});

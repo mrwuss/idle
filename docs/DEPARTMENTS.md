@@ -603,3 +603,20 @@ offshore clients pay over twice what HQ's do. Missing the deadline (or walking
 away) loses only the bonus. Deliveries count toward two achievements and are kept
 through Overhaul; offers and the active contract belong to the run.
 
+## Department signatures (implemented, v0.3.8)
+
+Each of these departments now does something of its own, shown live on its card
+and in its focus sheet:
+
+| Department | Signature | Formula |
+|---|---|---|
+| Accounting | **Interest on cash** | `cash × 0.001% × Accounting strength` per second, capped at 20% of income |
+| Quality | **Certified Paks** | Pak prices × `(1 + 3% × Quality strength)`, up to +60% |
+| Warehouse | **Rush Ship** (a business-side Surge) and contract time | the buffer fills in `10 min ÷ (1 + 10% × strength)`; when full, Rush Ship sells 2 min of production at once; Pak contract deadlines +2% per strength (max +50%) |
+| Inside Sales | **Contract offers** | +1 offer slot per 4 strength (max 6 on the board); offers arrive 5% faster per strength |
+| Management | **Focus** | with Management strength 1+, pick any department: its strength ×2 for 5 min, then 15 min to recharge |
+
+Still planned from the table above: Outside Sales markets, Inside Sales
+conversion and lost leads, Quality yield/RMAs and certifications that gate
+markets, Accounting collection delay (DSO), Management span of control.
+

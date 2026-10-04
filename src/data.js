@@ -528,6 +528,21 @@
     // Time Machine: jump ahead and play the time out (managers, executives, SCADA, Paks, incidents).
     warpHours: [1, 8, 24],     // the jumps on offer
     standardBase: 25,          // the first standard costs 25 Patents…
+    // Department signatures
+    interestPer: 1e-5,         // Accounting: cash earns 0.001%/s per Accounting strength…
+    interestCapIncome: 0.2,    // …capped at 20% of income
+    qualityPakPer: 0.03,       // Quality certifications: Pak prices +3% per strength…
+    qualityPakMax: 0.6,        // …up to +60%
+    rushFillS: 600,            // Warehouse: the Rush Ship buffer fills in 10 min ÷ (1 + 10% × strength)
+    rushFillPer: 0.1,
+    rushSeconds: 120,          // Rush Ship sells 2 min of production at once
+    warehouseTimePer: 0.02,    // Warehouse: contract deadlines +2% per strength, up to +50%
+    warehouseTimeMax: 0.5,
+    insideOfferPer: 4,         // Inside Sales: +1 offer slot per 4 strength (max 6 offers)…
+    insideSpeedPer: 0.05,      // …and offers arrive 5% faster per strength
+    focusS: 300,               // Management Focus: one department ×2 for 5 min…
+    focusCooldownS: 900,       // …then 15 min to recharge
+    focusMinMgmt: 1,           // needs Management strength 1+
     // Sys-Pak contracts
     contractEvery: 240,        // a new offer every 4 minutes (the board holds 3)
     contractOffers: 3,

@@ -316,6 +316,43 @@
     return [status, detail, `${load}%`, story, strength, neck];
   }
   /** Chips that break down where a team's output comes from. */
+  /** A department's signature mechanic, live: [short text, button html or ''] */
+  function signature(s, dd, id) {
+    const C = E.DATA.CONSTANTS;
+    switch (id) {
+      case 'accounting': return [`Interest on cash: +$${fmt(E.interestRate(s, dd))}/s (capped at ${C.interestCapIncome * 100}% of income)`, ''];
+      case 'quality': return [`Certified Paks: prices +${Math.round((E.qualityPakMult(s) - 1) * 100)}%`, ''];
+      case 'warehouse': return [`Rush Ship buffer ${Math.floor(s.rush * 100)}% · contract deadlines +${Math.round((E.warehouseTimeMult(s) - 1) * 100)}%`, 'rush'];
+      case 'inside_sales': return [`Contract offers: ${E.offerSlots(s)} on the board, ${Math.round((E.insideSpeed(s) - 1) * 100)}% faster`, ''];
+      case 'management': return [E.focusOpen(s) ? (s.focus.left > 0 ? `Focus: ${DEPT_BY_ID[s.focus.id].name} ×2 for ${fmtTime(s.focus.left)}` : s.focus.cooldown > 0 ? `Focus recharging: ${fmtTime(s.focus.cooldown)}` : 'Focus ready: pick a department and tap Focus') : `Focus needs Management strength ${C.focusMinMgmt}`, ''];
+      default: return ['', ''];
+    }
+  }
+
+  /** Fill a signature box: the live text plus persistent buttons (rebuilt only when their set changes). */
+  function sigInto(box, s, dd, id, sig, btn, withFocus) {
+    const focus = withFocus && E.focusOpen(s) && id !== 'management';
+    const shape = [!!sig, btn, focus].join('|');
+    if (box._shape !== shape) {
+      box._shape = shape;
+      box.innerHTML = `${sig ? '<span class="sig"></span>' : ''}${btn === 'rush' ? '<button class="btn mini" data-rush="1"></button>' : ''}${focus ? `<button class="btn mini ghost" data-focus="${id}"></button>` : ''}`;
+    }
+    const sp = box.querySelector('.sig');
+    if (sp) setPart(sp, sig, true);
+    const rb = box.querySelector('[data-rush]');
+    if (rb) {
+      const html = `Rush Ship<small>+$${fmt(E.rushValue(s, dd))}</small>`;
+      if (rb._html !== html) { rb._html = html; rb.innerHTML = html; }
+      rb.disabled = !E.canRush(s); rb.classList.toggle('primary', E.canRush(s));
+    }
+    const fb = box.querySelector('[data-focus]');
+    if (fb) {
+      const html = `${E.focusMult(s, id) > 1 ? 'Focused' : 'Focus here'}<small>×2 for ${Math.round(E.DATA.CONSTANTS.focusS / 60)} min</small>`;
+      if (fb._html !== html) { fb._html = html; fb.innerHTML = html; }
+      fb.disabled = !E.canFocus(s, id);
+    }
+  }
+
   function boostChips(s, dd, d) {
     const st = s.depts[d.id], c = dd.order.depts[d.id] || {};
     const out = [`<span class="chip-s">People ${(1 + E.strength(st, d.id) / E.mgrBonus(st)).toFixed(1)}</span>`];
@@ -324,6 +361,7 @@
     if (E.mgmtMult(s) > 1) out.push(`<span class="chip-s good">Management +${Math.round((E.mgmtMult(s) - 1) * 100)}%</span>`);
     if (c.reach && c.reach !== 1) out.push(`<span class="chip-s good">Locations ×${c.reach.toFixed(2)}</span>`);
     if (d.id === 'purchasing' && E.purchasingDiscount(s) < 1) out.push(`<span class="chip-s">Prices −${Math.round((1 - E.purchasingDiscount(s)) * 100)}%</span>`);
+    if (E.focusMult(s, d.id) > 1) out.push(`<span class="chip-s good">Focus ×2 · ${fmtTime(s.focus.left)}</span>`);
     return out.join('');
   }
   const setBtn = (b, cost, label, cash) => {
@@ -338,7 +376,9 @@
     const o = dd.order, st = s.depts[d.id], c = o.depts[d.id];
     const [status, detail, , , , neck] = deptHealth(s, dd, d);
     r.staff.hidden = false;
-    r.twist.hidden = true;
+    const [sig, sigBtn] = signature(s, dd, d.id);
+    r.twist.hidden = !sig;
+    if (sig) sigInto(r.twist, s, dd, d.id, sig, sigBtn, false);
     r.status.textContent = status;
     setPart(r.staffText, `You + ${E.headcount(st)} hired · ${detail}`, true);
     r.cov.parentElement.hidden = !c;
@@ -433,6 +473,7 @@
         <section class="sh-health"><div class="sh-big" data-k="big"></div><p data-k="story"></p></section>
         ${dd.order.depts[d.id] ? '<div class="cov sh-cov"><div></div></div>' : ''}
         <div class="chips" data-k="chips"></div>
+        <div class="sig-row" data-k="sig"></div>
         <section><h4>What makes someone good here</h4>
           <div class="statfit"><div class="sf key"><b>${STAT[a].name}</b> <em>counts double</em><p>${STAT[a].desc}</p></div>
           <div class="sf"><b>${STAT[b].name}</b><p>${STAT[b].desc}</p></div></div>
@@ -450,6 +491,7 @@
     k('big').className = 'sh-big' + (neck ? ' bad' : '');
     setPart(k('story'), story, true);
     setPart(k('chips'), boostChips(s, dd, d));
+    { const [sig, sigBtn] = signature(s, dd, d.id); sigInto(k('sig'), s, dd, d.id, sig, sigBtn, true); }
     if (k('mgrlog')) {
       const lines = s.execLog.filter((l) => l.x === 'mgr:' + d.id).slice(0, 3);
       setPart(k('mgrlog'), lines.map((l) => `<li><span class="muted">${fmtTime(Math.max(0, s.time - l.t))} ago</span> ${l.m}</li>`).join(''));

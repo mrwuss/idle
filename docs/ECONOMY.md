@@ -40,6 +40,8 @@ update the tables here.
 | SCADA | 2M Know-how (needs Telematics + Controls strength 2); income × `(1 + min(0.2, 0.005 × Controls strength))`; automation scans every 2 s. Operator panel (Know-how, in order): historian 5M (+5% income), alarms 20M (incidents ×0.8), predictive 80M (+1 action/scan), APC 300M (tuning ×2, cap 40%). Simulator: historian ≈ 2h 47m, alarms ≈ 4h 54m |
 | Standards Committee | opens with the Board; standard *n* costs `25 × 2^n` Patents (spent, kept forever): actuators ×1.5, pumps ×1.5, costs −20%, temp limit +40°F, incidents −50%, Know-how ×2, SCADA kept through Overhaul, quick-start layout |
 | Era VI research | Isostatic Pressing 2M KH, Cryogenic Cooling 1.5M KH (+20°F limit), Subsea Power Units 3M KH (pumps ×1.25); not needed for the Patent Office |
+| Department signatures | Accounting interest `cash × 1e-5 × strength`/s (≤ 20% of income); Quality Pak prices ×(1 + 0.03 × strength, ≤ 1.6); Warehouse Rush Ship = 120 s of production, buffer fills in `600 s ÷ (1 + 0.1 × strength)`, contract time ×(1 + 0.02 × strength, ≤ 1.5); Inside Sales offers 3 + ⌊strength ÷ 4⌋ (≤ 6), arrival ×(1 + 0.05 × strength); Management Focus ×2 for 300 s, 900 s recharge |
+| Pak contracts | offer every 240 s; deadline 15–40 min; sized to 55% of it; bonus `2 × qty × price × (1 + region customers ÷ 400)` |
 | Patent Office | after all 17 original techs: filing *n* costs `1M × 1.6^n` Know-how (n counts every filing ever); filed patents don't reduce Overhaul gain |
 | Shake-up | costs 120 s of production, 5 min long, 30 min cooldown; incidents ×3 and Order Line ×0.9 while it runs |
 | Achievements | +1% income each (23 in all, kept through Overhaul) |
