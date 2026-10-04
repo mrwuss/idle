@@ -463,8 +463,9 @@ textarea { width: 100%; background: var(--sunk); color: var(--text); border: 1px
     height: var(--act-h); padding: 6px 10px; grid-template-columns: 1fr 1.5fr; gap: 8px;
     background: var(--bar); border-top: 1px solid var(--edge);
   }
-  .big-btn { padding: 6px; justify-content: center; }
-  .big-btn-title { font-size: 15px; }
+  .big-btn { padding: 6px 4px; justify-content: center; min-width: 0; }
+  /* The title scales with the screen so "Stroke hand pump" always fits (the whole button is the tap target). */
+  .big-btn-title { font-size: clamp(11px, 3.6vw, 15px); letter-spacing: .02em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
   .big-btn-sub { font-size: 10px; }
   .big-btn.surge { order: -1; }
   .tabs {
