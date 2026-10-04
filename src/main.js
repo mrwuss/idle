@@ -61,7 +61,7 @@
 
   // Hiring buttons inside re-rendered department cards.
   document.addEventListener('click', (ev) => {
-    const b = ev.target.closest('[data-scada-buy], [data-scada-panel], [data-scada-auto], [data-scada-budget], [data-file], [data-shake], [data-shake-free], [data-hire], [data-hire-best], [data-reroll], [data-promote], [data-auto], [data-eng], [data-engteam], [data-pak-target], [data-exec-appoint], [data-exec-hire], [data-exec-dismiss], [data-exec-pres], [data-board-elect], [data-board-replace]');
+    const b = ev.target.closest('[data-scada-buy], [data-warp], [data-scada-panel], [data-scada-auto], [data-scada-budget], [data-file], [data-shake], [data-shake-free], [data-hire], [data-hire-best], [data-reroll], [data-promote], [data-auto], [data-eng], [data-engteam], [data-pak-target], [data-exec-appoint], [data-exec-hire], [data-exec-dismiss], [data-exec-pres], [data-board-elect], [data-board-replace]');
     if (!b || b.disabled) return;
     if (b.dataset.scadaBuy) {
       const ok = E.buyScada(state);
@@ -75,6 +75,11 @@
       const n = E.filePatents(state, b.dataset.file === 'max' ? Infinity : 1);
       SFX.play(n ? 'research' : 'cant');
       if (n) UI.toast(`Filed <b>${n}</b> patent${n === 1 ? '' : 's'}. You now hold <b>${state.patents}</b> (+${state.patents * 10}% income).`, 3500);
+      return render();
+    }
+    if (b.dataset.warp) {
+      const ok = E.startWarp(state, Number(b.dataset.warp));
+      SFX.play(ok ? 'location' : 'cant');
       return render();
     }
     if (b.dataset.shakeFree) {
@@ -258,6 +263,17 @@
     const now = performance.now();
     let dt = (now - lastTick) / 1000;
     lastTick = now;
+    // A Time Machine jump runs in slices of ~40 ms so the screen keeps updating.
+    if (state.warp) {
+      let r = null;
+      while (!r && state.warp && performance.now() - now < 40) r = E.warpStep(state, 20);
+      lastTick = performance.now();
+      if (r) {
+        save();
+        UI.toast(`<b>Jumped ahead ${r.hours} h.</b> Earned $${fmt(r.earned)} and ${fmt(r.kh)} Know-how${r.lines > 0 ? `; ${fmt(r.lines, 0)} new lines` : ''}.`, 6000);
+      }
+      return;
+    }
     // Long gaps (sleeping laptop) are handled in chunks to keep temperature stable.
     while (dt > 0) { const step = Math.min(dt, 1); E.tick(state, step); dt -= step; }
     soundCues();

@@ -57,6 +57,7 @@
       shake: { phase: null, left: 0, cooldown: 0, moves: [], before: 0, report: null, done: 0, freeUsed: false },
       pak: { target: 'valve', building: 'valve', work: 0, stock: { valve: 0, base: 0 }, built: { valve: 0, base: 0, sys: 0 }, earned: 0 },
       mgrClock: 0, mgrReviewClock: 0, presClock: 0,
+      warp: null, warpJumps: 0, warpsDone: 0, lastWarp: null, // Time Machine (warpsDone kept)
       safety: { streak: 0, incident: null, seed: (Math.random() * 2 ** 32) >>> 0 },
       ach: {},                 // achievements earned (kept forever)
       tips: {},                // first-time tips already shown (kept forever)
@@ -340,14 +341,14 @@
   const patentsTotal = (lifetime) => Math.floor(C.patentScale * Math.cbrt(lifetime / C.patentDivisor));
   // Patents held = earned by Overhauls + filed with Know-how − spent on the Board; only the earned share counts against the next Overhaul.
   const overhaulGain = (s) => Math.max(0, patentsTotal(s.lifetime) - (s.patents - (s.patentsFiled || 0) + (s.patentsSpent || 0)));
-  const canOverhaul = (s) => s.lifetime >= C.overhaulMin && overhaulGain(s) > 0;
+  const canOverhaul = (s) => !s.warp && s.lifetime >= C.overhaulMin && overhaulGain(s) > 0;
 
   function overhaul(s) {
     if (!canOverhaul(s)) return false;
     const keep = {
       patents: s.patents + overhaulGain(s), lifetime: s.lifetime,
       overhauls: s.overhauls + 1, strokes: s.strokes, time: s.time, locations: s.locations, seed: s.seed,
-      ach: s.ach, tips: s.tips, shakeDone: s.shake && s.shake.done, freeUsed: !!(s.shake && s.shake.freeUsed), board: s.board, boardPool: s.boardPool, patentsSpent: s.patentsSpent, patentsFiled: s.patentsFiled, scadaPrefs: s.scadaPrefs,
+      ach: s.ach, tips: s.tips, warpsDone: s.warpsDone || 0, shakeDone: s.shake && s.shake.done, freeUsed: !!(s.shake && s.shake.freeUsed), board: s.board, boardPool: s.boardPool, patentsSpent: s.patentsSpent, patentsFiled: s.patentsFiled, scadaPrefs: s.scadaPrefs,
     };
     Object.assign(s, newState(), keep);
     s.shake.done = keep.shakeDone || 0;
@@ -764,6 +765,7 @@
       case 'scada': return s.scada && s.scada.owned ? 1 : 0;
       case 'filed': return s.patentsFiled || 0;
       case 'shakes': return (s.shake && s.shake.done) || 0;
+      case 'warps': return s.warpsDone || 0;
       default: return 0;
     }
   }
@@ -1276,6 +1278,43 @@
     return q.n;
   }
 
+  // ---- Time Machine: jump ahead and play the time out ---------------------------
+  // Paid in Know-how. The skipped time runs through the real game loop (in steps of
+  // up to 15 s so a whole day finishes in a few seconds), so managers hire, executives
+  // act, SCADA buys, Paks are built and incidents happen just as if you'd waited.
+
+  const warpOpen = (s) => s.overhauls >= 1 || s.lifetime >= 1e9;
+  function warpCost(s, hours, d = derive(s)) {
+    const perHour = Math.max(C.warpKhPerHourMin, d.khRate * C.warpKhRateS);
+    return hours * perHour * C.warpGrowth ** (s.warpJumps || 0);
+  }
+  const canWarp = (s, hours) => warpOpen(s) && !s.warp && C.warpHours.includes(hours) && s.kh >= warpCost(s, hours);
+  function startWarp(s, hours) {
+    if (!canWarp(s, hours)) return false;
+    s.kh -= warpCost(s, hours);
+    s.warpJumps = (s.warpJumps || 0) + 1;
+    const total = hours * 3600;
+    s.warp = { hours, total, left: total, dt: Math.max(1, total / C.warpMaxTicks),
+      from: { lifetime: s.lifetime, kh: s.kh, cash: s.cash, actuators: Object.values(s.actuators).reduce((a, b) => a + b, 0) } };
+    return true;
+  }
+  /** Advance a jump by up to `maxSteps` steps. Returns the report when it finishes. */
+  function warpStep(s, maxSteps = 200) {
+    const w = s.warp;
+    if (!w) return null;
+    for (let i = 0; i < maxSteps && w.left > 0; i++) {
+      const dt = Math.min(w.dt, w.left);
+      tick(s, dt);
+      w.left -= dt;
+    }
+    if (w.left > 0) return null;
+    s.warp = null;
+    s.warpsDone = (s.warpsDone || 0) + 1;
+    s.lastWarp = { hours: w.hours, earned: s.lifetime - w.from.lifetime, kh: s.kh - w.from.kh, cash: s.cash - w.from.cash,
+      lines: Object.values(s.actuators).reduce((a, b) => a + b, 0) - w.from.actuators, at: Math.round(s.time) };
+    return s.lastWarp;
+  }
+
   // ---- Shake-up: a timed, top-down reorganization ------------------------------
   // Board → executives → managers → employees. Each phase takes time and applies
   // when it ends; while it runs, incidents are likelier and the Order Line slows.
@@ -1576,6 +1615,7 @@
     boardOpen, boardSeatCost, fillBoardPool, electDirector, directorQuality, boardProposal, replaceDirector, presidentReview, presReplaceGap,
     scadaReady, canBuyScada, buyScada, scadaMult, scadaScan, scadaTick, bestGrowth, sustained, fmtDur, panelEff, hasPanel, nextPanel, canBuyPanel, buyPanel,
     officeOpen, fileCost, fileQuote, filePatents,
+    warpOpen, warpCost, canWarp, startWarp, warpStep,
     SHAKE_PHASES, shakeOpen, shakeCost, canShake, startShake, shakeTick, canFreeShake, freeShake, companyStrength, shakeScore,
     pakOpen, sysReady, pakTarget, pakNext, pakHoursRate, pakGrade, pakPrice, pakChainHours, pakIncome, setPakTarget, pakTick,
     serialize, deserialize,

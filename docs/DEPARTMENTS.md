@@ -578,3 +578,15 @@ across Overhauls (a Hall of Fame).
 - Locations are designed in [TERRITORY.md](TERRITORY.md). Every location is an
   extension of HQ with the same departments and processes, and adds customer
   base, which caps demand.
+
+## Time Machine (implemented, v0.3.6)
+
+On the R&D tab once you've done an Overhaul or earned $1B. Spend Know-how to jump
+**1, 8 or 24 hours** ahead. The skipped time is played out by the real game loop
+(`startWarp()`, `warpStep()`; steps of up to 15 s so a full day takes a few
+seconds), so income and Know-how pile up, managers hire, executives act, SCADA
+buys, Paks are built and incidents can happen. Cost per hour skipped: the larger
+of 2M Know-how and 60 s of your current Know-how output, ×1.3 for every jump
+already made this run (the multiplier resets on Overhaul). Overhaul is blocked
+while a jump runs. The "Time Traveler" achievement marks the first jump.
+

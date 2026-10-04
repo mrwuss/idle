@@ -1379,8 +1379,37 @@
     set(box.querySelector('[data-file="max"]'), q.n > 1 ? `File ${q.n}<small>${fmt(q.cost)} KH</small>` : `File max<small>${q.n ? fmt(q.cost) + ' KH' : 'not enough KH'}</small>`, q.n > 0);
   }
 
+  function renderTimeMachine(s) {
+    const box = $('time-machine'), open = E.warpOpen(s), C = E.DATA.CONSTANTS, w = s.warp;
+    box.hidden = !open;
+    if (!open) return;
+    const key = [!!w, w && w.hours, s.lastWarp && s.lastWarp.at].join('|');
+    if (box._key !== key) {
+      box._key = key;
+      const L = s.lastWarp;
+      box.innerHTML = `<h3>Time Machine</h3>
+        <p>Spend Know-how to jump ahead. The skipped time plays out for real: income and Know-how pile up, managers hire, executives act, SCADA buys, Paks get built and incidents can happen. Each jump this run costs ×${C.warpGrowth} more.</p>
+        ${w ? `<div class="cov warp-prog"><div data-k="wp"></div></div><p class="small" data-k="wp-text"></p>`
+          : `<div class="row-btns warp-btns">${C.warpHours.map((h) => `<button class="btn${h === 24 ? ' primary' : ''}" data-warp="${h}"></button>`).join('')}</div>`}
+        ${L && !w ? `<p class="small">Last jump (${L.hours} h): <b>+$${fmt(L.earned)}</b> earned, <b>+${fmt(L.kh)}</b> Know-how${L.lines > 0 ? `, ${fmt(L.lines, 0)} lines added` : ''}.</p>` : ''}`;
+    }
+    if (w) {
+      const done = 1 - w.left / w.total;
+      box.querySelector('[data-k="wp"]').style.width = `${done * 100}%`;
+      setPart(box.querySelector('[data-k="wp-text"]'), `Jumping ahead… ${fmtTime(w.total - w.left)} of ${w.hours} h`, true);
+      return;
+    }
+    for (const b of box.querySelectorAll('[data-warp]')) {
+      const h = Number(b.dataset.warp), cost = E.warpCost(s, h);
+      const html = `Jump ${h} h<small>${fmt(cost)} KH</small>`;
+      if (b._html !== html) { b._html = html; b.innerHTML = html; }
+      b.disabled = !E.canWarp(s, h);
+    }
+  }
+
   function renderTech(s) {
     renderOffice(s);
+    renderTimeMachine(s);
     for (const t of TECH) {
       const { el, cost: costEl } = techEls[t.id];
       const cost = E.techCost(s, t.id), done = !!s.tech[t.id], avail = E.techAvailable(s, t.id), ready = avail && s.kh >= cost;

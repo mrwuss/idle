@@ -650,3 +650,29 @@ test('SCADA holds cash instead of buying something that would take ages to pay b
   assert.equal(E.fmtDur(60.11e6), '1.9 years');
   assert.equal(E.fmtDur(90), '2 min');
 });
+
+test('the Time Machine spends Know-how and plays the skipped time out', () => {
+  const s = lateGame();
+  s.safety.incident = null;
+  assert.ok(E.warpOpen(s));
+  s.kh = 0;
+  assert.equal(E.startWarp(s, 8), false, 'needs Know-how');
+  const c8 = E.warpCost(s, 8);
+  assert.ok(E.warpCost(s, 24) > c8 && c8 > E.warpCost(s, 1));
+  s.kh = c8 * 10;
+  const life = s.lifetime, time = s.time, d = E.derive(s);
+  assert.ok(E.startWarp(s, 8));
+  assert.equal(E.startWarp(s, 1), false, 'one jump at a time');
+  assert.equal(E.canOverhaul(s), false, 'no Overhaul mid-jump');
+  let r = null;
+  for (let i = 0; i < 100 && !r; i++) r = E.warpStep(s, 200);
+  assert.ok(r, 'finishes');
+  assert.ok(Math.abs(s.time - time - 8 * 3600) < 1e-6, 'eight hours passed');
+  assert.ok(r.earned > d.income * 3600, 'earned hours of income');
+  assert.ok(s.lifetime - life === r.earned && r.kh > 0);
+  assert.ok(E.warpCost(s, 8) > c8, 'the next jump costs more');
+  assert.equal(s.warpsDone, 1);
+  s.lifetime = 1e13; E.overhaul(s);
+  assert.equal(s.warpsDone, 1, 'kept through Overhaul');
+  assert.equal(s.warpJumps, 0, 'price resets each run');
+});
