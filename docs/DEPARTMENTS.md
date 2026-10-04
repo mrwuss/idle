@@ -344,12 +344,19 @@ researched and the Controls team has strength 2+ (the SCADA button on the contro
 panel opens the screen either way and shows what's missing). Overhaul uninstalls
 it, but your automation switches are remembered.
 
-- **Cockpit:** a full-screen control-room view (always dark) with live tiles and
-  5-minute trends: income (and its % change per minute), production and the Order
-  Line, pressure, oil temperature (°F/min, equilibrium, limit, thermal penalty),
-  flow supply vs demand (utilization, relief dumping, accumulator charging), the
-  accumulator, the heat balance (pump losses, relief heat, cooling capacity),
-  Know-how, the Pak line and safety; plus the alarm list.
+- **Cockpit:** a full-screen control-room view (always dark) built from the
+  game's own instruments: the control panel's pressure and temperature dials and
+  its flow and accumulator meters. Live tiles show income (and its % change per
+  minute), production and the Order Line, pressure, oil temperature (°F/min,
+  equilibrium, limit, thermal penalty), flow supply vs demand (utilization,
+  relief dumping, accumulator charging), the accumulator, the heat balance (pump
+  losses, relief heat, cooling capacity), Know-how, the Pak line and safety; plus
+  the alarm list.
+- **Trends:** four labeled 5-minute charts (money, temperature with its limit
+  line, flow supply vs demand, Know-how). Axes use the game's number format and
+  switch to a log scale on their own once a series spans more than 100×, so
+  ridiculous late-game numbers (1e40 $/s and up) stay readable. Rate-of-change
+  percentages need 10 s of history and a positive base, and are clamped to ±999%.
 - **Loop tuning:** all income **+0.5% per Controls strength**, up to +20%.
 - **Autonomous control** (each switch off until you turn it on), scanning every
   2 s with `1 + Controls strength ÷ 3` actions per scan, each spending at most 1%,
