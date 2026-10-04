@@ -991,7 +991,10 @@
       pak: [`$${fmt(E.pakIncome(s, d))}/s`, E.pakOpen(s) ? `${fmt(E.pakHoursRate(s))} hrs/s · building ${E.pakNext(s)}` : 'no Engineering yet'],
       safety: [`${fmt(E.safeDays(s))} days safe`, (() => { const r = E.incidentRate(s, d) * 3600; return s.safety && s.safety.incident ? `LINE DOWN · ${Math.ceil(s.safety.incident.left)}s` : r > 0 ? `≈ ${fmt(r, 1)} incidents/hour${s.shake && s.shake.phase ? ' (shake-up ×3)' : ''}` : 'no incident risk'; })()],
     };
-    for (const id of SCADA_TILES) { setPart(k(`v-${id}`), v[id][0], true); setPart(k(`s-${id}`), v[id][1], true); }
+    for (const id of SCADA_TILES) {
+      setPart(k(`v-${id}`), v[id][0], true); setPart(k(`s-${id}`), v[id][1], true);
+      if (k(`s-${id}`).title !== v[id][1]) k(`s-${id}`).title = v[id][1]; // full text when it's clipped
+    }
     const tile = (id) => body.querySelector(`[data-tile="${id}"]`);
     tile('temp').classList.toggle('alarm', s.temp > lim);
     tile('temp').classList.toggle('warn', s.temp <= lim && d.tempEq > lim);
