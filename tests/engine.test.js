@@ -717,6 +717,17 @@ test('Era VI: new research, a 15,000 psi tier and new gear, without closing the 
   assert.ok(E.derive(s).perActuator.launch > 0);
 });
 
+test('Era VI research waits for the first adopted Standard', () => {
+  const s = lateGame();
+  for (const t of E.DATA.TECH) if (!t.era) s.tech[t.id] = true;
+  s.kh = 1e12; s.standards = {};
+  assert.equal(E.techAvailable(s, 'isostatic'), false);
+  assert.equal(E.research(s, 'isostatic'), false);
+  s.standards = { nfpa: true };
+  assert.ok(E.techAvailable(s, 'isostatic'));
+  assert.ok(E.research(s, 'isostatic'));
+});
+
 test('Pak contracts: offers from open locations, timed delivery, bonus on time', () => {
   const s = withEngineers(6);
   s.safety.incident = null;

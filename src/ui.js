@@ -1552,8 +1552,9 @@
       el.className = 'tech ' + (done ? 'done' : avail ? 'available' + (ready ? ' ready' : '') : 'locked');
       el.disabled = !ready;
       const price = `${fmt(cost)} KH${cost < t.cost ? ` <s>${fmt(t.cost)}</s> · Controls team` : ''}`;
-      setPart(costEl, done ? '✓ Researched' : avail ? price :
-        `${price} · needs ${t.requires.filter((r) => !s.tech[r]).map((r) => TECH.find((x) => x.id === r).name).join(', ')}`);
+      const missing = t.requires.filter((r) => !s.tech[r]).map((r) => TECH.find((x) => x.id === r).name);
+      if (t.era && !Object.keys(s.standards || {}).length) missing.unshift('an adopted Standard (Overhaul tab)');
+      setPart(costEl, done ? '✓ Researched' : avail ? price : `${price} · needs ${missing.join(', ')}`);
     }
     // Finished stages fold down on phones, and once everything is researched the
     // Patent Office and Time Machine (what you can still act on) come first.
