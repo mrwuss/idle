@@ -51,6 +51,7 @@
       execPool: { cro: [], coo: [], cfo: [], cto: [] },       // outside candidates per seat
       president: null, execClock: 0, execLog: [],
       board: [], boardPool: [], patentsSpent: 0,               // directors survive Overhaul
+      patentsFiled: 0,                                         // patents bought with Know-how (kept)
       shake: { phase: null, left: 0, cooldown: 0, moves: [], before: 0, report: null, done: 0 },
       pak: { target: 'valve', building: 'valve', work: 0, stock: { valve: 0, base: 0 }, built: { valve: 0, base: 0, sys: 0 }, earned: 0 },
       mgrClock: 0,
@@ -329,7 +330,8 @@
   // ---- Prestige: Overhaul --------------------------------------------------
 
   const patentsTotal = (lifetime) => Math.floor(C.patentScale * Math.cbrt(lifetime / C.patentDivisor));
-  const overhaulGain = (s) => Math.max(0, patentsTotal(s.lifetime) - s.patents - (s.patentsSpent || 0));
+  // Patents held = earned by Overhauls + filed with Know-how − spent on the Board; only the earned share counts against the next Overhaul.
+  const overhaulGain = (s) => Math.max(0, patentsTotal(s.lifetime) - (s.patents - (s.patentsFiled || 0) + (s.patentsSpent || 0)));
   const canOverhaul = (s) => s.lifetime >= C.overhaulMin && overhaulGain(s) > 0;
 
   function overhaul(s) {
@@ -337,7 +339,7 @@
     const keep = {
       patents: s.patents + overhaulGain(s), lifetime: s.lifetime,
       overhauls: s.overhauls + 1, strokes: s.strokes, time: s.time, locations: s.locations, seed: s.seed,
-      ach: s.ach, tips: s.tips, shakeDone: s.shake && s.shake.done, board: s.board, boardPool: s.boardPool, patentsSpent: s.patentsSpent,
+      ach: s.ach, tips: s.tips, shakeDone: s.shake && s.shake.done, board: s.board, boardPool: s.boardPool, patentsSpent: s.patentsSpent, patentsFiled: s.patentsFiled,
     };
     Object.assign(s, newState(), keep);
     s.shake.done = keep.shakeDone || 0;
@@ -711,6 +713,7 @@
       case 'execs': return execCount(s);
       case 'president': return s.president ? 1 : 0;
       case 'board': return (s.board || []).length;
+      case 'filed': return s.patentsFiled || 0;
       case 'shakes': return (s.shake && s.shake.done) || 0;
       default: return 0;
     }
@@ -980,6 +983,26 @@
   }
 
 
+
+  // ---- Patent Office: Know-how → Patents once the tree is done --------------------
+  const officeOpen = (s) => TECH.every((t) => s.tech[t.id]);
+  const fileCost = (s, n = 0) => C.patentFileKH * C.patentFileGrowth ** ((s.patentsFiled || 0) + n);
+  /** How many filings `kh` Know-how buys right now, and what they cost in total. */
+  function fileQuote(s, max = Infinity) {
+    let n = 0, cost = 0;
+    while (n < max && cost + fileCost(s, n) <= s.kh) { cost += fileCost(s, n); n++; }
+    return { n, cost };
+  }
+  function filePatents(s, max = 1) {
+    if (!officeOpen(s)) return 0;
+    const q = fileQuote(s, max);
+    if (!q.n) return 0;
+    s.kh -= q.cost;
+    s.patents += q.n;
+    s.patentsFiled = (s.patentsFiled || 0) + q.n;
+    return q.n;
+  }
+
   // ---- Shake-up: a timed, top-down reorganization ------------------------------
   // Board → executives → managers → employees. Each phase takes time and applies
   // when it ends; while it runs, incidents are likelier and the Order Line slows.
@@ -1146,6 +1169,7 @@
     EXEC, execOpen, execOf, execSkill, presidentSkill, execMult, presidentMult, execCount, boardEff, execCandidates, fillExecPool,
     execHireCost, appointExec, dismissExec, canAppointPresident, appointPresident, execTick,
     boardOpen, boardSeatCost, fillBoardPool, electDirector, directorQuality,
+    officeOpen, fileCost, fileQuote, filePatents,
     SHAKE_PHASES, shakeOpen, shakeCost, canShake, startShake, shakeTick, companyStrength,
     pakOpen, sysReady, pakTarget, pakNext, pakHoursRate, pakGrade, pakPrice, pakChainHours, pakIncome, setPakTarget, pakTick,
     serialize, deserialize,

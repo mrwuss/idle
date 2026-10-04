@@ -383,6 +383,8 @@
     { id: 'execAll',   name: 'Full Leadership Team',  stat: 'execs',     goal: 4,     desc: 'Seat all four executives.' },
     { id: 'president', name: 'Mr. or Madam President', stat: 'president', goal: 1,    desc: 'Appoint a President.' },
     { id: 'shake',     name: 'Shake It Up',           stat: 'shakes',    goal: 1,     desc: 'Finish a company shake-up.' },
+    { id: 'file1',     name: 'Patent Pending',        stat: 'filed',     goal: 1,     desc: 'File a patent with Know-how.' },
+    { id: 'file10',    name: 'Prolific Inventor',     stat: 'filed',     goal: 10,    desc: 'File 10 patents with Know-how.' },
     { id: 'board',     name: 'Boardroom',             stat: 'board',     goal: 1,     desc: 'Seat your first director.' },
     { id: 'overhaul1', name: 'Tear It Down',          stat: 'overhauls', goal: 1,     desc: 'Overhaul the shop once.' },
     { id: 'overhaul5', name: 'Serial Rebuilder',      stat: 'overhauls', goal: 5,     desc: 'Overhaul the shop five times.' },
@@ -440,6 +442,9 @@
     execReplaceGapPer: 0.03,// …minus 0.03 per skill point (better executives are pickier)
     execHireS: 600,         // an outside executive hire costs 10 min of production
     execPoolBoost: 2,       // outside candidates: Leadership and key stat +2
+    // Patent Office: once every technology is researched, Know-how files patents
+    patentFileKH: 1e6,      // the first filing costs 1M Know-how…
+    patentFileGrowth: 1.6,  // …and each one after costs 1.6× more (counted across Overhauls)
     // Shake-up: a top-down reorganization (Board → executives → managers → employees)
     shakePhaseS: { board: 45, cxo: 60, mgr: 60, staff: 120 },
     shakeCostS: 120,        // costs 2 min of production
