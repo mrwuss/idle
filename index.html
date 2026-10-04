@@ -62,7 +62,7 @@
   <main class="layout">
     <!-- Left: controls and instruments -->
     <section class="panel machine" aria-label="Control panel">
-      <h2 class="panel-title">Control panel <span id="tier-name" class="chip">Rubber Hose · 750 psi</span></h2>
+      <h2 class="panel-title">Control panel <span class="title-right"><button id="btn-scada" class="btn mini scada-btn" title="SCADA: supervisory control">SCADA</button><span id="tier-name" class="chip">Rubber Hose · 750 psi</span></span></h2>
 
 
       <div class="gauges">
@@ -212,6 +212,13 @@
   </main>
 
   <div id="toast" class="toast" role="status" hidden></div>
+
+  <!-- SCADA: the control-room cockpit (always dark) -->
+  <div id="scada" class="scada dark-scope" hidden role="dialog" aria-modal="true" aria-label="SCADA">
+    <header class="scada-head"><span class="scada-title">IFP MSI · SCADA</span><span class="scada-meta" id="scada-meta"></span></header>
+    <div class="scada-body" id="scada-body"></div>
+    <footer class="scada-foot"><button class="btn" id="scada-close">Close</button></footer>
+  </div>
 
   <!-- Department focus (bottom sheet on phones) and a person's ID badge -->
   <div id="sheet" class="sheet" hidden role="dialog" aria-modal="true" aria-labelledby="sheet-title">

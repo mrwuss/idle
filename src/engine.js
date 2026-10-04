@@ -52,6 +52,8 @@
       president: null, execClock: 0, execLog: [],
       board: [], boardPool: [], patentsSpent: 0,               // directors survive Overhaul
       patentsFiled: 0,                                         // patents bought with Know-how (kept)
+      scada: { owned: false, clock: 0, log: [] },              // installed this run
+      scadaPrefs: { cool: false, pumps: false, lines: false, budget: 1 }, // automation switches (kept)
       shake: { phase: null, left: 0, cooldown: 0, moves: [], before: 0, report: null, done: 0 },
       pak: { target: 'valve', building: 'valve', work: 0, stock: { valve: 0, base: 0 }, built: { valve: 0, base: 0, sys: 0 }, earned: 0 },
       mgrClock: 0,
@@ -166,7 +168,7 @@
 
     // What the shop floor can do, then what the Order Line lets through.
     const production = rawIncome * utilization * tMult * m.patentMult * safetyStreakMult(s) * achievementMult(s)
-      * presidentMult(s) * boardEff(s, 'incomeMult');
+      * presidentMult(s) * boardEff(s, 'incomeMult') * scadaMult(s);
     const order = orderLine(s, production);
     const income = production * sMult * order.factor * order.bonus;
     const khRate = C.khPerSqrtIncome * Math.sqrt(income) * engKhMult(s) * boardEff(s, 'khMult');
@@ -189,6 +191,8 @@
     if (s.mgrClock >= C.mgrEvery) { s.mgrClock = 0; managersTick(s, d); }
     pakTick(s, d, dt);
     shakeTick(s, dt);
+    s.scada.clock += dt;
+    if (s.scada.clock >= C.scadaEvery) { s.scada.clock = 0; scadaTick(s, d); }
     s.execClock += dt;
     if (s.execClock >= C.execEvery) { s.execClock = 0; execTick(s, d); }
     const earned = d.income * dt;
@@ -339,7 +343,7 @@
     const keep = {
       patents: s.patents + overhaulGain(s), lifetime: s.lifetime,
       overhauls: s.overhauls + 1, strokes: s.strokes, time: s.time, locations: s.locations, seed: s.seed,
-      ach: s.ach, tips: s.tips, shakeDone: s.shake && s.shake.done, board: s.board, boardPool: s.boardPool, patentsSpent: s.patentsSpent, patentsFiled: s.patentsFiled,
+      ach: s.ach, tips: s.tips, shakeDone: s.shake && s.shake.done, board: s.board, boardPool: s.boardPool, patentsSpent: s.patentsSpent, patentsFiled: s.patentsFiled, scadaPrefs: s.scadaPrefs,
     };
     Object.assign(s, newState(), keep);
     s.shake.done = keep.shakeDone || 0;
@@ -713,6 +717,7 @@
       case 'execs': return execCount(s);
       case 'president': return s.president ? 1 : 0;
       case 'board': return (s.board || []).length;
+      case 'scada': return s.scada && s.scada.owned ? 1 : 0;
       case 'filed': return s.patentsFiled || 0;
       case 'shakes': return (s.shake && s.shake.done) || 0;
       default: return 0;
@@ -984,6 +989,68 @@
 
 
 
+
+  // ---- SCADA: supervisory control (Controls engineering) --------------------------
+  // Installed with Know-how once Telematics is researched and the Controls team is
+  // strong enough. Loop tuning lifts income; optional automation keeps the plant
+  // cool, balanced and growing on its own, within a cash budget per action.
+
+  const scadaReady = (s) => !!s.tech.telematics && teamStrength(s, 'controls') >= C.scadaControls;
+  const canBuyScada = (s) => !s.scada.owned && scadaReady(s) && s.kh >= C.scadaKH;
+  function buyScada(s) {
+    if (!canBuyScada(s)) return false;
+    s.kh -= C.scadaKH;
+    s.scada.owned = true;
+    return true;
+  }
+  const scadaMult = (s) => (s.scada && s.scada.owned ? 1 + Math.min(C.scadaTuneMax, C.scadaTunePer * teamStrength(s, 'controls')) : 1);
+  const scadaScan = (s) => 1 + Math.floor(teamStrength(s, 'controls') / 3);
+  function scadaLog(s, msg) {
+    s.scada.log.unshift({ t: Math.round(s.time), m: msg });
+    if (s.scada.log.length > 30) s.scada.log.length = 30;
+  }
+  /** Cheapest-per-benefit purchase among `items` of `kind`, within the budget. */
+  function bestBuy(s, kind, items, value, budget) {
+    let best = null;
+    for (const it of items) {
+      if (!isUnlocked(s, kind, it.id)) continue;
+      const q = quote(s, kind, it.id, 1);
+      if (q.cost > budget) continue;
+      const v = value(it) / q.cost;
+      if (!best || v > best.v) best = { it, v, cost: q.cost };
+    }
+    return best;
+  }
+  function scadaTick(s, d) {
+    if (!s.scada.owned) return [];
+    const P = s.scadaPrefs, done = [];
+    const budget = () => s.cash * C.scadaBudgets[P.budget ?? 1];
+    let actions = scadaScan(s);
+    const act = (kind, it, why) => { buy(s, kind, it.id, 1); actions--; const m = `${why}: bought a ${it.name}`; scadaLog(s, m); done.push(m); };
+    // 1. Cooling: keep the equilibrium temperature under the limit.
+    while (P.cool && actions > 0 && derive(s).tempEq > d.tempLimit - 5) {
+      const b = bestBuy(s, 'cooler', COOLERS, (c) => c.k, budget());
+      if (!b) break;
+      act('cooler', b.it, 'Oil running hot');
+    }
+    // 2. Pumps: no starved actuators (5% margin).
+    while (P.pumps && actions > 0) {
+      const dd = derive(s);
+      if (dd.supply >= dd.demand * 1.05 || dd.demand === 0) break;
+      const b = bestBuy(s, 'pump', PUMPS, (p) => p.gpm * milestoneMult(s.pumps[p.id] + 1), budget());
+      if (!b) break;
+      act('pump', b.it, 'Flow short');
+    }
+    // 3. Lines: put spare flow to work on the best-paying actuator that fits.
+    while (P.lines && actions > 0) {
+      const dd = derive(s), spare = dd.supply - dd.demand;
+      const b = bestBuy(s, 'actuator', ACTUATORS.filter((a) => a.gpm <= spare), (a) => a.rate * Math.sqrt(dd.psi / a.psi), budget());
+      if (!b) break;
+      act('actuator', b.it, 'Spare flow');
+    }
+    return done;
+  }
+
   // ---- Patent Office: Know-how → Patents once the tree is done --------------------
   const officeOpen = (s) => TECH.every((t) => s.tech[t.id]);
   const fileCost = (s, n = 0) => C.patentFileKH * C.patentFileGrowth ** ((s.patentsFiled || 0) + n);
@@ -1149,6 +1216,8 @@
     s.execs = { ...ns.execs, ...(raw.execs || {}) };
     s.execPool = { ...ns.execPool, ...(raw.execPool || {}) };
     s.shake = { ...ns.shake, ...(raw.shake || {}) };
+    s.scada = { ...ns.scada, ...(raw.scada || {}) };
+    s.scadaPrefs = { ...ns.scadaPrefs, ...(raw.scadaPrefs || {}) };
     const fresh = ns.pak, rp = raw.pak || {};
     s.pak = { ...fresh, ...rp, stock: { ...fresh.stock, ...(rp.stock || {}) }, built: { ...fresh.built, ...(rp.built || {}) } };
     return s;
@@ -1169,6 +1238,7 @@
     EXEC, execOpen, execOf, execSkill, presidentSkill, execMult, presidentMult, execCount, boardEff, execCandidates, fillExecPool,
     execHireCost, appointExec, dismissExec, canAppointPresident, appointPresident, execTick,
     boardOpen, boardSeatCost, fillBoardPool, electDirector, directorQuality,
+    scadaReady, canBuyScada, buyScada, scadaMult, scadaScan, scadaTick,
     officeOpen, fileCost, fileQuote, filePatents,
     SHAKE_PHASES, shakeOpen, shakeCost, canShake, startShake, shakeTick, companyStrength,
     pakOpen, sysReady, pakTarget, pakNext, pakHoursRate, pakGrade, pakPrice, pakChainHours, pakIncome, setPakTarget, pakTick,

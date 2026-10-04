@@ -61,8 +61,16 @@
 
   // Hiring buttons inside re-rendered department cards.
   document.addEventListener('click', (ev) => {
-    const b = ev.target.closest('[data-file], [data-shake], [data-hire], [data-hire-best], [data-reroll], [data-promote], [data-auto], [data-eng], [data-engteam], [data-pak-target], [data-exec-appoint], [data-exec-hire], [data-exec-dismiss], [data-exec-pres], [data-board-elect]');
+    const b = ev.target.closest('[data-scada-buy], [data-scada-auto], [data-scada-budget], [data-file], [data-shake], [data-hire], [data-hire-best], [data-reroll], [data-promote], [data-auto], [data-eng], [data-engteam], [data-pak-target], [data-exec-appoint], [data-exec-hire], [data-exec-dismiss], [data-exec-pres], [data-board-elect]');
     if (!b || b.disabled) return;
+    if (b.dataset.scadaBuy) {
+      const ok = E.buyScada(state);
+      SFX.play(ok ? 'location' : 'cant');
+      if (ok) UI.toast('<b>SCADA online.</b> Loop tuning is live; switch on autonomous control when you want it.', 5000);
+      return render();
+    }
+    if (b.dataset.scadaAuto) { state.scadaPrefs[b.dataset.scadaAuto] = !state.scadaPrefs[b.dataset.scadaAuto]; SFX.play('tab', 0.6); return render(); }
+    if (b.dataset.scadaBudget) { state.scadaPrefs.budget = Number(b.dataset.scadaBudget); SFX.play('tab', 0.6); return render(); }
     if (b.dataset.file) {
       const n = E.filePatents(state, b.dataset.file === 'max' ? Infinity : 1);
       SFX.play(n ? 'research' : 'cant');
@@ -304,6 +312,8 @@
       msg: '<b>Research ready.</b> You have enough Know-how for a technology. Open the R&D tab.' },
     { id: 'tier', when: (s) => E.canUpgradeTier(s),
       msg: '<b>Pressure upgrade affordable.</b> Higher psi unlocks new actuators and makes every line pay more. See the System tab.' },
+    { id: 'scada', when: (s) => E.scadaReady(s),
+      msg: '<b>SCADA available.</b> Your Controls team can install a supervisory system: trends, alarms, loop tuning and autonomous control. Tap SCADA on the control panel.' },
     { id: 'office', when: (s) => E.officeOpen(s),
       msg: '<b>Research complete!</b> The Patent Office on the R&D tab now turns Know-how into Patents: +10% income each, forever.' },
     { id: 'engineering', when: (s) => E.pakOpen(s),

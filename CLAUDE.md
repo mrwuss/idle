@@ -32,7 +32,8 @@
   The Company tab cards open a focus sheet (`openDept()`) and faces open an ID badge (`data-person`).
   Executives (`s.execs`, `execTick()` every `execEvery` s, `execMult()` per division), the President
   (`s.president`, `presidentMult()`) and the Board (`s.board`, `boardEff(key)`, bought with Patents tracked in
-  `s.patentsSpent`, kept through Overhaul) are in engine.js. The Patent Office (`officeOpen()`, `filePatents()`, `s.patentsFiled`; `overhaulGain()` ignores filed
+  `s.patentsSpent`, kept through Overhaul) are in engine.js. SCADA (`s.scada`, `buyScada()`, `scadaTick()` automation, `scadaMult()` tuning; switches in `s.scadaPrefs`,
+  kept through Overhaul) has a full-screen cockpit in ui.js (`openScada()`, history sampled in `sample()`). The Patent Office (`officeOpen()`, `filePatents()`, `s.patentsFiled`; `overhaulGain()` ignores filed
   patents) spends Know-how once every tech is done. A shake-up (`s.shake`, `startShake()`, `shakeTick()`, phases in `SHAKE_STEP`)
   reorganizes Board → execs → managers → staff and raises `incidentRate()` while it runs. The org chart and exec sheet (`exec:<id>`) are in ui.js.
   The remaining department twists are still a design scaffold. Location unlocks

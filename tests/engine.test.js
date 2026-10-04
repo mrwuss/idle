@@ -285,7 +285,8 @@ test('the Pak line builds inputs first, consumes them, and sells the target', ()
   assert.deepEqual(sold, ['base']);
   assert.equal(s.pak.built.valve, 1);
   assert.equal(s.pak.stock.valve, 0);
-  close(s.cash - cash, E.pakPrice(s, d, 'base'), 1e-6);
+  close(s.pak.earned, E.pakPrice(s, d, 'base'), 1e-9); // (cash is ~1e15 here, too coarse to diff)
+  assert.ok(s.cash > cash);
   // Sys-Paks need PLC Automation and a Controls engineer; until then the line makes Base-Paks.
   E.setPakTarget(s, 'sys');
   assert.equal(E.pakTarget(s), 'base');
@@ -434,4 +435,28 @@ test('the Patent Office opens after the whole tree and turns Know-how into paten
   E.overhaul(s);
   assert.equal(s.patentsFiled, filed);
   assert.ok(s.patents >= held);
+});
+
+test('SCADA installs with Know-how once Controls is ready, tunes income and automates', () => {
+  const s = withEngineers(6);
+  s.kh = 1e7; s.cash = 1e15;
+  assert.equal(E.buyScada(s), false, 'needs Telematics and Controls strength');
+  s.tech.telematics = true;
+  for (const i of s.depts.engineering.team.keys()) E.setEngTeam(s, i, 'controls');
+  const prod = E.derive(s).production;
+  assert.ok(E.buyScada(s));
+  assert.ok(E.derive(s).production > prod, 'loop tuning lifts production');
+  // Automation: a starved, overheating plant gets pumps and coolers on its own.
+  s.actuators.press += 400; s.coolers.fan = 0; s.coolers.shell = 0;
+  assert.ok(E.derive(s).supply < E.derive(s).demand, 'test setup: starved');
+  s.scadaPrefs.cool = true; s.scadaPrefs.pumps = true;
+  for (let i = 0; i < 40; i++) E.scadaTick(s, E.derive(s));
+  const d = E.derive(s);
+  assert.ok(d.supply >= d.demand, 'flow balanced');
+  assert.ok(d.tempEq <= d.tempLimit, 'cooled below the limit');
+  assert.ok(s.scada.log.some((l) => /pump/i.test(l.m)) && s.scada.log.some((l) => /Oil/.test(l.m)));
+  // Overhaul removes the system but remembers the switches.
+  s.lifetime = 1e13; E.overhaul(s);
+  assert.equal(s.scada.owned, false);
+  assert.equal(s.scadaPrefs.pumps, true);
 });

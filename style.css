@@ -741,3 +741,50 @@ ul.plain b { color: var(--text); }
 .patent-office { margin-top: 12px; border-color: var(--accent-dim); }
 .patent-office p { margin: 4px 0; font-size: 13px; }
 .patent-office .btn { min-height: 44px; }
+
+/* ---- SCADA cockpit (always dark, like a control room) ---- */
+.title-right { display: flex; gap: 6px; align-items: center; }
+.scada-btn { font-family: var(--font-mono); letter-spacing: .08em; }
+.scada { position: fixed; inset: 0; z-index: 65; display: flex; flex-direction: column; background: #0b0e11; color: var(--text); }
+.scada-head { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; padding: 10px 14px; border-bottom: 2px solid #f04b25; background: #0d1013; flex-wrap: wrap; }
+.scada-title { font: 800 15px var(--font-mono); letter-spacing: .12em; color: #f04b25; }
+.scada-meta { font: 11px var(--font-mono); color: var(--muted); }
+.scada-body { flex: 1; overflow-y: auto; padding: 12px 14px; display: grid; gap: 12px; align-content: start;
+  background-image: linear-gradient(rgba(255,255,255,.02) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.02) 1px, transparent 1px); background-size: 20px 20px; }
+.scada-foot { display: flex; justify-content: flex-end; padding: 8px 14px calc(8px + env(safe-area-inset-bottom, 0px)); border-top: 1px solid var(--edge); background: #0d1013; }
+.scada-foot .btn { min-height: 44px; min-width: 120px; }
+.scada-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 8px; }
+.tile-s { background: #12171c; border: 1px solid var(--edge); border-radius: 6px; padding: 8px 10px; display: grid; gap: 2px; min-width: 0; }
+.tile-s.alarm { border-color: var(--pressure); box-shadow: 0 0 0 1px var(--pressure) inset; animation: scada-blink 1.2s steps(2) infinite; }
+.tile-s.warn { border-color: #f2a900; }
+@keyframes scada-blink { 50% { box-shadow: none; } }
+.ts-label { font: 600 10px var(--font-mono); text-transform: uppercase; letter-spacing: .1em; color: var(--muted); }
+.ts-val { font: 700 20px var(--font-mono); color: #e8f0f6; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ts-sub { font: 10.5px var(--font-mono); color: var(--muted); min-height: 2.6em; }
+.ts-spark { display: block; width: 100%; height: 34px; }
+.scada-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.scada-panel { background: #12171c; border: 1px solid var(--edge); border-radius: 6px; padding: 8px 10px; display: grid; gap: 6px; align-content: start; }
+.scada-panel h4 { margin: 0; font: 600 11px var(--font-mono); text-transform: uppercase; letter-spacing: .12em; color: #f04b25; }
+.scada-alarms { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; font: 12px var(--font-mono); }
+.scada-alarms li { border-left: 3px solid var(--edge); padding: 3px 8px; background: #0f1317; }
+.scada-alarms .bad { border-color: var(--pressure); color: #ffb3b5; }
+.scada-alarms .warn { border-color: #f2a900; }
+.scada-alarms .good { border-color: var(--ok); }
+.auto-row { display: grid; grid-template-columns: 1fr auto; gap: 0 8px; text-align: left; background: #0f1317; border: 1px solid var(--edge); border-radius: 6px; padding: 8px 10px; cursor: pointer; color: var(--text); min-height: 48px; touch-action: manipulation; }
+.auto-row b { font: 700 13px var(--font-mono); }
+.auto-row span { grid-column: 1; font-size: 11px; color: var(--muted); }
+.auto-row i { grid-column: 2; grid-row: 1 / span 2; align-self: center; font: 700 12px var(--font-mono); font-style: normal; padding: 4px 10px; border-radius: 99px; border: 1px solid var(--edge); color: var(--muted); }
+.auto-row.on { border-color: var(--ok); }
+.auto-row.on i { background: var(--ok); color: #0b0e11; border-color: var(--ok); }
+.scada-budget { flex-wrap: wrap; }
+.scada-install { max-width: 620px; background: #12171c; border: 1px solid var(--edge); border-radius: 8px; padding: 14px; display: grid; gap: 8px; }
+.scada-install h3 { color: #f04b25; margin: 0; }
+.scada-install p { margin: 0; font-size: 13px; }
+.scada-install .btn { justify-self: start; min-height: 48px; }
+.ok-text { color: var(--ok); }
+@media (max-width: 760px) {
+  .scada-grid { grid-template-columns: 1fr 1fr; gap: 6px; }
+  .ts-val { font-size: 16px; }
+  .scada-row { grid-template-columns: 1fr; }
+  .scada-body { padding: 8px; }
+}

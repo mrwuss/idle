@@ -180,6 +180,7 @@ while (s.time < end) {
     if (kind === 'cooler') once(rest, `BUY   first ${rest} cooler`);
   }
   for (const t of TECH) if (E.research(s, t.id)) log(`TECH  ${t.name}`);
+  if (E.canBuyScada(s)) { E.buyScada(s); once('scada', 'SCADA installed'); }
   if (E.officeOpen(s)) { const n = E.filePatents(s, Infinity); if (n) once('file', `FILE  first patents filed with Know-how (${n})`); }
   if (E.canSurge(s)) E.surge(s);
   for (const x of [1e3, 1e6, 1e9, 1e12]) if (s.lifetime >= x) once(`life${x}`, `$$$   lifetime ${fmt(x)}`);
@@ -205,7 +206,7 @@ const d = E.derive(s);
 console.log('\nFinal:', {
   orderLine: d.order.factor.toFixed(2), surplusBonus: '+' + Math.round((d.order.bonus - 1) * 100) + '%',
   execs: Object.fromEntries(E.DATA.EXECS.map((x) => [x.id, s.execs[x.id] ? E.execSkill(s, x.id) : '-'])), president: E.presidentSkill(s),
-  filed: s.patentsFiled, board: s.board.map((m) => m.perk).join(','), execActions: s.execLog.length, shakes: s.shake.done,
+  scada: s.scada.owned ? `+${Math.round((E.scadaMult(s) - 1) * 100)}% tuning` : 'no', filed: s.patentsFiled, board: s.board.map((m) => m.perk).join(','), execActions: s.execLog.length, shakes: s.shake.done,
   paks: { ...s.pak.built, earned: fmt(s.pak.earned), target: s.pak.target },
   load: Object.fromEntries(Object.entries(d.order.depts).filter(([, o]) => o.open).map(([k, o]) => [k, +o.load.toFixed(2)])),
   income: fmt(d.income) + '/s', lifetime: fmt(s.lifetime), patentsAvailable: E.overhaulGain(s),
