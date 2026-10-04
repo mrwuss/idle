@@ -218,6 +218,18 @@
     { id: 'cto', short: 'CTO', name: 'Chief Technology Officer', stat: 'mechanical',  depts: ['engineering', 'it'],
       desc: 'Runs Technology: engineering and IT.' },
   ];
+  // Operator-panel upgrades for the SCADA cockpit, bought in order with Know-how.
+  // Each adds instruments to the screen and makes the control room better at its job.
+  const SCADA_PANEL = [
+    { id: 'historian',  name: 'Trend historian',          kh: 5e6,
+      desc: '5-minute sparklines with low/high on every gauge, plus the trend charts. Better data: loop tuning +5% income.', eff: { tunePlus: 0.05 } },
+    { id: 'alarms',     name: 'Alarm management',         kh: 2e7,
+      desc: 'Flow, accumulator and heat-load gauges with alarm limits. Operators catch faults early: incidents −20%.', eff: { incidentMult: 0.8 } },
+    { id: 'predictive', name: 'Predictive analytics',     kh: 8e7,
+      desc: 'Forecasts the next minute on every sparkline and shows rates of change. Automation takes +1 action per scan.', eff: { scanPlus: 1 } },
+    { id: 'apc',        name: 'Advanced process control', kh: 3e8,
+      desc: 'Model-based loop tuning: +1% income per Controls strength, up to +40% (double).', eff: { tuneMult: 2 } },
+  ];
   // The President is appointed from the executives (3+ seated) and also runs Management.
   const PRESIDENT = { stat: 'organization', depts: ['management'] };
   // Board seats cost Patents and survive Overhaul. Each director brings one perk.
@@ -500,7 +512,7 @@
 
   const DATA = { PUMPS, ACTUATORS, TIERS, COOLERS, TECH, ERAS, DEPARTMENTS, PAKS, REGIONS, STATES,
     STATS, DEPT_STATS, TRAITS, TRAIT_CHANCE, FIRST_NAMES, LAST_NAMES, ENG_UPGRADES, ACHIEVEMENTS,
-    EXECS, PRESIDENT, BOARD_COSTS, BOARD_PERKS, CONSTANTS };
+    EXECS, PRESIDENT, SCADA_PANEL, BOARD_COSTS, BOARD_PERKS, CONSTANTS };
   root.PW = root.PW || {};
   root.PW.DATA = DATA;
   if (typeof module !== 'undefined') module.exports = DATA;

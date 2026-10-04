@@ -181,6 +181,8 @@ while (s.time < end) {
   }
   for (const t of TECH) if (E.research(s, t.id)) log(`TECH  ${t.name}`);
   if (E.canBuyScada(s)) { E.buyScada(s); once('scada', 'SCADA installed'); }
+  const pnl = E.nextPanel(s);
+  if (pnl && E.buyPanel(s, pnl.id)) once('panel-' + pnl.id, `SCADA panel: ${pnl.name}`);
   if (E.officeOpen(s)) { const n = E.filePatents(s, Infinity); if (n) once('file', `FILE  first patents filed with Know-how (${n})`); }
   if (E.canSurge(s)) E.surge(s);
   for (const x of [1e3, 1e6, 1e9, 1e12]) if (s.lifetime >= x) once(`life${x}`, `$$$   lifetime ${fmt(x)}`);

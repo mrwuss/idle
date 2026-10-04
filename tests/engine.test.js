@@ -520,3 +520,30 @@ test('the Chair proposes replacing a weak director for fewer Patents', () => {
   s.board = [s.board[0]];
   assert.equal(E.boardProposal(s), null, 'needs a Chair and another director');
 });
+
+test('operator-panel upgrades are bought in order with Know-how and pay off', () => {
+  const s = withEngineers(6);
+  s.kh = 1e10; s.cash = 1e15; s.tech.telematics = true;
+  for (const i of s.depts.engineering.team.keys()) E.setEngTeam(s, i, 'controls');
+  assert.equal(E.nextPanel(s), null, 'needs SCADA first');
+  E.buyScada(s);
+  assert.equal(E.buyPanel(s, 'alarms'), false, 'in order');
+  const tune = E.scadaMult(s), scan = E.scadaScan(s), d = E.derive(s);
+  const inc = E.incidentRate(s, d);
+  const kh = s.kh;
+  assert.ok(E.buyPanel(s, 'historian'));
+  assert.equal(s.kh, kh - E.DATA.SCADA_PANEL[0].kh);
+  assert.ok(E.scadaMult(s) > tune);
+  assert.ok(E.buyPanel(s, 'alarms'));
+  assert.ok(E.incidentRate(s, d) < inc || inc === 0);
+  assert.ok(E.buyPanel(s, 'predictive'));
+  assert.equal(E.scadaScan(s), scan + 1);
+  const t3 = E.scadaMult(s);
+  assert.ok(E.buyPanel(s, 'apc'));
+  assert.ok(E.scadaMult(s) > t3);
+  assert.equal(E.nextPanel(s), null);
+  const m = E.deserialize(E.serialize(s));
+  assert.ok(E.hasPanel(m, 'apc'), 'saved');
+  s.lifetime = 1e13; E.overhaul(s);
+  assert.equal(E.hasPanel(s, 'historian'), false, 'goes with the SCADA install');
+});
