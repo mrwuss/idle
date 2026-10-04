@@ -44,6 +44,16 @@
     lever: 0, clock: 0, prevPhase: {}, shipped: 0,
   };
   const products = [], particles = [];
+  // The floor has 8 bays. Once more than 8 lines exist, it shows the 8 most advanced
+  // ones you've unlocked (late in the game the first bays slide off to the left).
+  const BAYS = 8;
+  let shown = ACTUATORS.slice(0, BAYS);
+  function shownActs(s) {
+    let top = 0;
+    ACTUATORS.forEach((a, i) => { if (s.actuators[a.id] > 0 || E.isUnlocked(s, 'actuator', a.id)) top = i; });
+    const start = Math.max(0, Math.min(top - (BAYS - 1), ACTUATORS.length - BAYS));
+    return (shown = ACTUATORS.slice(start, start + BAYS));
+  }
 
   // ---- Setup -----------------------------------------------------------------
 
@@ -113,7 +123,7 @@
     if (x > WH_X) return { tab: 'company', dept: 'warehouse' };
     if (x > TANK.x - 34 && x < TANK.x + 4 && y > TANK.y - 40 && y < TANK.y + 110) return { stroke: true };
     if (x >= STATION_X0 && x < STATION_X0 + STATION_W * 8 && y > 130 && y < FLOOR) {
-      return { tab: 'actuators', id: ACTUATORS[Math.floor((x - STATION_X0) / STATION_W)].id };
+      return { tab: 'actuators', id: shown[Math.floor((x - STATION_X0) / STATION_W)].id };
     }
     if (x > TANK.x - 30 && x < TANK.x + TANK.w && y > 230 && y < FLOOR) return { tab: 'pumps' };
     if (x > 330 && x < 540 && y > 10) return { tab: 'system' };
@@ -292,7 +302,7 @@
   }
   function drawReturnLines(s, d) {
     // Each owned station's return drops into the trench.
-    ACTUATORS.forEach((a, i) => {
+    shownActs(s).forEach((a, i) => {
       if (!s.actuators[a.id]) return;
       const cx = STATION_X0 + STATION_W * (i + 0.5);
       pipe([[cx + 22, 168], [cx + 22, 180], [cx + 57, 180], [cx + 57, TRENCH]], 5);
@@ -370,7 +380,7 @@
   function drawPumps(s, d) {
     const owned = pumpSlots(s);
     const collectorY = 252;
-    const slotW = 43;
+    const slotW = owned.length > 6 ? 37 : 43; // seven pump types (Era VI) squeeze in
     const xs = owned.map((_, i) => TANK.x + 18 + i * slotW);
     // collector pipe from the pumps to the riser
     const right = 338;
@@ -526,7 +536,7 @@
   function drawStations(s, d, speed) {
     const P = d.psi;
     const labels = [];
-    ACTUATORS.forEach((a, i) => {
+    shownActs(s).forEach((a, i) => {
       const cx = STATION_X0 + STATION_W * (i + 0.5);
       const n = s.actuators[a.id];
       const unlocked = E.isUnlocked(s, 'actuator', a.id);
@@ -735,6 +745,42 @@
       ctx.beginPath(); ctx.moveTo(cx - 6, peak + 10); ctx.lineTo(cx, peak); ctx.lineTo(cx + 6, peak + 12); ctx.closePath(); ctx.fillStyle = '#e8eef4'; ctx.fill();
       if (e > 0.85 && Math.random() < 0.6) spark(cx + (Math.random() - 0.5) * 30, peak + 10, '#c9b5e0', 2);
     },
+    // Dam spillway gate: two cylinders lift a steel gate; the river pours out under it.
+    damgate(cx, e) {
+      const base = BELT - 6;
+      rect(cx - 58, base - 160, 14, 160, '#5b6670', colors.steel, 1.2);           // concrete piers
+      rect(cx + 44, base - 160, 14, 160, '#5b6670', colors.steel, 1.2);
+      rect(cx - 44, base - 80, 88, 80, 'rgba(58,160,255,0.3)');                    // the river behind
+      const gy = base - 76 - e * 62;
+      if (e > 0.05) { ctx.save(); ctx.globalAlpha = 0.25 + 0.5 * e; rect(cx - 44, gy + 70, 88, base - gy - 70, '#7cc0ff'); ctx.restore(); }
+      rect(cx - 52, base - 170, 6, gy - (base - 170) + 4, '#c9d2db');              // cylinder rods
+      rect(cx + 46, base - 170, 6, gy - (base - 170) + 4, '#c9d2db');
+      rect(cx - 58, base - 178, 116, 10, '#4a5866', colors.steel, 1.2);           // crosshead
+      rect(cx - 44, gy, 88, 70, '#7d8c99', colors.steel, 1.2);                     // the gate
+      for (let k = 1; k < 4; k++) line([[cx - 44, gy + k * 17.5], [cx + 44, gy + k * 17.5]], '#5b6670', 1);
+      if (e > 0.4 && Math.random() < 0.5) spark(cx + (Math.random() - 0.5) * 70, base - 4, '#bfe0ff', 2);
+    },
+    // Launch hold-down arms: clamp a rocket at full thrust, then let go.
+    launch(cx, e) {
+      const base = BELT - 6;
+      const open = e > 0.8 ? (e - 0.8) * 5 : 0;
+      const ry = base - 196 - open * 36;
+      if (e > 0.4) {
+        ctx.save(); ctx.globalAlpha = Math.min(1, (e - 0.4) * 3);
+        ctx.beginPath(); ctx.moveTo(cx - 10, ry + 176); ctx.lineTo(cx, ry + 206 + 18 * Math.random()); ctx.lineTo(cx + 10, ry + 176); ctx.closePath();
+        ctx.fillStyle = '#ffb04a'; ctx.fill(); ctx.restore();
+      }
+      rrect(cx - 12, ry, 24, 176, 8, '#dde3ea', colors.steel, 1.2);                // body
+      ctx.beginPath(); ctx.moveTo(cx - 12, ry + 16); ctx.lineTo(cx, ry - 16); ctx.lineTo(cx + 12, ry + 16); ctx.closePath();
+      ctx.fillStyle = '#c94a3a'; ctx.fill();                                       // nose
+      rect(cx - 12, ry + 64, 24, 8, '#c94a3a');
+      for (const sg of [-1, 1]) {
+        const tx = cx + sg * 46;
+        rect(tx - 5, base - 130, 10, 130, '#59687a', colors.steel, 1.2);           // tower
+        line([[tx, base - 104], [cx + sg * (13 + open * 22), base - 104]], '#f2a900', 4); // the arm
+      }
+      if (e > 0.5 && Math.random() < 0.6) spark(cx + (Math.random() - 0.5) * 24, base - 8, '#ffb04a', 3);
+    },
   };
 
   function circleHalf(x, y, r, top) {
@@ -753,6 +799,8 @@
     forge:     (x, y) => { rect(x - 8, y - 6, 16, 6, '#e8641c', '#ffb04a', 1); },
     shiplift:  (x, y) => { rect(x - 8, y - 9, 16, 9, '#c94a3a', '#e07b6c', 1); },
     tectonic:  (x, y) => { ctx.beginPath(); ctx.moveTo(x, y - 12); ctx.lineTo(x + 6, y - 5); ctx.lineTo(x, y); ctx.lineTo(x - 6, y - 5); ctx.closePath(); ctx.fillStyle = '#b48ee0'; ctx.fill(); },
+    damgate:   (x, y) => { circle(x, y - 6, 6, '#3aa0ff', '#7cc0ff', 1); },
+    launch:    (x, y) => { rect(x - 3, y - 14, 6, 14, '#dde3ea', '#9aa7b4', 1); rect(x - 3, y - 16, 6, 3, '#c94a3a'); },
   };
 
   // Parts should visibly reach Shipping even when the line is starved.

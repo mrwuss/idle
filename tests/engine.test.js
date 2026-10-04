@@ -676,3 +676,43 @@ test('the Time Machine spends Know-how and plays the skipped time out', () => {
   assert.equal(s.warpsDone, 1, 'kept through Overhaul');
   assert.equal(s.warpJumps, 0, 'price resets each run');
 });
+
+test('Standards Committee: Patents buy permanent rule changes that survive Overhaul', () => {
+  const s = lateGame();
+  s.safety.incident = null;
+  s.lifetime = 1e30; s.patents = 1000; // enough lifetime that Overhaul still pays
+  assert.ok(E.standardsOpen(s));
+  const cost = E.standardCost(s);
+  const before = E.derive(s).production;
+  assert.ok(E.adoptStandard(s, 'nfpa'));
+  assert.equal(s.patents, 1000 - cost);
+  assert.ok(E.derive(s).production > before * 1.2, 'actuators ×1.5 (patents spent cost some income too)');
+  assert.equal(E.standardCost(s), cost * 2, 'the next one costs ×2');
+  assert.equal(E.adoptStandard(s, 'nfpa'), false, 'once only');
+  assert.ok(E.adoptStandard(s, 'opc'));
+  assert.ok(E.adoptStandard(s, 'layout'));
+  s.kh = 1e9; s.tech.telematics = true;
+  E.hire(s, 'engineering', 6);
+  for (const i of s.depts.engineering.team.keys()) E.setEngTeam(s, i, 'controls');
+  E.buyScada(s); E.buyPanel(s, 'historian');
+  assert.ok(E.overhaul(s));
+  assert.ok(E.hasStandard(s, 'nfpa'), 'kept through Overhaul');
+  assert.ok(s.scada.owned && E.hasPanel(s, 'historian'), 'OPC UA keeps SCADA and its panel');
+  assert.equal(s.actuators.jack, 25); assert.equal(s.pumps.gear, 25); assert.ok(s.tier >= 1);
+  const m = E.deserialize(E.serialize(s));
+  assert.ok(E.hasStandard(m, 'layout'));
+});
+
+test('Era VI: new research, a 15,000 psi tier and new gear, without closing the Patent Office', () => {
+  const s = lateGame();
+  for (const t of E.DATA.TECH) if (!t.era) s.tech[t.id] = true;
+  assert.ok(E.officeOpen(s), 'the original tree is enough for the Patent Office');
+  assert.equal(E.isUnlocked(s, 'pump', 'subsea'), false);
+  for (const t of E.DATA.TECH) s.tech[t.id] = true;
+  assert.ok(E.isUnlocked(s, 'pump', 'subsea') && E.isUnlocked(s, 'cooler', 'cryo'));
+  s.tier = E.DATA.TIERS.length - 1;
+  assert.equal(E.DATA.TIERS[s.tier].psi, 15000);
+  assert.ok(E.isUnlocked(s, 'actuator', 'launch'));
+  s.actuators.launch = 1; s.pumps.subsea = 30;
+  assert.ok(E.derive(s).perActuator.launch > 0);
+});

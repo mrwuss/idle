@@ -757,6 +757,16 @@ ul.plain b { color: var(--text); }
 .patent-office p { margin: 4px 0; font-size: 13px; }
 .patent-office .btn { min-height: 44px; }
 .time-machine { margin-top: 12px; border-color: var(--accent-dim); }
+.standards { margin-top: 12px; border-color: var(--accent-dim); }
+.standards p { font-size: 13px; margin: 4px 0 8px; }
+.std-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 6px; }
+.std { display: flex; gap: 8px; align-items: center; padding: 8px; border: 1px solid var(--edge); border-radius: var(--radius); background: var(--panel-2); min-width: 0; }
+.std.own { border-color: var(--ok); }
+.std-txt { flex: 1; display: grid; gap: 1px; min-width: 0; font-size: 12px; }
+.std-txt b { font: 700 11px var(--font-mono); color: var(--accent); }
+.std-txt span { font-weight: 700; }
+.std-txt em { font-style: normal; color: var(--muted); }
+.std-ok { font: 700 10px var(--font-mono); color: var(--ok); text-transform: uppercase; }
 .time-machine p { margin: 4px 0; font-size: 13px; }
 .warp-btns { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
 .warp-btns .btn { min-height: 44px; }

@@ -38,7 +38,9 @@ update the tables here.
 | Executives | skill `(2 × LEA + key stat) ÷ 3`; division strength × `(1 + 0.03 × skill)`; President income × `(1 + 0.02 × skill)` |
 | Board seats | 3 / 8 / 20 / 50 / 120 Patents (spent, not refunded); perk strength `0.6 + 0.08 × LEA` |
 | SCADA | 2M Know-how (needs Telematics + Controls strength 2); income × `(1 + min(0.2, 0.005 × Controls strength))`; automation scans every 2 s. Operator panel (Know-how, in order): historian 5M (+5% income), alarms 20M (incidents ×0.8), predictive 80M (+1 action/scan), APC 300M (tuning ×2, cap 40%). Simulator: historian ≈ 2h 47m, alarms ≈ 4h 54m |
-| Patent Office | after all 17 techs: filing *n* costs `1M × 1.6^n` Know-how (n counts every filing ever); filed patents don't reduce Overhaul gain |
+| Standards Committee | opens with the Board; standard *n* costs `25 × 2^n` Patents (spent, kept forever): actuators ×1.5, pumps ×1.5, costs −20%, temp limit +40°F, incidents −50%, Know-how ×2, SCADA kept through Overhaul, quick-start layout |
+| Era VI research | Isostatic Pressing 2M KH, Cryogenic Cooling 1.5M KH (+20°F limit), Subsea Power Units 3M KH (pumps ×1.25); not needed for the Patent Office |
+| Patent Office | after all 17 original techs: filing *n* costs `1M × 1.6^n` Know-how (n counts every filing ever); filed patents don't reduce Overhaul gain |
 | Shake-up | costs 120 s of production, 5 min long, 30 min cooldown; incidents ×3 and Order Line ×0.9 while it runs |
 | Achievements | +1% income each (23 in all, kept through Overhaul) |
 | Safety streak | +1% income per 10 min without an incident, max +25% |
@@ -57,6 +59,7 @@ update the tables here.
 | Radial piston | 220 | 92% | $48K | 218 | — |
 | Load-sensing | 1,100 | 94% | $750K | 682 | R&D: Load Sensing |
 | Digital displacement | 6,000 | 97% | $14M | 2,333 | R&D: Digital Displacement |
+| Subsea power unit (Era VI) | 32,000 | 98% | $400B | 12.5M | R&D: Subsea Power Units |
 
 Higher pumps cost more per GPM at base price. You buy them because the
 growth curve makes the 80th gear pump far pricier than the first vane pump,
@@ -74,6 +77,8 @@ and because their efficiency keeps heat down.
 | Open-Die Forging Press | 1,100 | 4,500 | 9.5K | $13M | 8.6 |
 | Ship Lift | 5,500 | 5,500 | 75K | $250M | 13.6 |
 | Tectonic Press | 30,000 | 9,000 | 700K | $5B | 23.3 |
+| Dam Spillway Gate (Era VI) | 150,000 | 12,000 | 6M | $120B | 40 |
+| Launch Hold-Down Arms (Era VI) | 800,000 | 15,000 | 50M | $3T | 62.5 |
 
 Each actuator earns more per GPM than the one before it, so upgrading the
 actuator mix is also a flow-efficiency upgrade, not just raw income.
@@ -88,6 +93,7 @@ actuator mix is also a flow-efficiency upgrade, not just raw income.
 | 4-Spiral Hose | 5,000 | $450K | Seal Chemistry |
 | 6-Spiral Hose | 6,000 | $25M | Forged Manifolds |
 | Ultra-High Pressure | 10,000 | $3B | Pressure Intensifiers |
+| Isostatic Line (Era VI) | 15,000 | $800B | Isostatic Pressing |
 
 ### Coolers
 
@@ -97,6 +103,7 @@ actuator mix is also a flow-efficiency upgrade, not just raw income.
 | Shell & Tube | 6 | $40K | 1.22 |
 | Brazed Plate | 80 | $3M | 1.22 |
 | Industrial Chiller | 1,200 | $250M | 1.22 |
+| Cryogenic Loop (Era VI) | 18,000 | $30B | 1.22 |
 
 ### Accumulator
 

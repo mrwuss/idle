@@ -25,6 +25,10 @@
     { id: 'dd',     name: 'Digital Displacement',  gpm: 6000,  eff: 0.97, cost: 1.4e7,   growth: 1.15,
       requires: 'digital_displacement',
       flavor: 'Every piston has its own solenoid valve and an opinion.' },
+    // Era VI
+    { id: 'subsea', name: 'Subsea Power Unit',     gpm: 32000, eff: 0.98, cost: 4e11,    growth: 1.15,
+      requires: 'subsea',
+      flavor: 'Built to run a decade on the seabed. Up here it just runs.' },
   ];
 
   // Actuators turn flow + pressure into paid work. Each needs a minimum system
@@ -46,6 +50,11 @@
       flavor: 'Raises a cargo ship and its canal water 30 metres. Every hour.' },
     { id: 'tectonic',  name: 'Tectonic Press',         gpm: 30000, psi: 9000, rate: 700000, cost: 5e9,  growth: 1.15,
       flavor: 'Nobody is entirely sure this is legal.' },
+    // Era VI
+    { id: 'damgate',   name: 'Dam Spillway Gate',      gpm: 150000, psi: 12000, rate: 6e6,  cost: 1.2e11, growth: 1.15,
+      flavor: 'Forty metres of steel gate, lifted against a river.' },
+    { id: 'launch',    name: 'Launch Hold-Down Arms',  gpm: 800000, psi: 15000, rate: 5e7,  cost: 3e12,   growth: 1.15,
+      flavor: 'Hold a rocket at full thrust, then let go on the count of zero.' },
   ];
 
   // System pressure rating (hoses, fittings, seals, relief valve setting).
@@ -57,6 +66,7 @@
     { name: '4-Spiral Hose',        psi: 5000,  cost: 4.5e5,  requires: 'seal_chem' },
     { name: '6-Spiral Hose',        psi: 6000,  cost: 2.5e7,  requires: 'forged_manifold' },
     { name: 'Ultra-High Pressure',  psi: 10000, cost: 3e9,    requires: 'intensifier' },
+    { name: 'Isostatic Line',       psi: 15000, cost: 8e11,   requires: 'isostatic' },   // Era VI
   ];
 
   // Coolers raise k, the heat-rejection coefficient (HP per °F above ambient).
@@ -69,6 +79,8 @@
       flavor: 'Fifty stainless plates, a fraction of the footprint.' },
     { id: 'chiller', name: 'Industrial Chiller',     k: 1200,  cost: 2.5e8, growth: 1.22,
       flavor: 'Refrigeration-grade cold for refinery-grade heat.' },
+    { id: 'cryo',    name: 'Cryogenic Loop',         k: 18000, cost: 3e10,  growth: 1.22, requires: 'cryogenics',
+      flavor: 'Liquid nitrogen where the cooling water used to be.' },
   ];
 
   // Research, paid in Know-how (KH). `effects` are read by engine.js.
@@ -124,6 +136,16 @@
     { id: 'digital_displacement', controls: true, name: 'Digital Displacement', cost: 500000, requires: ['load_sensing', 'telematics'],
       desc: 'Unlocks the Digital Displacement pump. All pumps ×1.5 flow.',
       effects: { pumpMult: 1.5 } },
+    // Era VI ("Beyond"): research past the original tree (the Patent Office doesn't wait for it).
+    { id: 'isostatic', era: 6, name: 'Isostatic Pressing', cost: 2e6, requires: ['intensifier'],
+      desc: 'Pressure from every side at once. Unlocks the Isostatic Line (15,000 psi).',
+      effects: {} },
+    { id: 'cryogenics', era: 6, name: 'Cryogenic Cooling', cost: 1.5e6, requires: ['intensifier'],
+      desc: 'Unlocks the Cryogenic Loop cooler. Oil temperature limit +20°F.',
+      effects: { tempLimit: 20 } },
+    { id: 'subsea', era: 6, controls: true, name: 'Subsea Power Units', cost: 3e6, requires: ['digital_displacement'],
+      desc: 'Unlocks the Subsea Power Unit pump. All pumps ×1.25 flow.',
+      effects: { pumpMult: 1.25 } },
   ];
 
   // ---- Departments (design scaffold — not simulated yet) --------------------
@@ -229,6 +251,19 @@
       desc: 'Forecasts the next minute on every sparkline and shows rates of change. Automation takes +1 action per scan.', eff: { scanPlus: 1 } },
     { id: 'apc',        name: 'Advanced process control', kh: 3e8,
       desc: 'Model-based loop tuning: +1% income per Controls strength, up to +40% (double).', eff: { tuneMult: 2 } },
+  ];
+  // Standards Committee: a second prestige layer. Spend Patents (gone for good) on
+  // rule changes that last forever, through every Overhaul. Each one bought makes the
+  // next cost ×standardGrowth more. Opens with the Board.
+  const STANDARDS = [
+    { id: 'nfpa',    code: 'NFPA T3.6.7',  name: 'Pressure-rating standard',   desc: 'Every actuator line pays ×1.5.',          eff: { actMult: 1.5 } },
+    { id: 'iso4406', code: 'ISO 4406',     name: 'Fluid cleanliness codes',    desc: 'Clean oil: every pump ×1.5 flow.',      eff: { pumpMult: 1.5 } },
+    { id: 'din',     code: 'DIN 2353',     name: 'Interchangeable fittings',   desc: 'All equipment costs −20%.',              eff: { costMult: 0.8 } },
+    { id: 'sae',     code: 'SAE J517',     name: 'Hose and temperature specs', desc: 'Oil temperature limit +40°F.',           eff: { tempLimit: 40 } },
+    { id: 'iso4413', code: 'ISO 4413',     name: 'Fluid-power safety rules',   desc: 'Incidents −50%.',                        eff: { incidentMult: 0.5 } },
+    { id: 'kh',      code: 'ISO 9001',     name: 'Shared engineering practice', desc: 'Know-how ×2.',                          eff: { khMult: 2 } },
+    { id: 'opc',     code: 'OPC UA',       name: 'Open control protocol',      desc: 'SCADA and its operator panel stay installed through Overhaul.', eff: { keepScada: true } },
+    { id: 'layout',  code: 'ANSI B93',     name: 'Standard shop layout',       desc: 'Every run starts at 1-Wire Braid with 25 Bottle Jack Bays and 25 Gear Pumps.', eff: { quickStart: true } },
   ];
   // The President is appointed from the executives (3+ seated) and also runs Management.
   const PRESIDENT = { stat: 'organization', depts: ['management'] };
@@ -397,6 +432,8 @@
     { id: 'shake',     name: 'Shake It Up',           stat: 'shakes',    goal: 1,     desc: 'Finish a company shake-up.' },
     { id: 'scada',     name: 'Control Room',          stat: 'scada',     goal: 1,     desc: 'Install a SCADA system.' },
     { id: 'file1',     name: 'Patent Pending',        stat: 'filed',     goal: 1,     desc: 'File a patent with Know-how.' },
+    { id: 'standard',  name: 'Rule Maker',            stat: 'standards', goal: 1,     desc: 'Adopt your first industry standard.' },
+    { id: 'era6',      name: 'Beyond',                stat: 'isostatic', goal: 1,     desc: 'Run the Isostatic Line at 15,000 psi.' },
     { id: 'warp',      name: 'Time Traveler',         stat: 'warps',     goal: 1,     desc: 'Jump ahead with the Time Machine.' },
     { id: 'file10',    name: 'Prolific Inventor',     stat: 'filed',     goal: 10,    desc: 'File 10 patents with Know-how.' },
     { id: 'board',     name: 'Boardroom',             stat: 'board',     goal: 1,     desc: 'Seat your first director.' },
@@ -471,6 +508,8 @@
     scadaMaxPaybackS: 1800, // automation skips any buy that wouldn't pay for itself within 30 min
     // Time Machine: jump ahead and play the time out (managers, executives, SCADA, Paks, incidents).
     warpHours: [1, 8, 24],     // the jumps on offer
+    standardBase: 25,          // the first standard costs 25 Patents…
+    standardGrowth: 2,         // …and each one after costs ×2
     warpKhPerHourMin: 2e6,     // each hour skipped costs at least this much Know-how…
     warpKhRateS: 60,           // …or 60 s of your current Know-how output, whichever is more
     warpGrowth: 1.3,           // each jump this run costs ×1.3 more (resets on Overhaul)
@@ -520,7 +559,7 @@
 
   const DATA = { PUMPS, ACTUATORS, TIERS, COOLERS, TECH, ERAS, DEPARTMENTS, PAKS, REGIONS, STATES,
     STATS, DEPT_STATS, TRAITS, TRAIT_CHANCE, FIRST_NAMES, LAST_NAMES, ENG_UPGRADES, ACHIEVEMENTS,
-    EXECS, PRESIDENT, SCADA_PANEL, BOARD_COSTS, BOARD_PERKS, CONSTANTS };
+    EXECS, PRESIDENT, SCADA_PANEL, STANDARDS, BOARD_COSTS, BOARD_PERKS, CONSTANTS };
   root.PW = root.PW || {};
   root.PW.DATA = DATA;
   if (typeof module !== 'undefined') module.exports = DATA;

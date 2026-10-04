@@ -32,6 +32,10 @@
     shell: '<rect x="6" y="12" width="28" height="16" rx="8"/><path class="accent" d="M8 17 H32 M8 20 H32 M8 23 H32"/><path d="M14 12 V6 M26 28 V34"/>',
     plate: '<path d="M10 6 V34 M15 6 V34 M20 6 V34 M25 6 V34 M30 6 V34"/><path class="accent" d="M6 12 H34 M6 28 H34"/>',
     chiller: '<path class="accent" d="M20 4 V36 M6 12 L34 28 M6 28 L34 12"/><path d="M16 7 L20 11 L24 7 M16 33 L20 29 L24 33"/>',
+    subsea: '<path class="accent" d="M2 10 Q8 6 14 10 T26 10 T38 10"/><rect x="8" y="18" width="24" height="14" rx="3"/><circle cx="20" cy="25" r="4"/><path d="M14 32 V36 M26 32 V36"/>',
+    damgate: '<path d="M4 6 V36 M36 6 V36 M4 6 H36"/><rect x="9" y="12" width="22" height="14"/><path class="accent" d="M9 32 Q14 29 20 32 T31 32"/>',
+    launch: '<path d="M20 3 L25 12 V30 H15 V12 Z"/><path class="accent" d="M17 30 L20 37 L23 30"/><path d="M6 36 V16 M34 36 V16 M6 20 H15 M34 20 H25"/>',
+    cryo: '<rect x="8" y="6" width="24" height="28" rx="4"/><path class="accent" d="M20 11 V29 M12 15 L28 25 M12 25 L28 15"/>',
   };
   const icon = (id) => `<svg class="item-icon" viewBox="0 0 40 40" aria-hidden="true">${ICONS[id] || ''}</svg>`;
 
@@ -1424,11 +1428,37 @@
   function renderOverhaul(s) {
     const C = E.DATA.CONSTANTS;
     $('ov-gain').textContent = fmt(E.overhaulGain(s));
-    const nextAt = (E.patentsTotal(s.lifetime) + 1) ** 2 * C.patentDivisor;
+    const nextAt = ((E.patentsTotal(s.lifetime) + 1) / C.patentScale) ** 3 * C.patentDivisor;
     $('ov-detail').textContent = s.lifetime < C.overhaulMin
       ? `Available once you have earned $${fmt(C.overhaulMin)} in total (so far $${fmt(s.lifetime)}).`
       : `Lifetime earnings $${fmt(s.lifetime)}. Next patent at $${fmt(nextAt)}.`;
     $('btn-overhaul').disabled = !E.canOverhaul(s);
+    renderStandards(s);
+  }
+
+  // Standards Committee: spend Patents on rules that last forever.
+  function renderStandards(s) {
+    const box = $('standards'), open = E.standardsOpen(s);
+    box.hidden = !open && !Object.keys(s.standards || {}).length;
+    if (box.hidden) return;
+    const key = Object.keys(s.standards || {}).join();
+    if (box._key !== key) {
+      box._key = key;
+      const n = Object.keys(s.standards || {}).length;
+      box.innerHTML = `<h3>Standards Committee <span class="muted small">· ${n}/${E.DATA.STANDARDS.length} adopted</span></h3>
+        <p>Write the rules of the industry. A standard costs Patents (gone for good: each was +10% income) and changes the game <b>forever</b>, through every Overhaul. Each one adopted makes the next cost ×${E.DATA.CONSTANTS.standardGrowth}.</p>
+        <div class="std-list">${E.DATA.STANDARDS.map((sd) => {
+          const own = E.hasStandard(s, sd.id);
+          return `<div class="std${own ? ' own' : ''}"><div class="std-txt"><b>${sd.code}</b> <span>${sd.name}</span><em>${sd.desc}</em></div>
+            ${own ? '<span class="std-ok">Adopted</span>' : `<button class="btn mini" data-standard="${sd.id}"></button>`}</div>`;
+        }).join('')}</div>`;
+    }
+    const cost = E.standardCost(s);
+    box.querySelectorAll('[data-standard]').forEach((b) => {
+      const html = `${fmt(cost)} patents<small>adopt</small>`;
+      if (b._html !== html) { b._html = html; b.innerHTML = html; }
+      b.disabled = !E.canAdopt(s, b.dataset.standard);
+    });
   }
 
   function renderStats(s, d) {

@@ -82,8 +82,8 @@ Design: [TERRITORY.md](TERRITORY.md)
 
 ## v0.6 — Long game
 
-- [ ] Era VI content
-- [ ] Second prestige layer: Standards Committee (spend Patents on rule-changing standards)
+- [x] Era VI content (Isostatic Line, Subsea Power Unit, Cryogenic Loop, Dam Spillway Gate, Launch Hold-Down Arms)
+- [x] Second prestige layer: Standards Committee (spend Patents on rule-changing standards)
 - [ ] Balance pass with real playtest data
 
 ## Open questions
