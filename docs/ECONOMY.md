@@ -39,7 +39,7 @@ update the tables here.
 | Board seats | 3 / 8 / 20 / 50 / 120 Patents (spent, not refunded); perk strength `0.6 + 0.08 × LEA` |
 | SCADA | 2M Know-how (needs Telematics + Controls strength 2); income × `(1 + min(0.2, 0.005 × Controls strength))`; automation scans every 2 s. Operator panel (Know-how, in order): historian 5M (+5% income), alarms 20M (incidents ×0.8), predictive 80M (+1 action/scan), APC 300M (tuning ×2, cap 40%). Simulator: historian ≈ 2h 47m, alarms ≈ 4h 54m |
 | Standards Committee | opens with the Board; standard *n* costs `25 × 2^n` Patents (spent, kept forever): actuators ×1.5, pumps ×1.5, costs −20%, temp limit +40°F, incidents −50%, Know-how ×2, SCADA kept through Overhaul, quick-start layout |
-| Era VI research | Isostatic Pressing 2M KH, Cryogenic Cooling 1.5M KH (+20°F limit), Subsea Power Units 3M KH (pumps ×1.25); not needed for the Patent Office |
+| Era VI research | Opens with your first adopted Standard. Isostatic Pressing 2M KH, Cryogenic Cooling 1.5M KH (+20°F limit), Subsea Power Units 3M KH (pumps ×1.25); not needed for the Patent Office |
 | Department signatures | Accounting interest `cash × 1e-5 × strength`/s (≤ 20% of income); Quality Pak prices ×(1 + 0.03 × strength, ≤ 1.6); Warehouse Rush Ship = 120 s of production, buffer fills in `600 s ÷ (1 + 0.1 × strength)`, contract time ×(1 + 0.02 × strength, ≤ 1.5); Inside Sales offers 3 + ⌊strength ÷ 4⌋ (≤ 6), arrival ×(1 + 0.05 × strength); Management Focus ×2 for 300 s, 900 s recharge |
 | Pak contracts | offer every 240 s; deadline 15–40 min; sized to 55% of it; bonus `2 × qty × price × (1 + region customers ÷ 400)` |
 | Patent Office | after all 17 original techs: filing *n* costs `1M × 1.6^n` Know-how (n counts every filing ever); filed patents don't reduce Overhaul gain |
@@ -129,6 +129,7 @@ places the bot is naïve about, so treat these as relative pacing.
 | $1B lifetime | 1–2 h | 1h 06m (executives arrive) |
 | First ship lift | 1–2 h | 1h 07m |
 | All 17 techs | 3–5 h | ~1h 33m |
+| Era VI research | after the first Standard | not reachable in run 1 ($1T at 3h 35m) |
 | Run 1 plateau | 2–4 h | ~160M/s by 6 h (heat wall at 200°F) |
 
 The bot hires into the bottleneck before buying anything else, promotes

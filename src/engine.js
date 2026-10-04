@@ -308,9 +308,11 @@
     return true;
   }
 
+  /** Era VI research is the late game: it waits for the first adopted industry Standard. */
+  const eraOpen = (s, t) => !t.era || Object.keys(s.standards || {}).length > 0;
   function techAvailable(s, id) {
     const t = TECHS[id];
-    return !s.tech[id] && t.requires.every((r) => s.tech[r]);
+    return !s.tech[id] && eraOpen(s, t) && t.requires.every((r) => s.tech[r]);
   }
   /** Know-how price; Controls engineers make the Controls branch cheaper. */
   function techCost(s, id) {
