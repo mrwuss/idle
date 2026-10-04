@@ -716,3 +716,29 @@ test('Era VI: new research, a 15,000 psi tier and new gear, without closing the 
   s.actuators.launch = 1; s.pumps.subsea = 30;
   assert.ok(E.derive(s).perActuator.launch > 0);
 });
+
+test('Pak contracts: offers from open locations, timed delivery, bonus on time', () => {
+  const s = withEngineers(6);
+  s.safety.incident = null;
+  for (const i of s.depts.engineering.team.keys()) E.setEngTeam(s, i, 'project');
+  E.tick(s, 1);
+  const K = s.contracts;
+  assert.ok(K.offers.length >= 1, 'an offer arrives');
+  const o = K.offers[0];
+  assert.ok(o.qty >= 1 && o.time >= 900 && s.locations[o.region] && o.client);
+  assert.ok(E.acceptContract(s, o.id));
+  assert.equal(E.pakTarget(s), o.pak === 'sys' && !E.sysReady(s) ? 'base' : o.pak, 'the line builds the contract Pak');
+  const cash = s.cash, bonus = E.contractBonus(s, E.derive(s), K.active);
+  for (let t = 0; t < o.time && K.active; t++) E.tick(s, 1);
+  assert.equal(K.active, null);
+  assert.equal(s.contractsDone, 1, 'delivered on time');
+  assert.ok(s.cash - cash > bonus * 0.5, 'bonus paid');
+  // A missed one pays no bonus.
+  K.active = { ...o, id: 99, qty: 1e6, left: 2, delivered: 0 };
+  E.tick(s, 1); E.tick(s, 1); E.tick(s, 1);
+  assert.equal(K.active, null);
+  assert.equal(s.contractsDone, 1);
+  assert.ok(K.log.some((l) => /Missed/.test(l.m)));
+  s.lifetime = 1e13; E.overhaul(s);
+  assert.equal(s.contractsDone, 1, 'kept through Overhaul');
+});

@@ -61,7 +61,7 @@
 
   // Hiring buttons inside re-rendered department cards.
   document.addEventListener('click', (ev) => {
-    const b = ev.target.closest('[data-scada-buy], [data-standard], [data-warp], [data-scada-panel], [data-scada-auto], [data-scada-budget], [data-file], [data-shake], [data-shake-free], [data-hire], [data-hire-best], [data-reroll], [data-promote], [data-auto], [data-eng], [data-engteam], [data-pak-target], [data-exec-appoint], [data-exec-hire], [data-exec-dismiss], [data-exec-pres], [data-board-elect], [data-board-replace]');
+    const b = ev.target.closest('[data-scada-buy], [data-contract], [data-contract-drop], [data-standard], [data-warp], [data-scada-panel], [data-scada-auto], [data-scada-budget], [data-file], [data-shake], [data-shake-free], [data-hire], [data-hire-best], [data-reroll], [data-promote], [data-auto], [data-eng], [data-engteam], [data-pak-target], [data-exec-appoint], [data-exec-hire], [data-exec-dismiss], [data-exec-pres], [data-board-elect], [data-board-replace]');
     if (!b || b.disabled) return;
     if (b.dataset.scadaBuy) {
       const ok = E.buyScada(state);
@@ -77,6 +77,12 @@
       if (n) UI.toast(`Filed <b>${n}</b> patent${n === 1 ? '' : 's'}. You now hold <b>${state.patents}</b> (+${state.patents * 10}% income).`, 3500);
       return render();
     }
+    if (b.dataset.contract) {
+      const ok = E.acceptContract(state, Number(b.dataset.contract));
+      SFX.play(ok ? 'upgrade' : 'cant');
+      return render();
+    }
+    if (b.dataset.contractDrop) { E.abandonContract(state); SFX.play('tab', 0.6); return render(); }
     if (b.dataset.standard) {
       const sd = E.DATA.STANDARDS.find((x) => x.id === b.dataset.standard);
       const ok = E.adoptStandard(state, sd.id);

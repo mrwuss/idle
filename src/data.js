@@ -300,6 +300,23 @@
       markets: ['Oil & gas', 'Petrochemical', 'Offshore', 'Ports & marine'] },
   ];
 
+  // Sys-Pak contracts: fictional clients by market. Each open location's markets
+  // send offers; bigger customer bases pay bigger bonuses.
+  const CLIENTS = {
+    'Ag equipment OEMs': ['Prairie Implement Co.', 'Cedar Valley Tractor Works'],
+    'Industrial manufacturing': ['Hawkeye Stamping', 'River Bend Fabrication'],
+    'Mining': ['Iron Range Ore Co.', 'Northern Shield Mining'],
+    'Forestry & paper': ['North Woods Paper Mill', 'Lakeshore Timber'],
+    'Food processing': ['Twin Rivers Foods', 'Red River Dairy Co-op'],
+    'Aerospace': ['Plains Aerostructures', 'High Prairie Avionics'],
+    'Agriculture': ['Heartland Grain Co-op', 'Flint Hills Feeders'],
+    'Oil & gas': ['Red Mesa Drilling', 'Dry Creek Well Services'],
+    'Rail & trucking': ['Kaw Valley Railcar', 'Crossroads Freight Lines'],
+    'Petrochemical': ['Ship Channel Polymers', 'Bayou Refining Partners'],
+    'Offshore': ['Blue Shelf Offshore', 'Deep Gulf Rig Services'],
+    'Ports & marine': ['Tidewater Cargo Co.', 'Sabine Pass Marine'],
+  };
+
   const STATES = [
     { id: 'ND',   name: 'North Dakota',  region: 'north', customers: 25,  x: 1, y: 0 },
     { id: 'MN',   name: 'Minnesota',     region: 'north', customers: 60,  x: 2, y: 0, branch: true },
@@ -434,6 +451,8 @@
     { id: 'file1',     name: 'Patent Pending',        stat: 'filed',     goal: 1,     desc: 'File a patent with Know-how.' },
     { id: 'standard',  name: 'Rule Maker',            stat: 'standards', goal: 1,     desc: 'Adopt your first industry standard.' },
     { id: 'era6',      name: 'Beyond',                stat: 'isostatic', goal: 1,     desc: 'Run the Isostatic Line at 15,000 psi.' },
+    { id: 'contract',  name: 'Signed, Sealed',        stat: 'contracts', goal: 1,     desc: 'Deliver a Pak contract on time.' },
+    { id: 'contract10', name: 'Preferred Supplier',   stat: 'contracts', goal: 10,    desc: 'Deliver 10 Pak contracts on time.' },
     { id: 'warp',      name: 'Time Traveler',         stat: 'warps',     goal: 1,     desc: 'Jump ahead with the Time Machine.' },
     { id: 'file10',    name: 'Prolific Inventor',     stat: 'filed',     goal: 10,    desc: 'File 10 patents with Know-how.' },
     { id: 'board',     name: 'Boardroom',             stat: 'board',     goal: 1,     desc: 'Seat your first director.' },
@@ -509,6 +528,13 @@
     // Time Machine: jump ahead and play the time out (managers, executives, SCADA, Paks, incidents).
     warpHours: [1, 8, 24],     // the jumps on offer
     standardBase: 25,          // the first standard costs 25 Patents…
+    // Sys-Pak contracts
+    contractEvery: 240,        // a new offer every 4 minutes (the board holds 3)
+    contractOffers: 3,
+    contractTimeS: [900, 2400], // deadlines between 15 and 40 minutes
+    contractLoad: 0.55,        // sized to take ~55% of the deadline at your current Project speed
+    contractBonus: 2,          // on-time delivery pays ×2 the Paks' value on top of their sale…
+    contractRegionPer: 400,    // …× (1 + the region's customer base ÷ 400)
     standardGrowth: 2,         // …and each one after costs ×2
     warpKhPerHourMin: 2e6,     // each hour skipped costs at least this much Know-how…
     warpKhRateS: 60,           // …or 60 s of your current Know-how output, whichever is more
@@ -559,7 +585,7 @@
 
   const DATA = { PUMPS, ACTUATORS, TIERS, COOLERS, TECH, ERAS, DEPARTMENTS, PAKS, REGIONS, STATES,
     STATS, DEPT_STATS, TRAITS, TRAIT_CHANCE, FIRST_NAMES, LAST_NAMES, ENG_UPGRADES, ACHIEVEMENTS,
-    EXECS, PRESIDENT, SCADA_PANEL, STANDARDS, BOARD_COSTS, BOARD_PERKS, CONSTANTS };
+    EXECS, PRESIDENT, SCADA_PANEL, STANDARDS, CLIENTS, BOARD_COSTS, BOARD_PERKS, CONSTANTS };
   root.PW = root.PW || {};
   root.PW.DATA = DATA;
   if (typeof module !== 'undefined') module.exports = DATA;

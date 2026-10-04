@@ -59,6 +59,7 @@
       mgrClock: 0, mgrReviewClock: 0, presClock: 0,
       warp: null, warpJumps: 0, warpsDone: 0, lastWarp: null, // Time Machine (warpsDone kept)
       standards: {},           // Standards Committee: adopted standards (kept forever)
+      contracts: { offers: [], active: null, clock: 0, log: [], n: 0 }, contractsDone: 0, // Pak contracts (done count kept)
       safety: { streak: 0, incident: null, seed: (Math.random() * 2 ** 32) >>> 0 },
       ach: {},                 // achievements earned (kept forever)
       tips: {},                // first-time tips already shown (kept forever)
@@ -202,6 +203,7 @@
     s.mgrReviewClock += dt;
     if (s.mgrReviewClock >= C.mgrReviewEvery) { s.mgrReviewClock = 0; managersReview(s); }
     pakTick(s, d, dt);
+    contractsTick(s, d, dt);
     shakeTick(s, dt);
     s.scada.clock += dt;
     if (s.scada.clock >= C.scadaEvery) { s.scada.clock = 0; scadaTick(s, d); }
@@ -357,7 +359,7 @@
     const keep = {
       patents: s.patents + overhaulGain(s), lifetime: s.lifetime,
       overhauls: s.overhauls + 1, strokes: s.strokes, time: s.time, locations: s.locations, seed: s.seed,
-      ach: s.ach, tips: s.tips, standards: s.standards || {}, warpsDone: s.warpsDone || 0, shakeDone: s.shake && s.shake.done, freeUsed: !!(s.shake && s.shake.freeUsed), board: s.board, boardPool: s.boardPool, patentsSpent: s.patentsSpent, patentsFiled: s.patentsFiled, scadaPrefs: s.scadaPrefs,
+      ach: s.ach, tips: s.tips, standards: s.standards || {}, contractsDone: s.contractsDone || 0, warpsDone: s.warpsDone || 0, shakeDone: s.shake && s.shake.done, freeUsed: !!(s.shake && s.shake.freeUsed), board: s.board, boardPool: s.boardPool, patentsSpent: s.patentsSpent, patentsFiled: s.patentsFiled, scadaPrefs: s.scadaPrefs,
     };
     const scada = s.scada;
     Object.assign(s, newState(), keep);
@@ -779,6 +781,7 @@
       case 'filed': return s.patentsFiled || 0;
       case 'shakes': return (s.shake && s.shake.done) || 0;
       case 'warps': return s.warpsDone || 0;
+      case 'contracts': return s.contractsDone || 0;
       case 'standards': return Object.keys(s.standards || {}).length;
       case 'isostatic': return psi(s) >= 15000 ? 1 : 0;
       default: return 0;
@@ -805,7 +808,11 @@
   const pakOpen = (s) => departmentOpen(s, DEPT.engineering);
   const sysReady = (s) => !!s.tech.plc && teamStrength(s, 'controls') >= 1;
   /** What the line is really aiming for (Sys-Pak falls back to Base-Pak until it's possible). */
-  const pakTarget = (s) => (s.pak.target === 'sys' && !sysReady(s) ? 'base' : s.pak.target);
+  /** What the line finishes and sells: an active contract's Pak, else your chosen target. */
+  function pakTarget(s) {
+    const c = s.contracts && s.contracts.active, t = c ? c.pak : s.pak.target;
+    return t === 'sys' && !sysReady(s) ? 'base' : t;
+  }
   function pakNext(s) {
     const t = pakTarget(s), st = s.pak.stock;
     if (t === 'valve') return 'valve';
@@ -852,12 +859,82 @@
         const price = pakPrice(s, d, id);
         s.cash += price; s.runEarnings += price; s.lifetime += price; P.earned += price;
         sold.push(id);
+        const c = s.contracts && s.contracts.active;
+        if (c && c.pak === id && ++c.delivered >= c.qty) completeContract(s, d);
       } else P.stock[id]++;
     }
     P.building = pakNext(s);
     return sold;
   }
 
+
+  // ---- Sys-Pak contracts --------------------------------------------------------
+  // Clients in your open locations offer timed Pak orders. Accept one: the line
+  // builds that Pak, each one still sells as usual, and delivering the lot on time
+  // pays a bonus that grows with the region's customer base. Miss the deadline and
+  // the bonus is lost (the Paks already sold stay sold).
+
+  const contractLog = (s, m) => { s.contracts.log.unshift({ t: Math.round(s.time), m }); if (s.contracts.log.length > 12) s.contracts.log.length = 12; };
+  function newOffer(s) {
+    const rate = pakHoursRate(s);
+    if (rate <= 0) return null;
+    const regions = DATA.REGIONS.filter((r) => s.locations[r.id]);
+    const r = regions[Math.floor(rand(s) * regions.length)];
+    const market = r.markets[Math.floor(rand(s) * r.markets.length)];
+    const names = DATA.CLIENTS[market] || ['A regional OEM'];
+    const paks = sysReady(s) ? ['valve', 'base', 'sys', 'sys'] : ['valve', 'base', 'base'];
+    const pak = paks[Math.floor(rand(s) * paks.length)];
+    const [t0, t1] = C.contractTimeS;
+    const time = Math.round((t0 + rand(s) * (t1 - t0)) / 60) * 60;
+    const unitS = pakChainHours(pak) / rate;
+    const qty = Math.max(1, Math.min(999, Math.round((time * C.contractLoad) / unitS)));
+    if (qty * unitS > time * 0.9) return null; // can't be done in time even with one
+    return { id: ++s.contracts.n, client: names[Math.floor(rand(s) * names.length)], market, region: r.id, pak, qty, time,
+      bonusMult: C.contractBonus * (1 + customerBase(s, r.id) / C.contractRegionPer) };
+  }
+  /** What delivering a contract on time pays on top of selling the Paks (at today's prices). */
+  const contractBonus = (s, d, c) => c.bonusMult * c.qty * pakPrice(s, d, c.pak);
+  function contractsTick(s, d, dt) {
+    const K = s.contracts;
+    if (!pakOpen(s)) return;
+    K.clock += dt;
+    if (K.clock >= C.contractEvery || (!K.offers.length && pakHoursRate(s) > 0)) {
+      K.clock = 0;
+      const o = newOffer(s);
+      if (o) { K.offers.push(o); if (K.offers.length > C.contractOffers) K.offers.shift(); }
+    }
+    const c = K.active;
+    if (c) {
+      c.left -= dt;
+      if (c.left <= 0) {
+        contractLog(s, `Missed: ${c.client} (${c.delivered}/${c.qty} ${PAK[c.pak].name}s). The bonus is lost.`);
+        K.active = null;
+      }
+    }
+  }
+  function acceptContract(s, id) {
+    const K = s.contracts, i = K.offers.findIndex((o) => o.id === id);
+    if (K.active || i < 0) return false;
+    const o = K.offers.splice(i, 1)[0];
+    K.active = { ...o, left: o.time, delivered: 0 };
+    contractLog(s, `Accepted: ${o.qty} ${PAK[o.pak].name}${o.qty > 1 ? 's' : ''} for ${o.client}`);
+    return true;
+  }
+  function abandonContract(s) {
+    const c = s.contracts.active;
+    if (!c) return false;
+    contractLog(s, `Walked away from ${c.client} (${c.delivered}/${c.qty} delivered).`);
+    s.contracts.active = null;
+    return true;
+  }
+  function completeContract(s, d) {
+    const c = s.contracts.active, bonus = contractBonus(s, d, c);
+    s.cash += bonus; s.runEarnings += bonus; s.lifetime += bonus; s.pak.earned += bonus;
+    s.contractsDone = (s.contractsDone || 0) + 1;
+    contractLog(s, `Delivered: ${c.qty} ${PAK[c.pak].name}${c.qty > 1 ? 's' : ''} to ${c.client}, bonus $${fmtNum(bonus)}`);
+    s.contracts.last = { client: c.client, bonus, at: Math.round(s.time) };
+    s.contracts.active = null;
+  }
 
   // ---- Executive track: executives, President, Board -------------------------------
 
@@ -1654,6 +1731,7 @@
     scadaReady, canBuyScada, buyScada, scadaMult, scadaScan, scadaTick, bestGrowth, sustained, fmtDur, panelEff, hasPanel, nextPanel, canBuyPanel, buyPanel,
     officeOpen, fileCost, fileQuote, filePatents,
     warpOpen, warpCost, canWarp, startWarp, warpStep,
+    acceptContract, abandonContract, contractBonus, contractsTick, newOffer,
     standardsOpen, standardCost, canAdopt, adoptStandard, hasStandard, stdEff,
     SHAKE_PHASES, shakeOpen, shakeCost, canShake, startShake, shakeTick, canFreeShake, freeShake, companyStrength, shakeScore,
     pakOpen, sysReady, pakTarget, pakNext, pakHoursRate, pakGrade, pakPrice, pakChainHours, pakIncome, setPakTarget, pakTick,
