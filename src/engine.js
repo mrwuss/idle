@@ -54,7 +54,7 @@
       patentsFiled: 0,                                         // patents bought with Know-how (kept)
       scada: { owned: false, clock: 0, log: [], panel: {} },   // installed this run (panel upgrades too)
       scadaPrefs: { cool: false, pumps: false, lines: false, tier: false, budget: 1 }, // automation switches (kept)
-      shake: { phase: null, left: 0, cooldown: 0, moves: [], before: 0, report: null, done: 0 },
+      shake: { phase: null, left: 0, cooldown: 0, moves: [], before: 0, report: null, done: 0, freeUsed: false },
       pak: { target: 'valve', building: 'valve', work: 0, stock: { valve: 0, base: 0 }, built: { valve: 0, base: 0, sys: 0 }, earned: 0 },
       mgrClock: 0, mgrReviewClock: 0, presClock: 0,
       safety: { streak: 0, incident: null, seed: (Math.random() * 2 ** 32) >>> 0 },
@@ -347,11 +347,12 @@
     const keep = {
       patents: s.patents + overhaulGain(s), lifetime: s.lifetime,
       overhauls: s.overhauls + 1, strokes: s.strokes, time: s.time, locations: s.locations, seed: s.seed,
-      ach: s.ach, tips: s.tips, shakeDone: s.shake && s.shake.done, board: s.board, boardPool: s.boardPool, patentsSpent: s.patentsSpent, patentsFiled: s.patentsFiled, scadaPrefs: s.scadaPrefs,
+      ach: s.ach, tips: s.tips, shakeDone: s.shake && s.shake.done, freeUsed: !!(s.shake && s.shake.freeUsed), board: s.board, boardPool: s.boardPool, patentsSpent: s.patentsSpent, patentsFiled: s.patentsFiled, scadaPrefs: s.scadaPrefs,
     };
     Object.assign(s, newState(), keep);
     s.shake.done = keep.shakeDone || 0;
-    delete s.shakeDone;
+    s.shake.freeUsed = keep.freeUsed;
+    delete s.shakeDone; delete s.freeUsed;
     return true;
   }
 
@@ -1478,6 +1479,20 @@
     },
   };
 
+  /** The one-time gift: the whole goal-seek at once, free, with no disruption and no cooldown. */
+  const canFreeShake = (s) => shakeOpen(s) && !s.shake.phase && !s.shake.freeUsed;
+  function freeShake(s) {
+    if (!canFreeShake(s)) return null;
+    const sh = s.shake;
+    Object.assign(sh, { moves: [], before: shakeScore(s).inc, report: null });
+    for (const ph of SHAKE_PHASES) SHAKE_STEP[ph](s);
+    const after = shakeScore(s).inc;
+    sh.report = { moves: sh.moves.length, change: sh.before > 0 ? after / sh.before - 1 : 0, at: Math.round(s.time), free: true };
+    sh.freeUsed = true;
+    sh.done = (sh.done || 0) + 1;
+    return sh.report;
+  }
+
   function shakeTick(s, dt) {
     const sh = s.shake;
     if (sh.cooldown > 0) sh.cooldown = Math.max(0, sh.cooldown - dt);
@@ -1542,7 +1557,7 @@
     boardOpen, boardSeatCost, fillBoardPool, electDirector, directorQuality, boardProposal, replaceDirector, presidentReview, presReplaceGap,
     scadaReady, canBuyScada, buyScada, scadaMult, scadaScan, scadaTick, bestGrowth, sustained, panelEff, hasPanel, nextPanel, canBuyPanel, buyPanel,
     officeOpen, fileCost, fileQuote, filePatents,
-    SHAKE_PHASES, shakeOpen, shakeCost, canShake, startShake, shakeTick, companyStrength, shakeScore,
+    SHAKE_PHASES, shakeOpen, shakeCost, canShake, startShake, shakeTick, canFreeShake, freeShake, companyStrength, shakeScore,
     pakOpen, sysReady, pakTarget, pakNext, pakHoursRate, pakGrade, pakPrice, pakChainHours, pakIncome, setPakTarget, pakTick,
     serialize, deserialize,
   };

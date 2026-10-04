@@ -611,3 +611,22 @@ test('a shake-up goal-seeks company output and never makes any measure worse', (
   // People are free to cross divisions.
   assert.ok(s.shake.moves.some((m) => /: (\w[\w ]*) → (?!\1)/.test(m)));
 });
+
+test('the one-time free reorg runs instantly, costs nothing and stays used through Overhaul', () => {
+  const s = lateGame();
+  for (const d of E.HIREABLE) s.depts[d.id].mgr = null;
+  const cash = s.cash, before = E.shakeScore(s).inc;
+  assert.ok(E.canFreeShake(s));
+  const r = E.freeShake(s);
+  assert.ok(r && r.free && r.change > 0);
+  assert.ok(E.shakeScore(s).inc > before);
+  assert.equal(s.cash, cash, 'free');
+  assert.equal(s.shake.phase, null, 'instant');
+  assert.equal(s.shake.cooldown, 0, 'no cooldown');
+  assert.ok(E.canShake(s), 'a paid shake-up is still available');
+  assert.equal(E.freeShake(s), null, 'only once');
+  const m = E.deserialize(E.serialize(s));
+  assert.equal(E.canFreeShake(m), false, 'saved');
+  s.lifetime = 1e13; E.overhaul(s);
+  assert.equal(s.shake.freeUsed, true, 'kept through Overhaul');
+});

@@ -487,6 +487,10 @@ better (income counts most); it repeats until nothing helps.
 | Managers | 60 s | Every manager seat; any seat still empty then goes to its team's best leader if nothing gets worse (managers also hire and review) | 12 best leaders anywhere |
 | Employees | 120 s | Team positions: pairwise swaps between departments, the most promising 60 tested each step, up to 400 swaps | everyone on a team |
 
+**Free instant reorg (v0.3.5):** once per save, the same goal seek runs in one go
+with no cost, no disruption and no cooldown (a paid shake-up stays available). The
+flag (`s.shake.freeUsed`) survives Overhaul.
+
 While it runs, **incidents are 3× likelier** and Order Line teams work at **90%**.
 At the end you get a report (moves made and the change in income), and every move
 is listed in the shake-up card with its gain.
