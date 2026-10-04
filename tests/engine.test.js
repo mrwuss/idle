@@ -630,3 +630,23 @@ test('the one-time free reorg runs instantly, costs nothing and stays used throu
   s.lifetime = 1e13; E.overhaul(s);
   assert.equal(s.shake.freeUsed, true, 'kept through Overhaul');
 });
+
+test('SCADA holds cash instead of buying something that would take ages to pay back', () => {
+  const s = lateGame();
+  s.kh = 1e9; s.tech.telematics = true;
+  E.hire(s, 'engineering', 6);
+  for (const i of s.depts.engineering.team.keys()) E.setEngTeam(s, i, 'controls');
+  E.buyScada(s);
+  s.scadaPrefs.lines = true; s.scadaPrefs.pumps = true; s.scadaPrefs.budget = 2;
+  // Late-run prices: everything costs a fortune relative to what it adds.
+  for (const a of E.DATA.ACTUATORS) s.actuators[a.id] += 400;
+  for (const p of E.DATA.PUMPS) s.pumps[p.id] += 400;
+  s.cash = 1e60;
+  for (let i = 0; i < 5; i++) E.staffLine(s);
+  const before = JSON.stringify([s.actuators, s.pumps]);
+  E.scadaTick(s, E.derive(s));
+  assert.equal(JSON.stringify([s.actuators, s.pumps]), before, 'nothing bought');
+  assert.ok(s.scada.log.some((l) => /Holding cash: .*pay back/.test(l.m)), 'and it says why');
+  assert.equal(E.fmtDur(60.11e6), '1.9 years');
+  assert.equal(E.fmtDur(90), '2 min');
+});

@@ -1143,6 +1143,15 @@
     }
     return best;
   }
+  /** A duration in seconds as words: 45s, 12 min, 3.5 h, 9 days, 1.9 years. */
+  function fmtDur(sec) {
+    if (!Number.isFinite(sec)) return 'forever';
+    if (sec < 60) return `${Math.round(sec)}s`;
+    if (sec < 3600) return `${Math.round(sec / 60)} min`;
+    if (sec < 86400) return `${(sec / 3600).toFixed(1)} h`;
+    if (sec < 365 * 86400) return `${Math.round(sec / 86400)} days`;
+    return `${fmtNum(sec / (365 * 86400))} years`;
+  }
   /** Short numbers for log lines (the engine has no access to the UI's fmt()). */
   function fmtNum(v) {
     const a = Math.abs(v);
@@ -1225,10 +1234,20 @@
     while (!held && actions > 0 && (P.pumps || P.lines || P.tier || P.cool)) {
       const best = bestGrowth(s, P, budget());
       if (!best) break;
+      // Even the best buy can be a bad one late in a run (the 500th press costs a fortune
+      // and adds a sliver): hold the cash rather than buy something that won't pay back.
+      const payback = best.cost / best.gain;
+      if (payback > C.scadaMaxPaybackS) {
+        const idle = `Holding cash: the best buy (${best.label.replace(/^bought /, '')}) would take ${fmtDur(payback)} to pay back (limit ${fmtDur(C.scadaMaxPaybackS)})`;
+        if (!s.scada.idle) scadaLog(s, idle);
+        s.scada.idle = idle;
+        break;
+      }
+      s.scada.idle = '';
       for (const [kind, id, n] of best.items) buy(s, kind, id, n);
       if (best.tier) upgradeTier(s);
       actions--; grew = true;
-      const m = `Best return: ${best.label} · +$${fmtNum(best.gain)}/s for $${fmtNum(best.cost)} (pays back in ${fmtNum(best.cost / best.gain)}s)`;
+      const m = `Best return: ${best.label} · +$${fmtNum(best.gain)}/s for $${fmtNum(best.cost)} (pays back in ${fmtDur(payback)})`;
       scadaLog(s, m); done.push(m);
     }
     // 3. Accumulator: no steady revenue of its own, so only when no revenue buy fits.
@@ -1555,7 +1574,7 @@
     EXEC, execOpen, execOf, execSkill, presidentSkill, execMult, presidentMult, execCount, boardEff, execCandidates, fillExecPool,
     execHireCost, appointExec, dismissExec, canAppointPresident, appointPresident, execTick,
     boardOpen, boardSeatCost, fillBoardPool, electDirector, directorQuality, boardProposal, replaceDirector, presidentReview, presReplaceGap,
-    scadaReady, canBuyScada, buyScada, scadaMult, scadaScan, scadaTick, bestGrowth, sustained, panelEff, hasPanel, nextPanel, canBuyPanel, buyPanel,
+    scadaReady, canBuyScada, buyScada, scadaMult, scadaScan, scadaTick, bestGrowth, sustained, fmtDur, panelEff, hasPanel, nextPanel, canBuyPanel, buyPanel,
     officeOpen, fileCost, fileQuote, filePatents,
     SHAKE_PHASES, shakeOpen, shakeCost, canShake, startShake, shakeTick, canFreeShake, freeShake, companyStrength, shakeScore,
     pakOpen, sysReady, pakTarget, pakNext, pakHoursRate, pakGrade, pakPrice, pakChainHours, pakIncome, setPakTarget, pakTick,

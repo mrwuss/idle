@@ -375,7 +375,10 @@ it, but your automation switches are remembered.
     allow and measures what it adds to *sustained* production (accumulator empty,
     oil at equilibrium, so a charged accumulator can't hide a flow shortage, and
     milestones, heat and relief all count). It buys the best gain per $ within the
-    budget, and logs the gain, the cost and the payback time.
+    budget, and logs the gain, the cost and the payback time (in seconds, minutes,
+    hours, days or years). **Payback limit:** it skips any buy that wouldn't pay
+    for itself within 30 minutes (`scadaMaxPaybackS`) and logs "Holding cash" with
+    the best option and its payback instead of draining cash on it.
   - *Auto-lines* offers every unlocked actuator; with *Auto-pumps* on, a line that
     would outrun the flow comes bundled with the pumps to feed it.
   - *Auto-pumps* also offers single pumps while the plant is starved.
