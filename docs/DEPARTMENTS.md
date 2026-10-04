@@ -590,6 +590,12 @@ of 2M Know-how and 60 s of your current Know-how output, ×1.3 for every jump
 already made this run (the multiplier resets on Overhaul). Overhaul is blocked
 while a jump runs. The "Time Traveler" achievement marks the first jump.
 
+**Time away (v0.3.9)** uses the same machinery for free: when you come back, the time
+you were away × the offline rate (50%, or 100% with Telematics), capped by the
+offline hours, is played out through `tick()` (`startCatchUp()`), so SCADA, managers,
+executives, contracts and the Pak line keep working while you're gone. The
+"While you were away" report arrives when it finishes.
+
 ## Pak contracts (implemented, v0.3.7)
 
 Clients in your open locations (fictional firms from each region's markets) offer

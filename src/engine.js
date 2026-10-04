@@ -1455,6 +1455,22 @@
       from: { lifetime: s.lifetime, kh: s.kh, cash: s.cash, actuators: Object.values(s.actuators).reduce((a, b) => a + b, 0) } };
     return true;
   }
+  /**
+   * Catch up on time away by playing it out like a Time Machine jump (free): the
+   * away time × the offline rate (50%, or 100% with Telematics), capped by the
+   * offline hours. Managers, executives, SCADA and the Pak line all run. Returns the
+   * seconds it will simulate, or 0 if there's nothing to do.
+   */
+  function startCatchUp(s, seconds) {
+    if (s.warp || !(seconds > 60)) return 0;
+    const m = mods(s);
+    const sim = Math.min(seconds, m.offlineCapH * 3600) * m.offlineRate;
+    if (sim < 30) return 0;
+    s.surgeLeft = 0;
+    s.warp = { hours: sim / 3600, total: sim, left: sim, dt: Math.max(1, sim / C.warpMaxTicks), offline: true, away: seconds, rate: m.offlineRate,
+      from: { lifetime: s.lifetime, kh: s.kh, cash: s.cash, actuators: Object.values(s.actuators).reduce((a, b) => a + b, 0) } };
+    return sim;
+  }
   /** Advance a jump by up to `maxSteps` steps. Returns the report when it finishes. */
   function warpStep(s, maxSteps = 200) {
     const w = s.warp;
@@ -1466,10 +1482,13 @@
     }
     if (w.left > 0) return null;
     s.warp = null;
+    const report = { hours: w.hours, earned: s.lifetime - w.from.lifetime, kh: s.kh - w.from.kh, cash: s.cash - w.from.cash,
+      lines: Object.values(s.actuators).reduce((a, b) => a + b, 0) - w.from.actuators, at: Math.round(s.time),
+      offline: !!w.offline, away: w.away, rate: w.rate };
+    if (w.offline) return report;
     s.warpsDone = (s.warpsDone || 0) + 1;
-    s.lastWarp = { hours: w.hours, earned: s.lifetime - w.from.lifetime, kh: s.kh - w.from.kh, cash: s.cash - w.from.cash,
-      lines: Object.values(s.actuators).reduce((a, b) => a + b, 0) - w.from.actuators, at: Math.round(s.time) };
-    return s.lastWarp;
+    s.lastWarp = report;
+    return report;
   }
 
   // ---- Shake-up: a timed, top-down reorganization ------------------------------
@@ -1772,7 +1791,7 @@
     boardOpen, boardSeatCost, fillBoardPool, electDirector, directorQuality, boardProposal, replaceDirector, presidentReview, presReplaceGap,
     scadaReady, canBuyScada, buyScada, scadaMult, scadaScan, scadaTick, bestGrowth, sustained, fmtDur, panelEff, hasPanel, nextPanel, canBuyPanel, buyPanel,
     officeOpen, fileCost, fileQuote, filePatents,
-    warpOpen, warpCost, canWarp, startWarp, warpStep,
+    warpOpen, warpCost, canWarp, startWarp, warpStep, startCatchUp,
     qualityPakMult, warehouseTimeMult, insideSpeed, offerSlots, interestRate, rushFillS, rushOpen, rushValue, canRush, rushShip,
     focusOpen, focusMult, canFocus, setFocus,
     acceptContract, abandonContract, contractBonus, contractsTick, newOffer,

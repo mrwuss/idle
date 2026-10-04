@@ -1471,7 +1471,7 @@
     if (w) {
       const done = 1 - w.left / w.total;
       box.querySelector('[data-k="wp"]').style.width = `${done * 100}%`;
-      setPart(box.querySelector('[data-k="wp-text"]'), `Jumping ahead… ${fmtTime(w.total - w.left)} of ${w.hours} h`, true);
+      setPart(box.querySelector('[data-k="wp-text"]'), w.offline ? `Catching up on time away… ${fmtTime(w.total - w.left)} of ${fmtTime(w.total)}` : `Jumping ahead… ${fmtTime(w.total - w.left)} of ${w.hours} h`, true);
       return;
     }
     for (const b of box.querySelectorAll('[data-warp]')) {
