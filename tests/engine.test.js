@@ -460,3 +460,63 @@ test('SCADA installs with Know-how once Controls is ready, tunes income and auto
   assert.equal(s.scada.owned, false);
   assert.equal(s.scadaPrefs.pumps, true);
 });
+
+const dud = (n) => ({ n, a: 1, s: [1, 1, 1, 1, 1, 1, 1, 1] });
+const star = (n, lea = 10) => ({ n, a: 2, s: [10, 10, 10, 10, 10, 10, 10, lea] });
+
+test('managers let their weakest person go for a clearly better applicant', () => {
+  const s = lateGame();
+  const st = s.depts.warehouse;
+  E.promote(s, 'warehouse', 0);
+  st.team[0] = dud('Weak Link');
+  st.pool[0] = star('Ace Hire');
+  const heads = st.team.length;
+  st.auto = false;
+  assert.equal(E.managersReview(s).length, 0, 'not while auto-staff is off');
+  st.auto = true;
+  const done = E.managersReview(s);
+  assert.ok(done.some((x) => x.dept === 'warehouse'));
+  assert.ok(st.team.some((p) => p.n === 'Ace Hire'));
+  assert.ok(!st.team.some((p) => p.n === 'Weak Link'));
+  assert.equal(st.team.length, heads, 'head count stays the same');
+  assert.ok(s.execLog.some((l) => l.x === 'mgr:warehouse'));
+  // A better manager acts on smaller gaps.
+  assert.ok(E.mgrReplaceGap(10) < E.mgrReplaceGap(2));
+});
+
+test('the President fills vacant seats and replaces weaker executives', () => {
+  const s = lateGame();
+  for (const x of ['cro', 'coo', 'cfo']) E.appointExec(s, x, { pool: 0 });
+  E.appointPresident(s, 'cfo');
+  s.execs.cro = dud('Tired Exec');
+  s.depts.outside_sales.team[0] = star('Rising Star');
+  const msg = E.presidentReview(s);
+  assert.ok(msg && msg.includes('Rising Star'), msg);
+  assert.equal(s.execs.cro.n, 'Rising Star');
+  assert.ok(s.depts.outside_sales.team.some((p) => p.n === 'Tired Exec'), 'the old exec returns to the division');
+  // The emptied CFO seat is filled on a later review.
+  for (let i = 0; i < 4; i++) E.presidentReview(s);
+  assert.ok(s.execs.cfo, 'CFO seat filled');
+  assert.ok(s.execLog.some((l) => l.x === 'pres'));
+});
+
+test('the Chair proposes replacing a weak director for fewer Patents', () => {
+  const s = lateGame();
+  s.lifetime = 1e13;
+  s.board = [{ ...star('Chair Person'), perk: 'founder' }, { ...dud('Sleepy Director'), perk: 'banker' }];
+  s.depts.warehouse.team[0] = star('Floor Leader', 9);
+  const pr = E.boardProposal(s);
+  assert.ok(pr);
+  assert.equal(pr.out.n, 'Sleepy Director');
+  assert.equal(pr.chair.n, 'Chair Person');
+  assert.ok(pr.cost < E.DATA.BOARD_COSTS[1]);
+  s.patents = 0;
+  assert.equal(E.replaceDirector(s), false);
+  s.patents = pr.cost;
+  assert.ok(E.replaceDirector(s));
+  assert.equal(s.board[1].perk, 'banker', 'the seat keeps its perk');
+  assert.ok(!s.depts.warehouse.team.some((p) => p.n === s.board[1].n), 'the new director leaves their job');
+  assert.equal(s.patents, 0);
+  s.board = [s.board[0]];
+  assert.equal(E.boardProposal(s), null, 'needs a Chair and another director');
+});

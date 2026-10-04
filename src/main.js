@@ -61,7 +61,7 @@
 
   // Hiring buttons inside re-rendered department cards.
   document.addEventListener('click', (ev) => {
-    const b = ev.target.closest('[data-scada-buy], [data-scada-auto], [data-scada-budget], [data-file], [data-shake], [data-hire], [data-hire-best], [data-reroll], [data-promote], [data-auto], [data-eng], [data-engteam], [data-pak-target], [data-exec-appoint], [data-exec-hire], [data-exec-dismiss], [data-exec-pres], [data-board-elect]');
+    const b = ev.target.closest('[data-scada-buy], [data-scada-auto], [data-scada-budget], [data-file], [data-shake], [data-hire], [data-hire-best], [data-reroll], [data-promote], [data-auto], [data-eng], [data-engteam], [data-pak-target], [data-exec-appoint], [data-exec-hire], [data-exec-dismiss], [data-exec-pres], [data-board-elect], [data-board-replace]');
     if (!b || b.disabled) return;
     if (b.dataset.scadaBuy) {
       const ok = E.buyScada(state);
@@ -94,6 +94,13 @@
     if (b.dataset.execDismiss) { E.dismissExec(state, X.id); SFX.play('tab', 0.6); return render(); }
     if (b.dataset.execPres) {
       if (E.appointPresident(state, X.id)) { SFX.play('location'); UI.toast(`<b>${state.president.n}</b> is the President of IFP MSI.`, 4500); UI.openDept('exec:pres'); }
+      return render();
+    }
+    if (b.dataset.boardReplace != null) {
+      const pr = E.boardProposal(state);
+      const ok = pr && E.replaceDirector(state);
+      SFX.play(ok ? 'research' : 'cant');
+      if (ok) UI.toast(`<b>${pr.cand.p.n}</b> takes ${pr.out.n}'s Board seat.`, 3500);
       return render();
     }
     if (b.dataset.boardElect != null) {

@@ -404,8 +404,10 @@
             <span>Leadership <b>${lea}</b>/10</span>
             <ul class="plain"><li>Team works <b>+${Math.round((E.mgrBonus(st) - 1) * 100)}%</b> harder (5% per Leadership point)</li>
             <li>Screens <b>${E.poolSize(st, s)}</b> applicants for you</li>
-            ${support ? '' : `<li>${st.auto ? `Hires up to <b>${1 + Math.floor(lea / 4)}</b> people every 2 s when the team falls behind` : 'Auto-hire is off'}</li>`}</ul>
-            ${support ? '' : `<button class="btn mini ${st.auto ? '' : 'ghost'}" data-auto="${d.id}">${st.auto ? 'Auto-hire: on' : 'Auto-hire: off'}</button>`}</div></div>`
+            ${!st.auto ? '<li>Auto-staff is off: you hire and replace people yourself</li>' : `${support ? '' : `<li>Hires up to <b>${1 + Math.floor(lea / 4)}</b> people every 2 s when the team falls behind</li>`}
+            <li>Every ${E.DATA.CONSTANTS.mgrReviewEvery} s, lets the weakest person go when an applicant beats them by <b>+${E.mgrReplaceGap(lea).toFixed(2)}</b> (e.g. ×1.00 → ×${(1 + E.mgrReplaceGap(lea)).toFixed(2)}; a smaller gap with more Leadership)</li>`}</ul>
+            <button class="btn mini ${st.auto ? '' : 'ghost'}" data-auto="${d.id}">${st.auto ? 'Auto-staff: on' : 'Auto-staff: off'}</button>
+            <ul class="exec-log mgr-log" data-k="mgrlog"></ul></div></div>`
         : `<p class="mgr none">No manager yet. Tap someone with high <b>Leadership</b> and choose <b>Promote</b>: a manager boosts the whole team${support ? '' : ', screens more applicants and keeps the team staffed'}.</p>`;
       const faces = (list) => list.map(([p, i]) => face(p, d.id, 'team', i)).join('');
       const teamHtml = isEng
@@ -444,6 +446,10 @@
     k('big').className = 'sh-big' + (neck ? ' bad' : '');
     setPart(k('story'), story, true);
     setPart(k('chips'), boostChips(s, dd, d));
+    if (k('mgrlog')) {
+      const lines = s.execLog.filter((l) => l.x === 'mgr:' + d.id).slice(0, 3);
+      setPart(k('mgrlog'), lines.map((l) => `<li><span class="muted">${fmtTime(Math.max(0, s.time - l.t))} ago</span> ${l.m}</li>`).join(''));
+    }
     const c = dd.order.depts[d.id], cov = body.querySelector('.sh-cov');
     if (c && cov) {
       cov.firstChild.style.width = `${Math.min(100, c.coverage * 100)}%`;
@@ -553,12 +559,21 @@
     if (bopen) E.fillBoardPool(s);
     const cost = E.boardSeatCost(s);
     setPart($('board-summary'), bopen ? `· ${s.board.length}/${E.DATA.BOARD_COSTS.length} seats · directors stay through Overhaul` : '· opens after 2 Overhauls or $1T earned', true);
-    const bkey = [bopen, s.board.map((m) => m.perk + m.n).join(), s.boardPool.map((m) => m.perk).join()].join('|');
+    const prop = E.boardProposal(s);
+    const bkey = [bopen, s.board.map((m) => m.perk + m.n).join(), s.boardPool.map((m) => m.perk).join(),
+      prop && prop.seat + prop.cand.p.n + prop.cost].join('|');
     if (board._key !== bkey) {
       board._key = bkey;
       const perk = (id) => E.DATA.BOARD_PERKS.find((k) => k.id === id);
       const q = (m) => `LEA ${E.leadership(m)} · perk strength ×${E.directorQuality(m).toFixed(2)}`;
-      board.innerHTML = s.board.map((m) => `<div class="director"><span class="face-img">${avatar(m.a)}</span><div><b>${m.n}</b><span>${perk(m.perk).name}</span><em>${perk(m.perk).desc} · ${q(m)}</em></div></div>`).join('')
+      const chairOf = prop ? prop.chair : s.board.length > 1 && s.board.reduce((a, b) => (E.leadership(b) > E.leadership(a) ? b : a));
+      board.innerHTML = s.board.map((m) => `<div class="director${m === chairOf ? ' chair' : ''}"><span class="face-img">${avatar(m.a)}</span><div><b>${m.n}${m === chairOf ? ' <span class="chair-tag">Chair</span>' : ''}</b><span>${perk(m.perk).name}</span><em>${perk(m.perk).desc} · ${q(m)}</em></div></div>`).join('')
+        + (prop ? `<div class="board-prop"><div class="app-head">${first(prop.chair.n)} (Chair) proposes</div>
+          <div class="director cand"><span class="face-img">${avatar(prop.cand.p.a)}</span><div><b>${prop.cand.p.n}</b>
+            <span>${DEPT_BY_ID[prop.cand.dept].name}${prop.cand.kind === 'mgr' ? ' manager' : ''} · replaces ${prop.out.n} as ${perk(prop.out.perk).name}</span>
+            <em>LEA ${E.leadership(prop.out)} → ${E.leadership(prop.cand.p)} · perk strength ×${E.directorQuality(prop.out).toFixed(2)} → ×${E.directorQuality(prop.cand.p).toFixed(2)}</em></div>
+            <button class="btn mini" data-board-replace>${prop.cost} patent${prop.cost > 1 ? 's' : ''}<small>replace</small></button></div>
+          <p class="muted small">The Chair watches for anyone in the company who leads clearly better than the weakest director. ${first(prop.out.n)} retires; ${first(prop.cand.p.n)} leaves their job.</p></div>` : '')
         + (bopen && cost != null ? `<div class="board-cands"><div class="app-head">Candidates for seat ${s.board.length + 1} · ${cost} patents</div>${s.boardPool.map((m, i) =>
           `<div class="director cand"><span class="face-img">${avatar(m.a)}</span><div><b>${m.n}</b><span>${perk(m.perk).name}</span><em>${perk(m.perk).desc} · ${q(m)}</em></div>
             <button class="btn mini" data-board-elect="${i}">${cost} patents<small>elect</small></button></div>`).join('')}
@@ -566,6 +581,7 @@
         + (!bopen ? '' : !s.board.length && cost == null ? '' : '');
     }
     board.querySelectorAll('[data-board-elect]').forEach((b) => (b.disabled = cost == null || s.patents < cost));
+    board.querySelectorAll('[data-board-replace]').forEach((b) => (b.disabled = !prop || s.patents < prop.cost));
   }
 
   function renderExecSheet(s, dd) {
@@ -584,12 +600,13 @@
       const what = isPres
         ? `<ul class="plain"><li>All income <b>+${Math.round(C.presidentIncomePer * 100)}%</b> per skill point</li>
             <li>Every executive <b>+1 skill</b> per ${C.presidentSkillDiv} President skill</li>
-            <li>Runs Management: its team <b>+${Math.round(C.execBonusPer * 100)}%</b> per skill point</li></ul>`
+            <li>Runs Management: its team <b>+${Math.round(C.execBonusPer * 100)}%</b> per skill point</li>
+            <li>Every ${C.presReviewEvery} s, reviews the C-suite: fills a vacant seat with the best person in its division (skill ${C.presFillSkill}+), or replaces an executive when someone would be <b>${E.presReplaceGap(s)}+</b> skill better (the gap shrinks as the President improves). The outgoing executive takes the newcomer's old job.</li></ul>`
         : `<ul class="plain"><li>Division teams work <b>+${Math.round(C.execBonusPer * 100)}%</b> harder per skill point</li>
             <li>Every ${C.execEvery} s, takes <b>1 + skill÷3</b> actions, each spending at most <b>${(C.execBudgetBase * 100).toFixed(1)}% + ${(C.execBudgetPer * 100).toFixed(1)}% per skill</b> of your cash:</li>
             <li>• makes the best leader each team's manager</li>
             <li>• hires Order Line teams up to <b>100% + ${Math.round(C.execTargetPer * 100)}% per skill</b> coverage, and tops up support teams while cheap</li>
-            <li>• replaces the weakest person when an applicant is clearly better (pickier with more skill)</li>
+            <li>• lets the weakest person go when an applicant is clearly better (acts on smaller gains with more skill)</li>
             <li>• refreshes an applicant pool with nobody worth hiring</li></ul>`;
       const card = p ? `<div class="mgr-card">${execFace(p, isPres ? 'PRES' : x.short, ui.sheet)}<div class="mgr-info"><b>${p.n}</b>
           <span>Skill <b data-k="skill"></b></span>
@@ -612,7 +629,7 @@
         <p class="sh-role">${isPres ? 'Leads the executives and the company.' : `${x.desc} Division: ${deptNames(x.depts)}.`}</p>
         <section><h4>${isPres ? 'President' : 'Executive'}</h4>${card}</section>
         <section><h4>What they do</h4>${what}</section>
-        ${isPres ? '' : `<section><h4>Recent decisions</h4><ul class="exec-log" data-k="log"></ul></section>`}
+        <section><h4>Recent decisions</h4><ul class="exec-log" data-k="log"></ul></section>
         <section><h4>${isPres ? 'Your executives' : 'Promote from inside'} <span class="muted">· key stats: Leadership ×2 and ${statName}</span></h4>
           ${cands.length ? cands.map(candRow).join('') : `<p class="muted">${isPres ? 'No executives seated yet.' : 'Nobody in this division yet.'}</p>`}</section>
         ${outside}`;

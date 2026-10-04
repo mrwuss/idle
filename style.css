@@ -699,6 +699,12 @@ ul.plain b { color: var(--text); }
 .director em { font-style: normal; color: var(--muted); font-size: 11px; }
 .director.cand { border-style: dashed; }
 .board-cands { display: grid; gap: 6px; margin-top: 4px; }
+.board-prop { display: grid; gap: 6px; margin-top: 4px; padding: 8px; border: 1px solid var(--accent); border-radius: var(--radius); }
+.board-prop .director.cand { border-color: var(--accent); }
+.director.chair { border-color: var(--accent); }
+.chair-tag { display: inline-block; margin-left: 4px; padding: 0 5px; border-radius: 999px; background: var(--accent); color: #fff !important; font: 700 9px var(--font-mono); text-transform: uppercase; vertical-align: 1px; }
+.mgr-log { margin-top: 6px; }
+.mgr-log:empty { display: none; }
 .cand-row { display: flex; gap: 8px; align-items: center; padding: 4px 0; border-bottom: 1px solid var(--edge); }
 .cand-row .p-main { flex: 1; min-width: 0; }
 .cand-row .p-stats b { color: var(--ok); }

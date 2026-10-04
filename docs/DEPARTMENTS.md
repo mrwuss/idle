@@ -300,10 +300,14 @@ Hires are people, not head counts.
 | Applicants reviewed | 3 + ⌊LEA / 3⌋ | 4 | 6 |
 | Hires per staffing check (every 2 s) | 1 + ⌊LEA / 4⌋ | 1 | 3 |
 
-- **Auto-hire** (on by default, toggle on the card): whenever their department
+- **Auto-staff** (on by default, toggle on the card): whenever their department
   drops below 100% coverage, the manager hires the best applicant they're
   screening, paying the normal hire cost. Managers keep head count where it
   needs to be, and better managers pick better people and fill gaps faster.
+- **Team reviews (v0.3.0):** with auto-staff on, every 15 s each manager (support
+  departments too) lets their weakest person go when an applicant beats them by
+  `max(0.2, 0.6 − 0.04 × LEA)` effectiveness, paying half a hire, at most 0.5% of
+  cash. Head count stays the same; the last few swaps show on the manager card.
 - **Promote for Leadership, not effectiveness:** a high-LEA person with mediocre
   job stats makes the best manager. Managers keep doing their own job, so a
   promotion never lowers a team's output.
@@ -420,6 +424,12 @@ Overhaul) and appear as an org chart under **Leadership** on the Company tab.
 - **President:** named from your executives once three are seated (their seat
   opens up). All income **+2% per skill point**, every executive +1 skill per 3
   President skill, and Management +3% per skill point.
+- **The President reviews the C-suite (v0.3.0)** every 30 s, one change per
+  review: a vacant seat goes to the best person in its division (skill 4+), and
+  a seated executive is replaced when someone in the division would be
+  `max(1, 3 − ⌊President skill ÷ 4⌋)` skill better. The outgoing executive takes
+  the newcomer's old job (manager seat or team spot). A seat you leave empty is
+  filled on the next review.
 - **Board of Directors:** opens after 2 Overhauls or $1T earned. Five seats cost
   **3, 8, 20, 50 and 120 Patents** (gone for good, and not refunded by the next
   Overhaul). Each seat offers three candidates with one perk each: income +10%,
@@ -430,6 +440,12 @@ Overhaul) and appear as an org chart under **Leadership** on the Company tab.
   but not the Board.
 - **Director strength:** a director's perk scales with their Leadership:
   `1 + (perk − 1) × (0.6 + 0.08 × LEA)`, so ×1.0 at LEA 5 and ×1.4 at LEA 10.
+- **The Chair (v0.3.0):** with 2+ directors, the strongest leader chairs the
+  Board and keeps watch. When someone on a team (or a manager) has 2+ more
+  Leadership than the weakest other director, the Chair proposes a swap for a
+  quarter of that seat's Patent price (min 1, spent for good). The seat keeps its
+  perk, the old director retires and the newcomer leaves their job. You approve
+  each swap.
 
 ### Shake-up (implemented, v0.2.7)
 
