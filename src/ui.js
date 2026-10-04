@@ -881,7 +881,7 @@
     const body = $('scada-body'), C = E.DATA.CONSTANTS, P = s.scadaPrefs, owned = s.scada.owned;
     setPart($('scada-meta'), `T+${fmtTime(s.time)} · ${owned ? `scan ${C.scadaEvery}s × ${E.scadaScan(s)} · tuning +${Math.round((E.scadaMult(s) - 1) * 1000) / 10}%` : 'NOT INSTALLED'}`, true);
     const panel = (id) => E.hasPanel(s, id), nextP = E.nextPanel(s);
-    const key = [owned, E.scadaReady(s), P.cool, P.pumps, P.lines, P.budget, E.DATA.SCADA_PANEL.map((u) => +panel(u.id)).join('')].join('|');
+    const key = [owned, E.scadaReady(s), P.cool, P.pumps, P.lines, P.tier, P.budget, E.DATA.SCADA_PANEL.map((u) => +panel(u.id)).join('')].join('|');
     if (body._key !== key) {
       body._key = key;
       scG = null;
@@ -919,7 +919,8 @@
             <section class="scada-panel"><h4>Autonomous control</h4>
               ${[['cool', 'Auto-cooling', 'buys the best cooler per $ while the oil runs toward its limit'],
                  ['pumps', 'Auto-pumps', 'buys pumps whenever actuators would be starved'],
-                 ['lines', 'Auto-lines', 'puts spare flow to work on the best-paying actuator that fits']].map(([k, n, w]) =>
+                 ['lines', 'Auto-lines', 'puts spare flow to work on the best-paying actuator that fits'],
+                 ['tier', 'Auto-tier & accumulator', 'upgrades the pressure tier when its extra output pays it back within 10 min, and the accumulator when it fits the budget']].map(([k, n, w]) =>
                 `<button class="auto-row${P[k] ? ' on' : ''}" data-scada-auto="${k}"><b>${n}</b><span>${w}</span><i>${P[k] ? 'ON' : 'OFF'}</i></button>`).join('')}
               <div class="seg scada-budget">${C.scadaBudgets.map((b, i) => `<button class="btn mini${P.budget === i ? ' on' : ' ghost'}" data-scada-budget="${i}">≤ ${b * 100}% cash / action</button>`).join('')}</div>
               <p class="muted small" data-k="scan"></p>

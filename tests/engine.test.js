@@ -450,7 +450,7 @@ test('SCADA installs with Know-how once Controls is ready, tunes income and auto
   s.actuators.press += 400; s.coolers.fan = 0; s.coolers.shell = 0;
   assert.ok(E.derive(s).supply < E.derive(s).demand, 'test setup: starved');
   s.scadaPrefs.cool = true; s.scadaPrefs.pumps = true;
-  for (let i = 0; i < 40; i++) E.scadaTick(s, E.derive(s));
+  for (let i = 0; i < 40; i++) { E.staffLine(s); E.scadaTick(s, E.derive(s)); }
   const d = E.derive(s);
   assert.ok(d.supply >= d.demand, 'flow balanced');
   assert.ok(d.tempEq <= d.tempLimit, 'cooled below the limit');
@@ -546,4 +546,32 @@ test('operator-panel upgrades are bought in order with Know-how and pay off', ()
   assert.ok(E.hasPanel(m, 'apc'), 'saved');
   s.lifetime = 1e13; E.overhaul(s);
   assert.equal(E.hasPanel(s, 'historian'), false, 'goes with the SCADA install');
+});
+
+test('SCADA holds growth while the Order Line caps income, and can climb pressure tiers', () => {
+  const s = lateGame();
+  s.kh = 1e9; s.tech.telematics = true;
+  E.hire(s, 'engineering', 6);
+  for (const i of s.depts.engineering.team.keys()) E.setEngTeam(s, i, 'controls');
+  E.buyScada(s);
+  s.scadaPrefs.pumps = true; s.scadaPrefs.lines = true; s.scadaPrefs.budget = 2;
+  // Short-staff the Order Line: no machines get bought, and the log says why.
+  for (const d of E.STAFFED) { s.depts[d.id].team = []; s.depts[d.id].staff = 0; s.depts[d.id].mgr = null; }
+  const o = E.derive(s).order;
+  assert.ok(o.factor < 0.999, 'test setup: line capped');
+  const acts = JSON.stringify([s.pumps, s.actuators]);
+  E.scadaTick(s, E.derive(s));
+  assert.equal(JSON.stringify([s.pumps, s.actuators]), acts);
+  assert.ok(s.scada.log.some((l) => /Holding growth/.test(l.m)));
+  // Staffed again: growth resumes.
+  for (let i = 0; i < 5; i++) E.staffLine(s);
+  E.scadaTick(s, E.derive(s));
+  assert.ok(s.scada.log.some((l) => /growth resumes/.test(l.m)));
+  // Auto-tier: buys the next tier when it pays back fast, and the accumulator.
+  for (const t of E.DATA.TECH) s.tech[t.id] = true;
+  s.scadaPrefs.tier = true;
+  const tier = s.tier, acc = s.accLevel;
+  for (let i = 0; i < 20; i++) { E.staffLine(s); E.scadaTick(s, E.derive(s)); }
+  assert.ok(s.tier > tier, 'tier upgraded');
+  assert.ok(s.accLevel > acc, 'accumulator upgraded');
 });

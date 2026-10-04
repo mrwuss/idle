@@ -374,8 +374,15 @@ it, but your automation switches are remembered.
   - *Auto-cooling* buys the best cooler per $ while equilibrium temperature is
     within 5°F of the limit;
   - *Auto-pumps* buys the most GPM per $ whenever demand exceeds supply (5% margin);
-  - *Auto-lines* buys the best-paying actuator per $ that fits in the spare flow.
-  Every automated purchase is logged on the screen.
+  - *Auto-lines* buys the best-paying actuator per $ that fits in the spare flow;
+  - *Auto-tier & accumulator* (v0.3.2) upgrades the pressure tier when the extra
+    production repays its cost within 10 minutes, and the accumulator whenever it
+    fits the budget. It runs before pumps and lines so big steps get an action.
+  - **Order Line aware (v0.3.2):** while short staffing caps income, pumps, lines and
+    tiers are put on hold (more machines would earn nothing); the log says which
+    department is short and when growth resumes. Cooling keeps running.
+  Every automated purchase is logged on the screen. Automation runs in the game
+  loop whether or not the screen is open, but not while the game is closed.
 
 ### Pak lines (implemented, v0.2.5)
 
