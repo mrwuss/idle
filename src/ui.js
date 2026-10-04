@@ -1002,6 +1002,11 @@
       trend(body.querySelector(`[data-c="${c.id}"]`), c.series, { log: c.log, marks });
     }
     setPart(k('alarms'), $('alerts').innerHTML || '<li class="good">No active alarms</li>');
+    body.querySelectorAll('[data-scada-panel]').forEach((b) => {
+      const u = PANEL_BY_ID[b.dataset.scadaPanel];
+      b.disabled = !E.canBuyPanel(s, u.id);
+      b.title = b.disabled ? `Needs ${fmt(u.kh)} Know-how (you have ${fmt(s.kh)})` : '';
+    });
     setPart(k('scan'), `Scan every ${C.scadaEvery}s, up to ${E.scadaScan(s)} action${E.scadaScan(s) === 1 ? '' : 's'} per scan (1 + Controls strength ÷ 3).`, true);
     setPart(k('log'), s.scada.log.slice(0, 6).map((l) => `<li><span class="muted">${fmtTime(Math.max(0, s.time - l.t))} ago</span> ${l.m}</li>`).join('') || '<li class="muted">No automated actions yet.</li>');
   }
