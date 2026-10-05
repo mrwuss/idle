@@ -19,7 +19,7 @@
   department a bottleneck on income, and `hire()`/`hirePerson()`/`staffLine()` fix it. Hires are people
   (`depts[id].team`, applicants in `.pool`) generated from the seeded `s.seed`, so
   quotes match results; `effectiveness()` weighs each department's two stats. Managers (`depts[id].mgr`,
-  promoted with `promote()`) boost strength, auto-hire in `managersTick()` and swap out weak staff in `managersReview()` (shared `upgradeWeakest()`); Engineering,
+  promoted with `promote()`; managers, each department's best `keepPerDept` and all executives survive Overhaul via `coreTeams()`; from the second run the HR Director autopilot `hrTick()` hires, promotes and swaps, switch `s.hrAuto`; experience `expMult()` grows effectiveness with time in a department) boost strength, auto-hire in `managersTick()` and swap out weak staff in `managersReview()` (shared `upgradeWeakest()`); Engineering,
   IT, Safety and Management are in `HIREABLE` (not the Order Line): `engKhMult()`, `itMult()`,
   `safetyTick()`/`incidentRate()` (own seed in `s.safety`) and `mgmtMult()`.
   machine.js pauses off-screen and drops to a low-quality mode on slow devices. Phones (≤760px) use the

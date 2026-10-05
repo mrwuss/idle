@@ -227,8 +227,21 @@ department-specific twists come next.
 - **Locations help Outside Sales:** each rep's reach is multiplied by
   `√(customer base ÷ HQ's)`. Opening North makes every rep count ×1.58, West
   ×2.24 and South ×3.16. Locations widen the market, and Outside Sales covers it.
-- **Overhaul** resets staff. Departments reopen at the new run's (tiny)
-  production, so each run you staff up again as you grow.
+- **Overhaul keeps your people (v0.3):** each department keeps its manager and
+  its best 3 people (Engineering: best 3 per team); applicants and the production
+  baseline start fresh, so departments reopen at the new run's (tiny) production.
+- **Experience (v0.3):** people get better the longer they work in the same
+  department: effectiveness × `1 + 0.3 × (1 − e^(−t / 1.5 h))`, so +16% after 1 h
+  and +26% after 3 h (`expMult()`, `p.x` seconds in `p.xd`). Moving to another
+  department starts it over, so shake-ups and swaps have a real cost; it travels
+  with them through Overhaul. Veterans (+10% or more) wear a ★ on their headshot.
+- **HR Director (v0.3):** from the second run on, staffing runs on autopilot
+  (`hrTick()` every 2 s, switch on the Order Line, kept through Overhaul). In every
+  open department it makes the best leader manager (or replaces one out-led by 2),
+  hires the Order Line to 110% while one hire costs under 25% of cash, grows
+  support teams while a hire is under 2% of cash, and swaps the weakest person for
+  an applicant at least ×0.2 better when the fee is under 2% of cash. The first run
+  stays hands-on so you learn the Order Line; after that, people are min/maxed for you.
 - **People UI (v0.2.5):** department cards are compact: status, coverage, a row of
   headshots (manager first) and a quick hire. Tapping a card opens its **focus
   sheet** (a bottom sheet on phones): plain-language health, where the output
@@ -339,7 +352,7 @@ Hires are people, not head counts.
 
 - **Effect on pacing:** with Engineering staffed, the balance bot finishes the
   R&D tree around 2h instead of 3.5h, and end-of-run income is unchanged.
-- **Overhaul** resets projects, staff and the Pak line, like everything else in a run.
+- **Overhaul** resets projects and the Pak line; Engineering keeps its manager and best 3 per team.
 
 ### SCADA (implemented, v0.2.9)
 
@@ -457,8 +470,8 @@ Overhaul) and appear as an org chart under **Leadership** on the Company tab.
   Pak prices +25%, Outside Sales reach ×1.25, equipment −8%, Know-how +25%,
   incidents −35%, Order Line need −10%, +1 applicant everywhere, or every
   executive +1 skill. **Directors stay through Overhaul.**
-- **Overhaul** resets executives and the President (they are part of the run),
-  but not the Board.
+- **Overhaul** keeps executives, the President and the Board (v0.3; executives
+  and the President used to reset each run).
 - **Director strength:** a director's perk scales with their Leadership:
   `1 + (perk − 1) × (0.6 + 0.08 × LEA)`, so ×1.0 at LEA 5 and ×1.4 at LEA 10.
 - **The Chair (v0.3.0):** with 2+ directors, the strongest leader chairs the

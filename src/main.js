@@ -204,6 +204,13 @@
     if (E.staffLine(state)) { SFX.play('upgrade'); UI.toast('Order Line fully staffed.'); render(); } else SFX.play('cant');
   });
 
+  document.addEventListener('click', (ev) => {
+    if (!ev.target.closest('[data-hr-toggle]')) return;
+    state.hrAuto = state.hrAuto === false;
+    UI.toast(state.hrAuto ? 'HR Director is running staffing.' : 'HR Director is off: staffing is up to you.');
+    render();
+  });
+
   $('btn-stroke').addEventListener('click', (ev) => {
     const gain = E.click(state);
     SFX.play('stroke', 0.8);
