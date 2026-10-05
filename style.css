@@ -675,6 +675,16 @@ ul.plain b { color: var(--text); }
 .team-seg .btn { min-height: 34px; white-space: nowrap; }
 .team-seg .btn.locked:not(.on) { opacity: .5; }
 .face.vet .face-img::after { content: '★'; position: absolute; top: -2px; right: -2px; font-size: 11px; line-height: 1; color: var(--oil); text-shadow: 0 0 2px var(--panel); }
+.cool-status { font: 12px var(--font-mono); color: var(--muted); margin: 0 0 8px; display: flex; flex-wrap: wrap; gap: 4px 8px; align-items: baseline; }
+.cool-status b { color: var(--text); }
+.cool-status span { font: 800 11px var(--font-head); text-transform: uppercase; letter-spacing: .06em; padding: 1px 6px; border-radius: 3px; }
+.cs-ok { color: var(--ok); border: 1px solid var(--ok); }
+.cs-warn { color: var(--oil); border: 1px solid var(--oil); }
+.cs-bad { color: var(--pressure); border: 1px solid var(--pressure); }
+.ov-split { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 8px 0; }
+.ov-split > div { background: var(--panel-2); border: 1px solid var(--edge); border-radius: var(--radius); padding: 6px 8px; display: grid; gap: 2px; font-size: 12px; }
+.ov-split b { font: 800 11px var(--font-head); text-transform: uppercase; letter-spacing: .08em; color: var(--muted); }
+.ov-split > div:last-child b { color: var(--ok); }
 .hr-card { margin: 6px 0 10px; border-left: 4px solid var(--accent); }
 .hr-head { display: flex; gap: 10px; align-items: flex-start; justify-content: space-between; }
 .hr-head h4 { margin: 0; font: 800 13px var(--font-head); text-transform: uppercase; letter-spacing: .06em; }
