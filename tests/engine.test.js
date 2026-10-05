@@ -745,6 +745,21 @@ test('Overhaul keeps executives, managers and each department\'s best people', (
   assert.equal(s.depts.purchasing.p0, 0, 'the department reopens fresh this run');
 });
 
+test('people get better with time in the same department, and start over when they move', () => {
+  const s = lateGame();
+  const p = s.depts.purchasing.team[0];
+  const e0 = E.effectiveness(p, 'purchasing');
+  for (let i = 0; i < 60; i++) E.tick(s, 60); // an hour on the job
+  const e1 = E.effectiveness(p, 'purchasing');
+  assert.ok(e1 > e0 * 1.12 && e1 < e0 * 1.2, `${e0} → ${e1}`);
+  for (let i = 0; i < 600; i++) E.tick(s, 60);
+  assert.ok(E.effectiveness(p, 'purchasing') <= Math.round(e0 * (1 + E.DATA.CONSTANTS.expMax) * 100) / 100 + 0.01, 'capped');
+  // moved to Warehouse: experience starts over there
+  s.depts.purchasing.team.splice(0, 1); s.depts.warehouse.team.push(p);
+  E.tick(s, 1);
+  assert.ok(p.xd === 'warehouse' && p.x <= 1);
+});
+
 test('HR Director runs staffing on autopilot after the first Overhaul, and can be switched off', () => {
   const s = lateGame();
   // the shop has grown far past where the departments opened, and nobody is hired yet

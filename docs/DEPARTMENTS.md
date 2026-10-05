@@ -230,6 +230,11 @@ department-specific twists come next.
 - **Overhaul keeps your people (v0.3):** each department keeps its manager and
   its best 3 people (Engineering: best 3 per team); applicants and the production
   baseline start fresh, so departments reopen at the new run's (tiny) production.
+- **Experience (v0.3):** people get better the longer they work in the same
+  department: effectiveness × `1 + 0.3 × (1 − e^(−t / 1.5 h))`, so +16% after 1 h
+  and +26% after 3 h (`expMult()`, `p.x` seconds in `p.xd`). Moving to another
+  department starts it over, so shake-ups and swaps have a real cost; it travels
+  with them through Overhaul. Veterans (+10% or more) wear a ★ on their headshot.
 - **HR Director (v0.3):** from the second run on, staffing runs on autopilot
   (`hrTick()` every 2 s, switch on the Order Line, kept through Overhaul). In every
   open department it makes the best leader manager (or replaces one out-led by 2),

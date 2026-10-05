@@ -200,6 +200,7 @@
     const d = derive(s);
     snapshotDepts(s, d.production);
     safetyTick(s, d, dt);
+    experienceTick(s, dt);
     s.mgrClock += dt;
     if (s.mgrClock >= C.mgrEvery) { s.mgrClock = 0; managersTick(s, d); }
     s.mgrReviewClock += dt;
@@ -566,7 +567,25 @@
     const score = (2 * person.s[STAT_INDEX[p1]] + person.s[STAT_INDEX[p2]]) / 3;
     const tr = person.t && TRAIT[person.t];
     const bonus = tr && (tr.dept === deptId || tr.dept === 'any') ? tr.bonus : 0;
-    return Math.round((C.effBase + C.effPerPoint * score + bonus) * 100) / 100;
+    return Math.round((C.effBase + C.effPerPoint * score + bonus) * expMult(person, deptId) * 100) / 100;
+  }
+  /**
+   * Experience: people get better the longer they work in the same department
+   * (`p.x` seconds in department `p.xd`), up to +expMax. Moving to another
+   * department starts it over; it travels with them through Overhaul.
+   */
+  const expCurve = (x) => 1 + C.expMax * (1 - Math.exp(-x / C.expTau));
+  const expMult = (p, deptId) => (p && p.xd === deptId && p.x > 0 ? (p.xm || (p.xm = expCurve(p.x))) : 1);
+  function experienceTick(s, dt) {
+    for (const dept of HIREABLE) {
+      const st = s.depts[dept.id];
+      if (!st || !st.p0) continue;
+      for (const p of st.mgr ? [st.mgr, ...st.team] : st.team) {
+        if (p.xd !== dept.id) { p.xd = dept.id; p.x = 0; }
+        p.x += dt;
+        p.xm = expCurve(p.x); // cached for effectiveness()
+      }
+    }
   }
 
   const LEAD = STAT_INDEX.leadership;
@@ -1852,7 +1871,7 @@
     DATA, newState, derive, tick, applyOffline, mods, milestoneMult, nextMilestone,
     bulkCost, maxAffordable, isUnlocked, quote, buy,
     nextTier, canUpgradeTier, upgradeTier, accCapacity, accUpgradeCost, upgradeAccumulator,
-    techAvailable, research, click, canSurge, surge, hrOpen, hrTick, coreTeams,
+    techAvailable, research, click, canSurge, surge, hrOpen, hrTick, coreTeams, expMult,
     patentsTotal, overhaulGain, canOverhaul, overhaul, opensMet, departmentOpen, regionOpen, checkLocations, customerBase, currentEra,
     orderLine, snapshotDepts, hireQuote, hire, hirePerson, rerollPool, rerollCost, staffLineQuote, staffLine,
     effectiveness, headcount, strength, strokeGal, STAFFED, HIREABLE,

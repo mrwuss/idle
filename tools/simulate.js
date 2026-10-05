@@ -21,7 +21,16 @@ const doOverhaul = args.includes('--overhaul');
 const quiet = args.includes('--quiet');
 
 const BIG = 1e300;
-const clone = (s) => JSON.parse(JSON.stringify(s));
+// Purchase candidates only change equipment, so the people (the bulk of a late save)
+// are shared with the real state instead of copied for every candidate.
+const SHARED = ['depts', 'execs', 'execPool', 'president', 'board', 'boardPool', 'execLog', 'hrLog'];
+const clone = (s) => {
+  const rest = {};
+  for (const k of Object.keys(s)) if (!SHARED.includes(k)) rest[k] = s[k];
+  const c = JSON.parse(JSON.stringify(rest));
+  for (const k of SHARED) c[k] = s[k];
+  return c;
+};
 // Score purchases by what the shop floor produces; staffing is handled
 // separately (keepLineStaffed), the way a player would buy, then hire.
 const steadyIncome = (s) => { const d = E.derive(s, { steady: true }); return d.production * d.surgeMult; };

@@ -674,6 +674,7 @@ ul.plain b { color: var(--text); }
 .tl-short { display: none; }
 .team-seg .btn { min-height: 34px; white-space: nowrap; }
 .team-seg .btn.locked:not(.on) { opacity: .5; }
+.face.vet .face-img::after { content: '★'; position: absolute; top: -2px; right: -2px; font-size: 11px; line-height: 1; color: var(--oil); text-shadow: 0 0 2px var(--panel); }
 .hr-card { margin: 6px 0 10px; border-left: 4px solid var(--accent); }
 .hr-head { display: flex; gap: 10px; align-items: flex-start; justify-content: space-between; }
 .hr-head h4 { margin: 0; font: 800 13px var(--font-head); text-transform: uppercase; letter-spacing: .06em; }

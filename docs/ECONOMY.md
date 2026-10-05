@@ -142,8 +142,9 @@ the bot past the heat wall (4× end income), so the price is kept at 10 s.
 Executives open with Management at ~$1B; the bot seats all four (skill 9–10 by
 the end) and a President, which lifts end-of-run income from ~66M/s to ~160M/s
 (surplus +57%, President +14%) and lifetime from $1.1T to $2.1T. With
-`--overhaul` the bot fills all five Board seats and does 11 Overhauls in 6h44m
-(999 patents earned, 271 spent on the Board). The bot also runs a shake-up
+`--overhaul` the bot fills all five Board seats and does 12 Overhauls in 7 h
+(2,106 patents). Since v0.3 people carry through Overhaul and the HR Director
+staffs each new run, so later runs recover faster: Overhaul #11 at 4h 26m (was 5h 19m). The bot also runs a shake-up
 whenever one is off cooldown and costs under 5% of cash (5 in run 1, from ~3 h);
 lifetime stays about the same (~$1.9T) and the Overhaul rhythm is unchanged. Runs vary
 by a minute or two because applicants come from a random seed.

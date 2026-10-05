@@ -570,6 +570,8 @@
     presidentSkillDiv: 3,   // …and every executive +1 skill per 3 President skill
     mgrPoolPer: 3,          // …and reviews 1 more applicant per 3 Leadership points
     mgrEvery: 2,            // seconds between a manager's staffing checks
+    expMax: 0.3,            // experience: up to +30% effectiveness for time in the same department…
+    expTau: 5400,           // …approaching it with this time constant (s): +16% after 1 h, +26% after 3 h
     keepPerDept: 3,         // Overhaul: each department keeps its manager and this many of its best people
     // HR Director (after the first Overhaul): runs staffing on autopilot
     hrEvery: 2,             // seconds between the HR Director's checks

@@ -164,10 +164,16 @@
   const grade = (eff) => (eff >= 1.4 ? 'star' : eff >= 1.1 ? 'good' : eff < 0.85 ? 'weak' : 'ok');
   const GRADE_WORD = { star: 'Star fit', good: 'Strong fit', ok: 'Solid fit', weak: 'Weak fit' };
   const first = (n) => n.split(' ')[0];
-  /** A tappable headshot: opens the person's ID badge. */
+  /** Experience in this department, as words for the ID badge. */
+  function xpNote(p, d) {
+    const m = E.expMult(p, d.id);
+    if (m <= 1.005) return p.xd && p.xd !== d.id ? ', and no experience here yet' : '';
+    return `, plus <b>+${Math.round((m - 1) * 100)}%</b> from ${fmtTime(p.x)} on the job here (up to +${Math.round(E.DATA.CONSTANTS.expMax * 100)}%; moving to another department starts it over)`;
+  }
+  /** A tappable headshot: opens the person's ID badge. Veterans (+10% from experience) get a stripe. */
   function face(p, deptId, kind, idx, extra = '') {
-    const eff = E.effectiveness(p, deptId);
-    return `<div class="face-wrap"><button class="face ${grade(eff)}${kind === 'mgr' ? ' mgr' : ''}" data-person="${deptId}|${kind}|${idx}" title="${p.n}: tap for ID">
+    const eff = E.effectiveness(p, deptId), vet = E.expMult(p, deptId) >= 1.1;
+    return `<div class="face-wrap"><button class="face ${grade(eff)}${kind === 'mgr' ? ' mgr' : ''}${vet ? ' vet' : ''}" data-person="${deptId}|${kind}|${idx}" title="${p.n}${vet ? ' · veteran' : ''}: tap for ID">
       <span class="face-img">${avatar(p.a)}${kind === 'mgr' ? '<i class="face-tag">MGR</i>' : ''}</span>
       <span class="face-name">${first(p.n)}</span><span class="face-eff">×${eff.toFixed(2)}</span></button>${extra}</div>`;
   }
@@ -553,7 +559,7 @@
           <div><h3>${p.n}</h3><div class="idc-title">${title}</div><div class="idc-no">No. ${empNo}</div></div>
           <button class="sh-x" data-close="idcard" aria-label="Close">✕</button></div>
         <div class="idc-fit"><b>${GRADE_WORD[g]}</b>: counts as <b>${eff.toFixed(2)}</b> staff in ${d.name}
-          <p>From ${STAT[a].name} ${p.s[STAT[a].i]} (counts double) and ${STAT[b].name} ${p.s[STAT[b].i]}${fits ? `, plus +${tr.bonus.toFixed(2)} from their quirk` : ''}. An average person counts as about 1.0.</p></div>
+          <p>From ${STAT[a].name} ${p.s[STAT[a].i]} (counts double) and ${STAT[b].name} ${p.s[STAT[b].i]}${fits ? `, plus +${tr.bonus.toFixed(2)} from their quirk` : ''}${xpNote(p, d)}. An average person counts as about 1.0.</p></div>
         <h4>Stats <span class="muted">· 1 to 10</span></h4>
         <ul class="idc-stats">${stats}</ul>
         ${tr ? `<div class="idc-quirk"><b>Quirk:</b> ${tr.name}<p>${fits ? `Worth <b>+${tr.bonus.toFixed(2)}</b> staff in ${d.name}.` : `Helps in ${tr.dept === 'any' ? 'any job' : DEPT_BY_ID[tr.dept].name} (+${tr.bonus.toFixed(2)}), not here.`}</p></div>` : ''}
