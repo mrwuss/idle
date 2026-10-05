@@ -39,7 +39,7 @@ update the tables here.
 | Board seats | 3 / 8 / 20 / 50 / 120 Patents (spent, not refunded); perk strength `0.6 + 0.08 × LEA` |
 | SCADA | 2M Know-how (needs Telematics + Controls strength 2); income × `(1 + min(0.2, 0.005 × Controls strength))`; automation scans every 2 s. Operator panel (Know-how, in order): historian 5M (+5% income), alarms 20M (incidents ×0.8), predictive 80M (+1 action/scan), APC 300M (tuning ×2, cap 40%). Simulator: historian ≈ 2h 47m, alarms ≈ 4h 54m |
 | Standards Committee | opens with the Board; standard *n* costs `25 × 2^n` Patents (spent, kept forever): actuators ×1.5, pumps ×1.5, costs −20%, temp limit +40°F, incidents −50%, Know-how ×2, SCADA kept through Overhaul, quick-start layout |
-| Era VI research | Opens with your first adopted Standard. Isostatic Pressing 2M KH, Cryogenic Cooling 1.5M KH (+20°F limit), Subsea Power Units 3M KH (pumps ×1.25); not needed for the Patent Office |
+| Era VI research | Opens with your first adopted Standard. Isostatic Pressing 10M KH, Cryogenic Cooling 8M KH (+20°F limit), Subsea Power Units 15M KH (pumps ×1.25); not needed for the Patent Office |
 | Department signatures | Accounting interest `cash × 1e-5 × strength`/s (≤ 20% of income); Quality Pak prices ×(1 + 0.03 × strength, ≤ 1.6); Warehouse Rush Ship = 120 s of production, buffer fills in `600 s ÷ (1 + 0.1 × strength)`, contract time ×(1 + 0.02 × strength, ≤ 1.5); Inside Sales offers 3 + ⌊strength ÷ 4⌋ (≤ 6), arrival ×(1 + 0.05 × strength); Management Focus ×2 for 300 s, 900 s recharge |
 | Pak contracts | offer every 240 s; deadline 15–40 min; sized to 55% of it; bonus `2 × qty × price × (1 + region customers ÷ 400)` |
 | Patent Office | after all 17 original techs: filing *n* costs `1M × 1.6^n` Know-how (n counts every filing ever); filed patents don't reduce Overhaul gain |
@@ -94,8 +94,8 @@ actuator mix is also a flow-efficiency upgrade, not just raw income.
 | 2-Wire Braid | 3,000 | $9K | Pascal's Principle |
 | 4-Spiral Hose | 5,000 | $450K | Seal Chemistry |
 | 6-Spiral Hose | 6,000 | $25M | Forged Manifolds |
-| Ultra-High Pressure | 10,000 | $3B | Pressure Intensifiers |
-| Isostatic Line (Era VI) | 15,000 | $800B | Isostatic Pressing |
+| Ultra-High Pressure | 10,000 | $20B | Pressure Intensifiers; pump losses ×0.7 (intensifier circuits) |
+| Isostatic Line (Era VI) | 15,000 | $800B | Isostatic Pressing; pump losses ×0.6 |
 
 ### Coolers
 
@@ -128,8 +128,8 @@ places the bot is naïve about, so treat these as relative pacing.
 | First forging press | ~45 min | 39m |
 | $1B lifetime | 1–2 h | 1h 06m (executives arrive) |
 | First ship lift | 1–2 h | 1h 07m |
-| All 17 techs | 3–5 h | ~1h 33m |
-| Era VI research | after the first Standard | not reachable in run 1 ($1T at 3h 35m) |
+| All 17 techs | 3–5 h | ~2h 55m (Ultra-High Pressure at ~2h 40m) |
+| Era VI research | after the first Standard | not reachable in run 1 ($1T at ~3h 20m) |
 | Run 1 plateau | 2–4 h | ~160M/s by 6 h (heat wall at 200°F) |
 
 The bot hires into the bottleneck before buying anything else, promotes
@@ -149,8 +149,9 @@ whenever one is off cooldown and costs under 5% of cash (5 in run 1, from ~3 h);
 lifetime stays about the same (~$1.9T) and the Overhaul rhythm is unchanged. Runs vary
 by a minute or two because applicants come from a random seed.
 
-**Research is too fast:** the bot finishes the tree at ~1h40m against a 3–5 h
-target. Raise tech costs in the next balance pass.
+**Research pacing (v0.3):** tech costs from Stage 4 up were raised 3–10×
+(Proportional Valves 1.8K … Digital Displacement 5M KH; Era VI 8M–15M). The bot
+now finishes the tree at ~2h 55m and reaches $1T at ~3h 20m, against a 3–5 h target.
 
 **Known balance notes:**
 
@@ -158,13 +159,16 @@ target. Raise tech costs in the next balance pass.
   With the cube-root formula the bot reaches 512 patents in 5h30m over 9
   Overhauls, and the gap between runs grows (~1 h, then ~2 h).
 
-- The bot never buys Ultra-High Pressure in run 1. At 10,000 psi every pump's
-  losses jump by about 67%, and the cooling bill outweighs the gain. That's
-  intentional: UHP and the Tectonic Press belong to run 2 and later, where
-  Patents carry the cost.
+- Ultra-High Pressure used to be skipped in run 1: at 10,000 psi pump losses
+  jumped ~67% and the cooling bill outweighed the gain. Its intensifier circuits
+  now cut pump losses to ×0.7 (Isostatic Line ×0.6), so the bot buys it at ~2h 40m.
+- With people carried through Overhaul, experience and UHP in every run, the bot
+  (which Overhauls the moment Patents would double) does 12 Overhauls by ~3h 40m
+  and ~2,100 patents. Real players Overhaul less eagerly; if prestige feels too
+  quick, raise `patentDivisor`.
 - $1M arrives a little fast for a first Overhaul. Raise `overhaulMin`, or let it
   be: a 1-patent Overhaul is a weak move and players can tell.
-- Lean Manufacturing (50K KH) costs more than Synthetic Fluid (40K) but sits
+- Lean Manufacturing (300K KH) costs more than Synthetic Fluid (240K) but sits
   earlier in the tree's left-to-right reading. Consider swapping their places.
 - The heat wall around 200°F (limit after both fluid techs) is where run 1
   stalls. Good: that's the cue to Overhaul. Watch that it doesn't feel like a bug.

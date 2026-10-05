@@ -1379,7 +1379,7 @@
     $('r-khrate').textContent = `+${fmt(d.khRate)}/s`;
     $('r-patents-wrap').hidden = s.patents === 0 && !E.canOverhaul(s);
     $('r-patents').textContent = fmt(s.patents);
-    $('r-patentbonus').textContent = `+${fmt((m.patentMult - 1) * 100)}%`;
+    $('r-patentbonus').textContent = `×${fmt(m.patentMult)}`;
     fitRes();
 
     // machine panel
@@ -1486,10 +1486,16 @@
     if (next) {
       const needs = next.requires && !s.tech[next.requires] ? TECH.find((t) => t.id === next.requires).name : null;
       nextHtml = `<div class="card-row"><div>Next: <b>${next.name}</b> — ${fmt(next.psi)} psi
-        <div class="muted">${needs ? `Requires research: ${needs}` : 'Higher pressure unlocks new actuators and pays more for existing ones.'}</div></div>
+        <div class="muted">${needs ? `Requires research: ${needs}` : 'Higher pressure unlocks new actuators and pays more for existing ones.'}${next.lossMult ? ` Intensifier circuits: pump heat ×${next.lossMult}.` : ''}</div></div>
         <button class="btn" data-act="tier" ${E.canUpgradeTier(s) ? '' : 'disabled'}>$${fmt(next.cost * cm)}<small>upgrade</small></button></div>`;
     }
     setHtml('tier-box', `<div>Current: <b>${TIERS[s.tier].name}</b>, relief valve set to ${fmt(d.psi)} psi.</div>${nextHtml}<div class="ladder">${ladder}</div>`);
+
+    // Cooling at a glance: where the oil is, where it's heading, and the limit.
+    const eq = Math.min(d.tempEq, 9999), lim = d.tempLimit;
+    const st = s.temp > lim ? 'bad' : eq > lim ? 'warn' : 'ok';
+    setHtml('cool-status', `<span class="cs-${st}">${st === 'bad' ? `Too hot: income ×${d.thermalMult.toFixed(2)}` : st === 'warn' ? 'Heating past the limit' : 'Cool enough'}</span>
+      Oil <b>${Math.round(s.temp)}°F</b> · heading for <b>${fmt(eq, 0)}°F</b> · limit <b>${lim}°F</b> · heat ${fmt(d.heatHP)} HP vs cooling k ${fmt(d.k)}`);
 
     const accCost = E.accUpgradeCost(s);
     setHtml('acc-box', `<div class="card-row"><div>Bladder size <b>${s.accLevel + 1}</b>: ${fmt(d.accCap)} gal
@@ -1585,9 +1591,12 @@
     const C = E.DATA.CONSTANTS;
     $('ov-gain').textContent = fmt(E.overhaulGain(s));
     const nextAt = ((E.patentsTotal(s.lifetime) + 1) / C.patentScale) ** 3 * C.patentDivisor;
+    const gain = E.overhaulGain(s), now = 1 + C.patentBonus * s.patents, after = now + C.patentBonus * gain;
     $('ov-detail').textContent = s.lifetime < C.overhaulMin
       ? `Available once you have earned $${fmt(C.overhaulMin)} in total (so far $${fmt(s.lifetime)}).`
-      : `Lifetime earnings $${fmt(s.lifetime)}. Next patent at $${fmt(nextAt)}.`;
+      : gain > 0
+        ? `Patent bonus ×${fmt(now)} → ×${fmt(after)}: every run after this one earns ${fmt((after / now - 1) * 100)}% more.${s.hrAuto !== false && E.hrOpen(s) ? '' : s.overhauls === 0 ? ' From the next run, the HR Director staffs the company for you.' : ''}`
+        : `No new patents yet: the next one comes at $${fmt(nextAt)} lifetime (now $${fmt(s.lifetime)}).`;
     $('btn-overhaul').disabled = !E.canOverhaul(s);
     renderStandards(s);
   }
@@ -1631,9 +1640,12 @@
     setHtml('stats', rows.map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join(''));
     const all = E.DATA.ACHIEVEMENTS, got = all.filter((a) => a.id in s.ach).length;
     setHtml('ach-count', `${got}/${all.length} · +${got}% income`);
-    setHtml('ach', all.map((a) => {
+    // Open goals first (closest to done at the top), then the ones already earned.
+    const pctOf = (a) => (a.id in s.ach ? 100 : Math.min(99, Math.floor(100 * E.achStat(s, a.stat) / a.goal)));
+    const order = [...all].sort((x, y) => ((x.id in s.ach) - (y.id in s.ach)) || (x.id in s.ach ? 0 : pctOf(y) - pctOf(x)));
+    setHtml('ach', order.map((a) => {
       const done = a.id in s.ach;
-      const pct = done ? 100 : Math.min(99, Math.floor(100 * E.achStat(s, a.stat) / a.goal));
+      const pct = pctOf(a);
       return `<div class="ach${done ? ' got' : ''}" title="${a.desc}"><b>${done ? '★' : '☆'} ${a.name}</b>`
         + `<span>${a.desc}</span><i style="width:${pct}%"></i></div>`;
     }).join(''));

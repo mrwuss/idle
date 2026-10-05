@@ -144,6 +144,7 @@
       supply += q;
       pumpLossHP += (P * q / C.hpConst) * (1 - p.eff);
     }
+    pumpLossHP *= TIERS[s.tier].lossMult || 1; // high-pressure tiers use intensifier circuits
 
     let demand = 0, rawIncome = 0;
     const perActuator = {};

@@ -132,6 +132,7 @@
         <div id="acc-box" class="card"></div>
         <h3>Cooling</h3>
         <p class="hint">Every pump wastes part of its power as heat. Coolers carry it away. Above the temperature limit, oil thins out and income falls.</p>
+        <div id="cool-status" class="cool-status"></div>
         <div id="list-coolers" class="list"></div>
       </div>
       <div class="tab-body" data-body="tech" hidden>
@@ -190,8 +191,11 @@
       <div class="tab-body" data-body="overhaul" hidden>
         <div class="card overhaul-card">
           <h3>Full overhaul</h3>
-          <p>Strip the shop down to the slab and rebuild it better. You lose cash, equipment, pressure rating, accumulator and research. You keep your <b>Patents</b>: each one adds <b>+10%</b> to all income, forever.</p>
-          <p class="muted">Your people come with you: executives, the President, every manager and each department's best 3 (Engineering: best 3 per team). From the second run on, the <b>HR Director</b> runs staffing on autopilot: hiring, promoting and swapping in better people.</p>
+          <p>Strip the shop down to the slab and rebuild it better. Every <b>Patent</b> adds <b>+10%</b> to all income, forever.</p>
+          <div class="ov-split">
+            <div><b>Resets</b><span>Cash, equipment, pressure rating, accumulator, research, the Pak line</span></div>
+            <div><b>Keeps</b><span>Patents, executives, managers and each team's best 3, the Board, Standards, locations, achievements</span></div>
+          </div>
           <p class="big-number">+<span id="ov-gain">0</span> patents</p>
           <p class="muted" id="ov-detail"></p>
           <button id="btn-overhaul" class="btn danger" disabled>Overhaul the shop</button>
