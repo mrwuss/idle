@@ -1,0 +1,278 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>IFP MSI · Pressure Works</title>
+  <meta name="description" content="A hydraulic idle game: pumps, pressure, heat and a lot of cylinders.">
+  <link rel="icon" id="favicon" href="data:,">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Nunito+Sans:ital,wght@0,400;0,600;0,700;0,800;0,900;1,900&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css?v=b0d961d">
+  <script>
+    // If anything fails while the game starts, say so on screen (with the error) instead of
+    // leaving a half-built page. Saves are untouched; Reload usually fixes a stale download.
+    window.addEventListener('error', function (ev) {
+      if (window.PW && window.PW.debug) return; // the game is already running
+      var box = document.getElementById('load-error');
+      if (!box) {
+        box = document.createElement('div');
+        box.id = 'load-error';
+        box.style.cssText = 'position:fixed;left:12px;right:12px;top:12px;z-index:99;background:#fff;color:#333;border:2px solid #f04b25;border-radius:8px;padding:12px;font:14px system-ui,sans-serif;box-shadow:0 8px 30px rgba(0,0,0,.3)';
+        box.innerHTML = '<b>Pressure Works didn\u2019t start properly.</b><div id="load-error-msg" style="font:12px monospace;margin:6px 0;color:#c62828;word-break:break-word"></div>'
+          + '<div style="font-size:12px;color:#636363;margin-bottom:8px">Your save is safe. Reloading usually fixes it.</div><button onclick="location.reload()" style="font:inherit;padding:8px 14px;border:1px solid #f04b25;background:#fff;color:#f04b25;border-radius:6px">Reload</button>';
+        (document.body || document.documentElement).appendChild(box);
+      }
+      document.getElementById('load-error-msg').textContent = (ev.message || 'Error') + (ev.filename ? ' (' + ev.filename.split('/').pop() + ':' + ev.lineno + ')' : '');
+    });
+    // Theme before first paint: light (IFP) by default, dark shop floor if chosen.
+    try { if (localStorage.getItem('pw-theme') === 'dark') document.documentElement.dataset.theme = 'dark'; } catch (e) {}
+  </script>
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <span class="brand-logo" id="brand-logo" aria-label="IFP"></span>
+      <div>
+        <h1>MSI <span>· Pressure Works</span></h1>
+        <p class="tagline"><span id="tagline-loc">Cedar Rapids, Iowa</span> · est. 1972 · Motion Solutions</p>
+      </div>
+    </div>
+    <dl class="resources">
+      <div class="res"><dt>Cash</dt><dd id="r-cash">$0</dd><small id="r-income">$0/s</small></div>
+      <div class="res"><dt><span class="d-only">Know-how</span><span class="m-only">KH</span></dt><dd id="r-kh">0</dd><small id="r-khrate">0/s</small></div>
+      <div class="res" id="r-patents-wrap"><dt>Patents</dt><dd id="r-patents">0</dd><small><span id="r-patentbonus">+0%</span><span class="d-only"> income</span></small></div>
+    </dl>
+    <button id="m-status" class="m-status m-only" aria-label="Open the Works view"></button>
+    <button id="btn-mute" class="icon-btn" aria-pressed="false" title="Sound on (M to toggle)" aria-label="Mute sound">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path class="spk" d="M4 9 H8 L13 5 V19 L8 15 H4 Z"/><path class="wave" d="M16 9 Q18.5 12 16 15 M18.5 6.5 Q22.5 12 18.5 17.5"/><path class="cross" d="M16 9 L22 15 M22 9 L16 15"/></svg>
+    </button>
+  </header>
+
+  <!-- The Works: the live machine, built from what you own -->
+  <section class="works" aria-label="The Works: live view of the shop">
+    <div class="works-scroll">
+      <canvas id="machine" role="img" aria-label="Animated hydraulic machine showing your pumps, header, and one station per actuator type"></canvas>
+      <button id="btn-works-full" class="works-full-btn m-only" aria-label="Full-screen view">⤢ Full screen</button>
+      <button id="btn-works-close" class="works-close-btn" aria-label="Close full-screen view">✕ Close</button>
+    </div>
+    <p class="works-hint">Click the hand pump to stroke it. Click a station, the pump bank or the header to jump to it in the shop, or an office room or the warehouse to see that team.</p>
+  </section>
+
+  <main class="layout">
+    <!-- Left: controls and instruments -->
+    <section class="panel machine" aria-label="Control panel">
+      <h2 class="panel-title">Control panel <span class="title-right"><button id="btn-scada" class="btn mini scada-btn" title="SCADA: supervisory control">SCADA</button></span></h2>
+
+
+      <div class="gauges">
+        <figure class="gauge" id="g-pressure"><figcaption>Pressure</figcaption></figure>
+        <figure class="gauge" id="g-temp"><figcaption>Oil temp</figcaption></figure>
+      </div>
+
+      <div class="meters">
+        <div class="meter">
+          <div class="meter-head"><span>Flow</span><span id="m-flow-text">0 / 0 GPM</span></div>
+          <div class="bar"><div id="m-flow-demand" class="bar-mark"></div><div id="m-flow" class="bar-fill flow"></div></div>
+        </div>
+        <div class="meter">
+          <div class="meter-head"><span>Accumulator</span><span id="m-acc-text">0 / 5 gal</span></div>
+          <div class="bar"><div id="m-acc" class="bar-fill acc"></div></div>
+        </div>
+      </div>
+
+      <ul id="alerts" class="alerts" aria-live="polite"></ul>
+
+      <div class="actions">
+        <button id="btn-stroke" class="big-btn stroke">
+          <span class="big-btn-title">Stroke hand pump</span>
+          <span class="big-btn-sub" id="stroke-sub">+$1</span>
+        </button>
+        <button id="btn-surge" class="big-btn surge" disabled>
+          <span class="big-btn-title">Surge</span>
+          <span class="big-btn-sub" id="surge-sub">Charge the accumulator</span>
+        </button>
+      </div>
+    </section>
+
+    <!-- Right: the shop -->
+    <section class="panel shop" aria-label="Workshop">
+      <nav class="tabs" role="tablist">
+        <button role="tab" data-tab="works" class="m-only"><svg class="tab-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 21V11l5 3v-3l5 3v-3l5 3V5h3v16Z"/></svg><span class="tl"><span class="tl-long">Works</span><span class="tl-short">Works</span></span> <span class="badge" id="works-badge" hidden></span></button>
+        <button role="tab" data-tab="actuators" aria-selected="true"><svg class="tab-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M2 9h12v6H2z M14 12h7 M21 8v8"/></svg><span class="tl"><span class="tl-long">Actuators</span><span class="tl-short">Lines</span></span></button>
+        <button role="tab" data-tab="pumps"><svg class="tab-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5a7 7 0 1 0 .01 0 M12 2v3 M12 19v3 M2 12h3 M19 12h3 M12 9v6 M9 12h6"/></svg><span class="tl"><span class="tl-long">Pumps</span><span class="tl-short">Pumps</span></span></button>
+        <button role="tab" data-tab="system"><svg class="tab-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 17a9 9 0 1 1 18 0 M12 17l5-6 M3 17h18"/></svg><span class="tl"><span class="tl-long">System</span><span class="tl-short">System</span></span></button>
+        <button role="tab" data-tab="tech"><svg class="tab-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 3h6 M10 3v6l-5 11h14l-5-11V3 M7.5 15h9"/></svg><span class="tl"><span class="tl-long">R&amp;D</span><span class="tl-short">R&amp;D</span></span> <span class="badge" id="tech-badge" hidden></span></button>
+        <button role="tab" data-tab="company"><svg class="tab-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 11a3 3 0 1 0 0-6 3 3 0 0 0 0 6 M2 20c0-4 3-6 6-6s6 2 6 6 M16 5a3 3 0 0 1 0 6 M18 14c2.5 1 4 3 4 6"/></svg><span class="tl"><span class="tl-long">Company</span><span class="tl-short">Team</span></span> <span class="badge" id="company-badge" hidden>!</span></button>
+        <button role="tab" data-tab="overhaul" id="tab-overhaul"><svg class="tab-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 12a8 8 0 1 1-2.6-5.9 M20 3v5h-5"/></svg><span class="tl"><span class="tl-long">Overhaul</span><span class="tl-short">Overhaul</span></span></button>
+        <button role="tab" data-tab="settings"><svg class="tab-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h11a3 3 0 0 1 3 3v13H8a3 3 0 0 1-3-3Z M5 17a3 3 0 0 1 3-3h11"/></svg><span class="tl"><span class="tl-long">Logbook</span><span class="tl-short">Log</span></span></button>
+      </nav>
+
+      <div class="buyqty" id="buyqty" role="radiogroup" aria-label="Buy quantity">
+        <span>Buy</span>
+        <button data-qty="1" aria-checked="true">×1</button>
+        <button data-qty="10">×10</button>
+        <button data-qty="100">×100</button>
+        <button data-qty="next" title="Buy up to the next ×2 milestone">Next</button>
+        <button data-qty="max">Max</button>
+      </div>
+
+      <div class="tab-body" data-body="actuators">
+        <p class="hint">Actuators earn money. Each one needs <b>flow</b> from your pumps and a minimum <b>pressure rating</b>. Pressure above the minimum pays extra.</p>
+        <div id="list-actuators" class="list"></div>
+      </div>
+      <div class="tab-body" data-body="pumps" hidden>
+        <p class="hint">Pumps make flow. Too little and actuators stall; too much and the surplus dumps over the relief valve as <b>heat</b>.</p>
+        <div id="list-pumps" class="list"></div>
+      </div>
+      <div class="tab-body" data-body="system" hidden>
+        <h3>Pressure rating</h3>
+        <div id="tier-box" class="card"></div>
+        <h3>Accumulator</h3>
+        <div id="acc-box" class="card"></div>
+        <h3>Cooling</h3>
+        <p class="hint">Every pump wastes part of its power as heat. Coolers carry it away. Above the temperature limit, oil thins out and income falls.</p>
+        <div id="cool-status" class="cool-status"></div>
+        <div id="list-coolers" class="list"></div>
+      </div>
+      <div class="tab-body" data-body="tech" hidden>
+        <p class="hint">Know-how accumulates while your shop earns (√ of income). Spend it on engineering breakthroughs.</p>
+        <div id="tech-tree" class="tech-tree"></div>
+        <div id="patent-office" class="card patent-office"></div>
+        <div id="time-machine" class="card time-machine" hidden></div>
+      </div>
+      <div class="tab-body" data-body="company" hidden>
+        <div class="card era-card">
+          <div class="era-label">Era <span id="era-num">I</span> · <b id="era-name">The First Shop</b></div>
+          <p class="muted">Every fluid-power company runs on eleven departments. Orders flow through the
+            <b>Order Line</b> like oil through a circuit, and the narrowest department sets the pace.
+            Departments open as the shop grows. You cover each one yourself at first; as production grows, each needs more people, and the line runs at its least-covered department. Opening new locations lets each Outside Sales rep reach more customers.</p>
+        </div>
+        <div class="seg team-seg" role="tablist" aria-label="Company sections">
+          <button class="btn mini" data-team="line">Order Line</button>
+          <button class="btn mini" data-team="leaders">Leadership</button>
+          <button class="btn mini" data-team="paks">Paks</button>
+          <button class="btn mini" data-team="map">Territory</button>
+        </div>
+        <section class="team-group" data-team-group="line">
+          <div class="order-head">
+            <h3>Order Line <span class="muted">· leads in → cash out <span id="order-summary"></span></span></h3>
+            <button id="btn-staff-line" class="btn" hidden></button>
+          </div>
+          <div id="hr-card" class="card hr-card" hidden></div>
+          <div id="order-line" class="order-line"></div>
+          <h3>Support</h3>
+          <div id="support-depts" class="dept-grid"></div>
+        </section>
+        <section class="team-group" data-team-group="leaders" hidden>
+          <h3>Leadership <span class="muted" id="exec-summary"></span></h3>
+          <p class="hint" id="exec-hint"></p>
+          <div id="org" class="org"></div>
+          <div id="shake" class="shake" hidden></div>
+          <div id="board-wrap">
+            <h3>Board of Directors <span class="muted" id="board-summary"></span></h3>
+            <div id="board" class="board"></div>
+          </div>
+        </section>
+        <section class="team-group" data-team-group="paks" hidden>
+          <h3>Project Engineering · Pak lines <span class="muted" id="pak-summary"></span></h3>
+          <p class="hint" id="pak-hint"></p>
+          <div id="pak-chain" class="pak-chain"></div>
+          <div id="contracts" class="contracts" hidden></div>
+        </section>
+        <section class="team-group" data-team-group="map" hidden>
+          <h3>Territory <span class="muted">· 4 locations · 13 states + Gulf · <span id="customer-base"></span></span></h3>
+          <div class="territory">
+            <svg id="territory-map" class="territory-map" viewBox="0 0 188 368" role="img" aria-label="Territory map"></svg>
+            <div id="region-list" class="region-list"></div>
+          </div>
+        </section>
+      </div>
+      <div class="tab-body" data-body="overhaul" hidden>
+        <div class="card overhaul-card">
+          <h3>Full overhaul</h3>
+          <p>Strip the shop down to the slab and rebuild it better. Every <b>Patent</b> adds <b>+10%</b> to all income, forever.</p>
+          <div class="ov-split">
+            <div><b>Resets</b><span>Cash, equipment, pressure rating, accumulator, research, the Pak line</span></div>
+            <div><b>Keeps</b><span>Patents, executives, managers and each team's best 3, the Board, Standards, locations, achievements</span></div>
+          </div>
+          <p class="big-number">+<span id="ov-gain">0</span> patents</p>
+          <p class="muted" id="ov-detail"></p>
+          <button id="btn-overhaul" class="btn danger" disabled>Overhaul the shop</button>
+        </div>
+        <div id="standards" class="card standards" hidden></div>
+      </div>
+      <div class="tab-body" data-body="settings" hidden>
+        <div class="card">
+          <h3>Display</h3>
+          <div class="seg theme-seg" role="radiogroup" aria-label="Theme">
+            <button class="btn mini" data-theme-set="light">Light · IFP</button>
+            <button class="btn mini" data-theme-set="dark">Dark · shop floor</button>
+          </div>
+        </div>
+        <div class="card">
+          <h3>Logbook</h3>
+          <dl id="stats" class="stats"></dl>
+        </div>
+        <div class="card">
+          <h3>Achievements <span class="muted" id="ach-count"></span></h3>
+          <p class="muted">Each one adds +1% to all income, and they survive Overhaul.</p>
+          <div id="ach" class="ach-grid"></div>
+        </div>
+        <div class="card save-card">
+          <h3>Save data</h3>
+          <p class="muted">Autosaves every 10 seconds to this browser. Saves don't travel between browsers or between the Claude artifact and the web version on their own: move one with the buttons below.</p>
+          <div class="save-move" id="save-move">
+            <a id="btn-open-pages" class="btn primary" href="https://mrwuss.github.io/idle/" target="_blank" rel="noopener">Open in GitHub Pages<small>with this save</small></a>
+            <button id="btn-copy-save" class="btn">Copy save code</button>
+            <button id="btn-download-save" class="btn">Download save file</button>
+          </div>
+          <p class="muted small" id="save-move-note"></p>
+          <h4>Load a save</h4>
+          <textarea id="save-text" rows="4" spellcheck="false" placeholder="Paste a save code here and press Import."></textarea>
+          <div class="row-btns">
+            <button id="btn-import" class="btn primary">Import</button>
+            <button id="btn-paste" class="btn">Paste &amp; import</button>
+            <label class="btn file-btn">Load save file<input type="file" id="file-save" accept=".txt,.pwsave,text/plain" hidden></label>
+          </div>
+          <h4>This browser</h4>
+          <div class="row-btns">
+            <button id="btn-save" class="btn">Save now</button>
+            <button id="btn-export" class="btn">Show save code</button>
+            <button id="btn-reset" class="btn danger">Hard reset</button>
+          </div>
+        </div>
+        <div class="card import-offer" id="import-offer" hidden></div>
+      </div>
+    </section>
+  </main>
+
+  <div id="toast" class="toast" role="status" hidden></div>
+
+  <!-- SCADA: the control-room cockpit (always dark) -->
+  <div id="scada" class="scada" hidden role="dialog" aria-modal="true" aria-label="SCADA">
+    <header class="scada-head"><span class="scada-title">IFP MSI · SCADA</span><span class="scada-meta" id="scada-meta"></span></header>
+    <div class="scada-body" id="scada-body"></div>
+    <footer class="scada-foot"><button class="btn" id="scada-close">Close</button></footer>
+  </div>
+
+  <!-- Department focus (bottom sheet on phones) and a person's ID badge -->
+  <div id="sheet" class="sheet" hidden role="dialog" aria-modal="true" aria-labelledby="sheet-title">
+    <div class="sheet-backdrop" data-close="sheet"></div>
+    <div class="sheet-panel"><div class="sheet-body" id="sheet-body"></div><div class="sheet-foot" id="sheet-foot"></div></div>
+  </div>
+  <div id="idcard" class="sheet idsheet" hidden role="dialog" aria-modal="true" aria-label="Employee ID">
+    <div class="sheet-backdrop" data-close="idcard"></div>
+    <div class="sheet-panel"><div class="sheet-body" id="id-body"></div><div class="sheet-foot" id="id-foot"></div></div>
+  </div>
+
+  <script src="src/data.js?v=b0d961d"></script>
+  <script src="src/format.js?v=b0d961d"></script>
+  <script src="src/brand.js?v=b0d961d"></script>
+  <script src="src/engine.js?v=b0d961d"></script>
+  <script src="src/audio.js?v=b0d961d"></script>
+  <script src="src/machine.js?v=b0d961d"></script>
+  <script src="src/ui.js?v=b0d961d"></script>
+  <script src="src/main.js?v=b0d961d"></script>
+</body>
+</html>
